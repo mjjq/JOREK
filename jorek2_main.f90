@@ -278,9 +278,9 @@ mpi_required = 0
 
   if ( restart .and. (my_id == 0) ) then
     call import_restart(node_list, element_list, 'jorek_restart', rst_format, ierr)
-    if(remap) then
-      node_list_remap = node_list
-      element_list_remap = element_list
+    if(regrid) then
+      node_list_regrid = node_list
+      element_list_regrid = element_list
     endif
     if ( ierr /= 0 ) stop
 
@@ -314,7 +314,7 @@ mpi_required = 0
 #endif
       end do
     end if
-    
+#if 0
     ! --- Optional: Redo flux aligned grid (DOES NOT WORK CURRENTLY)
     if (regrid) then
       if (xpoint)  then
@@ -334,13 +334,13 @@ mpi_required = 0
       end if
       
     end if
+#endif
     
     if ( freeboundary .and. freeb_change_indices) call exchange_indices(node_list, my_id, n_cpu, .false.)
     
  end if !   if ( restart .and. (my_id == 0) ) then
 
   ! This is necessary for the parallel vacuum version during the code restart 
-  ! if(restart.and. (.not.remap)) then
   if(restart) then
     call broadcast_phys(my_id)  
     if(freeboundary) call broadcast_vacuum(my_id, resistive_wall)
@@ -351,7 +351,7 @@ mpi_required = 0
   !*                  define grid / equilibrium                          *
   !***********************************************************************
   
-  if_not_restart: if ((.not. restart) .or. remap) then
+  if_not_restart: if ((.not. restart) .or. regrid) then
     call tr_resetfile()
     
     call initial_grid(node_list, element_list, bnd_node_list, bnd_elm_list, my_id, n_cpu)
@@ -428,11 +428,11 @@ mpi_required = 0
 
     end if ! (my_id == 0)
 
-    ! --- remap the data from node_list_remap & element_list_remap into node_list & element_list
-    if(remap .and. (my_id == 0)) then
-      call remap_from_restart (node_list, element_list, node_list_remap, element_list_remap, ierr)
+    ! --- regrid: map the data from node_list_regrid & element_list_regrid into node_list & element_list
+    if(regrid .and. (my_id == 0)) then
+      call regrid_from_restart (node_list, element_list, node_list_regrid, element_list_regrid, ierr)
       if ( ierr /= 0 ) then
-        write(*,*) ' Remapping failed for some nodes, please check!'
+        write(*,*) ' Regridding failed for all nodes, please check!'
         stop
       endif
       index_now = index_now - 1

@@ -2231,7 +2231,7 @@ subroutine import_hdf5_restart_aux(aux_node_list, filename, format_rst, error)
   return
 end subroutine import_hdf5_restart_aux
 
-subroutine remap_from_restart(node_list_dst, element_list_dst, node_list_src, element_list_src, ierr)
+subroutine regrid_from_restart(node_list_dst, element_list_dst, node_list_src, element_list_src, ierr)
   use tr_module
   use data_structure
   use phys_module
@@ -2281,7 +2281,7 @@ subroutine remap_from_restart(node_list_dst, element_list_dst, node_list_src, el
   endif  
 
   if(is_different_mesh) then 
-    write(*,*) 'Start remapping data into new mesh ...'
+    write(*,*) 'Start mapping data into new mesh ...'
     
     call populate_element_rtree(node_list_src, element_list_src)
 
@@ -2289,7 +2289,7 @@ subroutine remap_from_restart(node_list_dst, element_list_dst, node_list_src, el
     n_elements_update = element_list_dst%n_elements
     n_nodes_each_circle = node_list_dst%n_nodes - element_list_dst%n_elements
 
-    do inode = 1, node_list_dst%n_nodes
+    inode_loop: do inode = 1, node_list_dst%n_nodes
       node_list_dst%node(inode)%values = 0.d0 
       node_list_dst%node(inode)%deltas = 0.d0 
       R = node_list_dst%node(inode)%x(1,1,1)
@@ -2300,10 +2300,10 @@ subroutine remap_from_restart(node_list_dst, element_list_dst, node_list_src, el
 
       if(ierr .ne. 0) then
         n_nodes_update = min(n_nodes_update, inode - 1)
-        write(*,*) 'Failed to find and remap node: ', inode, ', please check!'  
-        cycle
+        write(*,*) 'Failed to find and regrid for node: ', inode, ', please check!'  
+        exit inode_loop
       else
-        write(*,*) 'Succeed to find and remap node: ', inode
+        write(*,*) 'Succeed to find and regrid for node: ', inode
       endif
 
       !< map R Z coordinates
@@ -2330,8 +2330,8 @@ subroutine remap_from_restart(node_list_dst, element_list_dst, node_list_src, el
       Z_t = node_list_dst%node(inode)%x(1,3,2)
       Z_st = node_list_dst%node(inode)%x(1,4,2)   
 
-      do itor = 1, n_tor
-        do ivar = 1, (2 * n_var + 2)
+      itor_loop: do itor = 1, n_tor
+        ivar_loop: do ivar = 1, (2 * n_var + 2)
           
           if(ivar .gt. (2 * n_var) .and. itor .gt. 1) cycle !< only one interp call is required for Fprof_eq and psi_eq
 
@@ -2376,32 +2376,38 @@ subroutine remap_from_restart(node_list_dst, element_list_dst, node_list_src, el
           val_ptrs(4) = eq_g_R * R_st + eq_g_Z * Z_st + (R_t * Z_s + Z_t * R_s) * eq_g_RZ + R_s * R_t * eq_g_RR + Z_s * Z_t * eq_g_ZZ
 #endif
 
-        enddo
-      enddo
-    enddo
+        enddo ivar_loop
+      enddo itor_loop
+    enddo inode_loop
     write(*,*) " "
     if(ierr .eq. 0) then
-      write(*,*) "The imported data has been remapped for all nodes."
+      write(*,*) "The imported data has been mapped for all nodes."
     else if(n_nodes_update .ge. n_nodes_each_circle) then
-      write(*,*) "The imported data has been remapped, but failed on some nodes."
+      write(*,*) "The imported data has been mapped, but failed on some nodes."
       n_nodes_update = n_nodes_update - mod(n_nodes_update, n_nodes_each_circle)
-      n_elements_update = n_nodes_update - n_nodes_each_circle
-      write(*,*) "Boundary nodes at the last surface are updated."
-      node_list_dst%node(n_nodes_update - n_nodes_each_circle + 1 : n_nodes_update)%boundary = node_list_dst%node(node_list_dst%n_nodes - n_nodes_each_circle + 1 : node_list_dst%n_nodes)%boundary
-      write(*,*) "n_nodes is reduced from from ", node_list_dst%n_nodes, ' to ', n_nodes_update
-      write(*,*) "n_elements is reduced from from ", element_list_dst%n_elements, ' to ', n_elements_update
-      node_list_dst%n_nodes = n_nodes_update
-      element_list_dst%n_elements = n_elements_update
+      layer_cut = max(layer_cut, (node_list_dst%n_nodes - n_nodes_update) / n_nodes_each_circle)
       ierr = 0
     else
-      write(*,*) "The imported data has not been remapped, failed on all nodes!!!!"
+      write(*,*) "The imported data has not been mapped, failed on all nodes!!!!"
       return
     endif
   else
     !< This is just the same grid mesh
     node_list_dst = node_list_src
-    write(*,*) 'Same mesh as the original, remapping is not required.'
+    write(*,*) 'Same mesh as the original, mapping is not required.'
     write(*,'(A, ES15.6)') ' max_delta_RZ = ', max_delta_RZ
+  endif
+  
+  if(layer_cut .gt. 0) then
+    n_nodes_update = node_list_dst%n_nodes - layer_cut * n_nodes_each_circle
+    n_elements_update = n_nodes_update - n_nodes_each_circle
+    node_list_dst%node(n_nodes_update - n_nodes_each_circle + 1 : n_nodes_update)%boundary = node_list_dst%node(node_list_dst%n_nodes - n_nodes_each_circle + 1 : node_list_dst%n_nodes)%boundary
+    write(*,*) layer_cut, " layers of nodes & elements are removed."
+    write(*,*) "Boundary nodes at the last surface are updated."
+    write(*,*) "n_nodes is reduced from from ", node_list_dst%n_nodes, ' to ', n_nodes_update
+    write(*,*) "n_elements is reduced from from ", element_list_dst%n_elements, ' to ', n_elements_update
+    node_list_dst%n_nodes = n_nodes_update
+    element_list_dst%n_elements = n_elements_update
   endif
 
   ! --- Required initializations to update equilibrium state
@@ -2414,6 +2420,6 @@ subroutine remap_from_restart(node_list_dst, element_list_dst, node_list_src, el
   ! deallocate(node_list_src, element_list_src)
 
   return
-end subroutine remap_from_restart
+end subroutine regrid_from_restart
 
 end module mod_import_restart

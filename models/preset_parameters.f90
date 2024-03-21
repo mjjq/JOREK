@@ -58,9 +58,9 @@ subroutine preset_parameters
   central_mass    = 2.d0        ! the central average ion mass (D)
 
   restart      = .false.
-  remap        = .false.
   import_equil = .false.
   regrid       = .false.
+  layer_cut    = 0
   rst_format   = 0             ! use 'old' format for restart import
   write_ps     = .true.           ! write postscript file at the end of the run 
   

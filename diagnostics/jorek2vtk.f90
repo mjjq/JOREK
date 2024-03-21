@@ -1248,7 +1248,7 @@ do i=1,element_list%n_elements
 enddo  ! n_elements
 
 #if (!defined WITH_Impurities)
-  if (deuterium_adas)  ad_deuterium =  read_adf11(0,'96_h') !< for both include_radiation and include_neutral_dens
+  if (deuterium_adas)  ad_deuterium =  read_adf11(0,'96_h',trim(adas_dir)) !< for both include_radiation and include_neutral_dens
   if (include_radiation) then
     do i=1,nnos
       r0_real8  = scalars(i,var_rho)

@@ -3780,7 +3780,6 @@ module exec_commands
     i_file=111
     open(i_file, file=trim(filename), form='formatted', status=trim(status), access=trim(access),  &
         iostat=ierr)
-!    open(111,file=trim(filename),action="write",position="append",iostat=ierr)
     write(i_file,'(1e14.6)') res
     close(i_file)
 

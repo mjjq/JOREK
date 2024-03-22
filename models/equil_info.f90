@@ -417,7 +417,7 @@ module equil_info
   real*8  :: R, R_s, R_t, Z, Z_s, Z_t, P, P_s, P_t, P_st, P_ss, P_tt
   real*8  :: x(2), s, t, xerr, ferr, s_xp_init(2), t_xp_init(2)
   real*8  :: R_axis0, Z_axis0, R_xpoint0, Z_xpoint0, r_margin, s_axis, t_axis, psi_axis, fac_axis_xpoint       
-  integer :: ij_xpoint(2,2), i, iv, ms, mt, kf, kv, i_tries, i_init       
+  integer :: ij_xpoint(2,2), i, iv, ms, mt, kf, kv, i_tries, i_init
   integer :: i_elm_xp_init(2), min_indices_lw(3), min_indices_up(3)
   integer :: i_elm_axis, ifail_axis   
   logical :: found_upper, found_lower

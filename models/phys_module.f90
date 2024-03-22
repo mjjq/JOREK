@@ -51,6 +51,7 @@ module phys_module
   real*8  :: density_reflection   !< density reflection coeefficient on open fieldlines
   real*8  :: neutral_reflection   !< reflection coefficient of ions into neutrals (model500)
   real*8  :: imp_reflection       !< impurity reflection coefficient on open fieldlines
+  real*8  :: loop_voltage         !< Apply a loop voltage at the boundary of the computational domain (in V; works only for fixed boundary)
   logical :: old_deuterium_atomic !< use old fit to calculate atomic coefficients for D (ionization, recombination, radiation), otherwise a better fit is used
   logical :: deuterium_adas       !< use OPEN ADAS to calculate ionization, recombination and radiation coeffients for deuterium                        
   logical :: deuterium_adas_1e20  !< use OPEN ADAS with fixed density=1e20 to calculate ionization, recombination and radiation coeffients for deuterium

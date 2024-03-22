@@ -497,11 +497,7 @@ subroutine bootstrap_get_averaged_j_spline(my_id, node_list, element_list, psi_a
     call find_flux_surfaces(my_id,xpoint,xcase,node_list,element_list,flux_list)
 
     call tr_allocate(sep_list%psi_values,1,1,"sep_list%psi_values",CAT_GRID)
-    ! TODO
-    ! I think passing `i` to psi_values accesses wrong element, but Stan didn't get a crash...
-    ! either Fortran lets you go out of bounds and the separatrix didn't matter too much, or
-    ! somehow this works. Correction expected: psi_values(i) -> psi_values(1)
-    sep_list%psi_values(i) = psi_bnd
+    sep_list%psi_values(1) = psi_bnd
     call find_flux_surfaces(my_id,xpoint,xcase,node_list,element_list,sep_list)
   endif
   
@@ -716,11 +712,7 @@ subroutine bootstrap_get_q_and_ft_splines(my_id, node_list, element_list, psi_ax
     call find_flux_surfaces(my_id,xpoint,xcase,node_list,element_list,flux_list)
 
     call tr_allocate(sep_list%psi_values,1,1,"sep_list%psi_values",CAT_GRID)
-    ! TODO
-    ! I think passing `i` to psi_values accesses wrong element, but Stan didn't get a crash...
-    ! either Fortran lets you go out of bounds and the separatrix didn't matter too much, or
-    ! somehow this works. Correction expected: psi_values(i) -> psi_values(1)
-    sep_list%psi_values(i) = psi_bnd
+    sep_list%psi_values(1) = psi_bnd
     call find_flux_surfaces(my_id,xpoint,xcase,node_list,element_list,sep_list)
   endif
   

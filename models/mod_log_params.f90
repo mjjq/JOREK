@@ -259,6 +259,7 @@ write(*,'(1x,a)',advance='no') ' USE_CATALYST : '
     write(*,REAL_FMT) 'sig_z                 ', sig_z(:)
     write(*,REAL_FMT) 'bgf_r                 ', bgf_r
     write(*,REAL_FMT) 'bgf_z                 ', bgf_z
+    write(*,REAL_FMT) 'bgf_rpolar            ', bgf_rpolar
     write(*,REAL_FMT) 'bgf_tht               ', bgf_tht
   end if
 

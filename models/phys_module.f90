@@ -554,7 +554,8 @@ module phys_module
   real*8  :: SIG_tht(2)        	    !< Width of grid accumulation (two positions) (for polar grid)
   real*8  :: XR_z(2)           	    !< Z-position of square grid accumulation (two positions) (for square grid)
   real*8  :: SIG_z(2)          	    !< Z-Width of grid accumulation (two positions) (for square grid)
-  real*8  :: bgf_r, bgf_z, bgf_tht  !< Background for meshac distribution for R-Z or R-theta accumulation
+  real*8  :: bgf_r, bgf_z           !< Background for meshac distribution for R-Z accumulation
+  real*8  :: bgf_rpolar, bgf_tht    !< Background for meshac distribution for R-theta accumulation
   
   !> @name Flux surface grid
   !! Parameters defining a flux-aligned grid without X-point in the poloidal plane.

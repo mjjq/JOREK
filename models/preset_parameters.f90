@@ -128,7 +128,8 @@ subroutine preset_parameters
   SIG_z(:)      = 999.d0
   bgf_r         = 0.7
   bgf_z         = 0.7
-  bgf_tht       = 0.7
+  bgf_rpolar    = 0.6
+  bgf_tht       = 0.6
 
   SIG_closed  = 0.1d0
   SIG_open    = 0.1d0

@@ -16,13 +16,14 @@ integer, intent(out)   :: ifail
 
 integer :: k
 integer, dimension(:), allocatable :: i_elms
+real*8  :: minErrx
 
 ielm_out = 0
 call elements_containing_point(R_find, Z_find, i_elms)
 
 ! then loop through all
 do k=1,size(i_elms)
-  call find_RZ_single(node_list,element_list,i_elms(k),R_find,Z_find,R_out,Z_out,ielm_out,s_out,t_out,ifail)
+  call find_RZ_single(node_list,element_list,i_elms(k),R_find,Z_find,R_out,Z_out,ielm_out,s_out,t_out,ifail,minErrx)
   if (ifail .eq. 0) exit
 enddo
 
@@ -49,30 +50,49 @@ subroutine find_RZ_all(node_list,element_list,R_find,Z_find,R_out,Z_out,ielm_out
   
   integer :: k
   integer, dimension(:), allocatable :: i_elms
+  real*8  :: minErrx, minErrxAll
+  real*8  :: R_out_min,Z_out_min,s_out_min,t_out_min
+  integer :: ielm_out_min,ifail_min
   
   ielm_out = 0
+  ielm_out_min = 0
   call elements_containing_point(R_find, Z_find, i_elms)
   
   ! then loop through all
   do k=1,size(i_elms)
-    call find_RZ_single(node_list,element_list,i_elms(k),R_find,Z_find,R_out,Z_out,ielm_out,s_out,t_out,ifail)
+    call find_RZ_single(node_list,element_list,i_elms(k),R_find,Z_find,R_out,Z_out,ielm_out,s_out,t_out,ifail,minErrx)
     if (ifail .eq. 0) exit
   enddo
   
   if (ielm_out .eq. 0 .or. ifail .ne. 0) then
     ! then loop through the whole element_list
+    minErrxAll = 1.d8
     do k=1,element_list%n_elements
-      call find_RZ_single(node_list,element_list,k,R_find,Z_find,R_out,Z_out,ielm_out,s_out,t_out,ifail)
+      call find_RZ_single(node_list,element_list,k,R_find,Z_find,R_out,Z_out,ielm_out,s_out,t_out,ifail,minErrx)
       if (ifail .eq. 0) exit
+      if ((ifail .eq. 911) .and. (minErrx .le. minErrxAll)) then
+        minErrxAll = minErrx
+        R_out_min = R_out; Z_out_min = Z_out
+        s_out_min = s_out; t_out_min = t_out
+        ielm_out_min = ielm_out
+        ifail_min = ifail
+      endif
     enddo
   endif
   
   if (ielm_out .eq. 0) ifail = 99
   if (ifail .eq. 999) ielm_out = 0 ! Otherwise testing ielm=0 on output does not
+  if (ifail_min .eq. 911) then
+    R_out = R_out_min; Z_out = Z_out_min
+    s_out = s_out_min; t_out = t_out_min
+    ielm_out = ielm_out_min
+    ifail = 0
+    write(*,'(A, ES15.6)') " Approximated solution, please note! Error is: ", minErrxAll
+  endif
   ! work anymore (and we don't always check ifail)
   end subroutine find_RZ_all
 
-subroutine find_RZ_single(node_list,element_list,i_elm,R_find,Z_find,R_out,Z_out,ielm_out,s_out,t_out,ifail)
+subroutine find_RZ_single(node_list,element_list,i_elm,R_find,Z_find,R_out,Z_out,ielm_out,s_out,t_out,ifail,minErrx)
 !-------------------------------------------------------------------------
 !< solves two non-linear equations using Newtons method (from numerical recipes)
 !< LU decomposition replaced by explicit solution of 2x2 matrix.
@@ -91,6 +111,7 @@ real*8, intent(in)     :: R_find, Z_find
 real*8, intent(out)    :: R_out,Z_out,s_out,t_out
 integer, intent(out)   :: ielm_out
 integer, intent(out)   :: ifail
+real*8, intent(out)    :: minErrx
 
 integer :: i, ntrial, istart
 real*8  :: RRg1,dRRg1_dr,dRRg1_ds
@@ -101,6 +122,7 @@ real*8  :: x(2), FVEC(2), FJAC(2,2), p(2)
 ntrial = 20
 tolx = 1.d-8
 tolf = 1.d-15
+minErrx = 1.d8
 
 ielm_out = i_elm ! Since we only test a single element
 
@@ -150,6 +172,7 @@ do istart = 1,5
       ielm_out  = i_elm
       R_out     = RRg1
       Z_out     = ZZg1
+      minErrx   = tolx
 
 !        write(*,'(A,i3,4e16.8)') ' newton (1) : ',i,errf,errx,x
 
@@ -194,6 +217,21 @@ do istart = 1,5
       return
     endif
 
+    !> store the result with minimum error
+    if(errx .le. minErrx) then
+      minErrx = errx
+      s_out     = x(1)
+      t_out     = x(2)
+
+      ielm_out  = i_elm
+      R_out     = RRg1
+      Z_out     = ZZg1
+      ! ifail = 911
+    endif
+
   enddo
 enddo
+
+if(minErrx .le. 1.d8)  ifail = 911
+
 end subroutine find_RZ_single

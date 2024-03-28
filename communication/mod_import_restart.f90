@@ -2255,7 +2255,7 @@ subroutine regrid_from_restart(node_list_dst, element_list_dst, node_list_src, e
   type (type_bnd_element_list)           :: bnd_elm_list_dst
   type (type_bnd_node_list)              :: bnd_node_list_dst
 
-  integer                                :: inode, itor, ivar, i_elm_find
+  integer                                :: inode, itor, ivar, i_elm_find, ivar_loop_size
   real*8                                 :: s_find, t_find, R_find, Z_find
   
   real*8                                 :: R_g_tmp, R_s_tmp, R_t_tmp, R_st_tmp, R_ss_tmp, R_tt_tmp
@@ -2330,9 +2330,16 @@ subroutine regrid_from_restart(node_list_dst, element_list_dst, node_list_src, e
       Z_t = node_list_dst%node(inode)%x(1,3,2)
       Z_st = node_list_dst%node(inode)%x(1,4,2)   
 
+#ifdef fullmhd
+      ivar_loop_size = (2 * n_var + 2)   !< values, delta, psi_eq, Fprof_eq needed
+#elif altcs
+      ivar_loop_size = (2 * n_var + 1)   !< values, delta, psi_eq needed
+#else
+      ivar_loop_size = (2 * n_var)       !< values, delta needed
+#endif
+
       itor_loop: do itor = 1, n_tor
-        ivar_loop: do ivar = 1, (2 * n_var + 2)
-          
+        ivar_loop: do ivar = 1, ivar_loop_size
           if(ivar .gt. (2 * n_var) .and. itor .gt. 1) cycle !< only one interp call is required for Fprof_eq and psi_eq
 
           if (ivar .le. n_var) then                !< map values
@@ -2341,13 +2348,15 @@ subroutine regrid_from_restart(node_list_dst, element_list_dst, node_list_src, e
           else if (ivar .le. (2 * n_var)) then     !< map deltas
             call interp_delta(node_list_src, element_list_src, i_elm_find, ivar - n_var, itor, s_find, t_find, eq_g_tmp, eq_s_tmp, eq_t_tmp, eq_st_tmp, eq_ss_tmp, eq_tt_tmp)
             val_ptrs => node_list_dst%node(inode)%deltas(itor, :, ivar - n_var)
-#ifdef fullmhd
-          else if (ivar .eq. (2 * n_var + 1)) then !< map Fprof_eq
-            call interp(node_list_src, element_list_src, i_elm_find, 710, itor, s_find, t_find, eq_g_tmp, eq_s_tmp, eq_t_tmp, eq_st_tmp, eq_ss_tmp, eq_tt_tmp)
-            val_ptrs => node_list_dst%node(inode)%Fprof_eq(:)
-          else if (ivar .eq. (2 * n_var + 2)) then !< map psi_eq
+#if (defined fullmhd) || (defined altcs)
+          else if (ivar .eq. (2 * n_var + 1)) then !< map psi_eq
             call interp(node_list_src, element_list_src, i_elm_find, 711, itor, s_find, t_find, eq_g_tmp, eq_s_tmp, eq_t_tmp, eq_st_tmp, eq_ss_tmp, eq_tt_tmp)
             val_ptrs => node_list_dst%node(inode)%psi_eq(:)
+#endif
+#ifdef fullmhd
+          else if (ivar .eq. (2 * n_var + 2)) then !< map Fprof_eq
+            call interp(node_list_src, element_list_src, i_elm_find, 710, itor, s_find, t_find, eq_g_tmp, eq_s_tmp, eq_t_tmp, eq_st_tmp, eq_ss_tmp, eq_tt_tmp)
+            val_ptrs => node_list_dst%node(inode)%Fprof_eq(:)
 #endif
           else
             write(*,*) "Undefined mapping operations. Please check!"
@@ -2371,10 +2380,8 @@ subroutine regrid_from_restart(node_list_dst, element_list_dst, node_list_src, e
 
           val_ptrs(1) = eq_g_tmp
           val_ptrs(2) = eq_g_R * R_s + eq_g_Z * Z_s
-#ifdef fullmhd
           val_ptrs(3) = eq_g_R * R_t + eq_g_Z * Z_t
           val_ptrs(4) = eq_g_R * R_st + eq_g_Z * Z_st + (R_t * Z_s + Z_t * R_s) * eq_g_RZ + R_s * R_t * eq_g_RR + Z_s * Z_t * eq_g_ZZ
-#endif
 
         enddo ivar_loop
       enddo itor_loop

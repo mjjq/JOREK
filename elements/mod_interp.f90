@@ -359,14 +359,16 @@ do kv = 1,n_vertex_max  ! 4 vertices
   iv = element_list%element(i_elm)%vertex(kv)  ! the node number
   do kf = 1, n_degrees       ! basis functions
 
-#ifdef fullmhd
+#if (defined fullmhd) || (defined altcs)
     if (i_var == 710) then
+#ifdef fullmhd
       P    = P    + node_list%node(iv)%Fprof_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G(kv,kf)
       P_s  = P_s  + node_list%node(iv)%Fprof_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G_s(kv,kf)
       P_t  = P_t  + node_list%node(iv)%Fprof_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G_t(kv,kf)
       P_st = P_st + node_list%node(iv)%Fprof_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G_st(kv,kf)
       P_ss = P_ss + node_list%node(iv)%Fprof_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G_ss(kv,kf)
       P_tt = P_tt + node_list%node(iv)%Fprof_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G_tt(kv,kf)
+#endif
     elseif (i_var == 711) then
       P    = P    + node_list%node(iv)%psi_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G(kv,kf)
       P_s  = P_s  + node_list%node(iv)%psi_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G_s(kv,kf)
@@ -382,7 +384,7 @@ do kv = 1,n_vertex_max  ! 4 vertices
       P_st = P_st + node_list%node(iv)%values(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G_st(kv,kf)
       P_ss = P_ss + node_list%node(iv)%values(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G_ss(kv,kf)
       P_tt = P_tt + node_list%node(iv)%values(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G_tt(kv,kf)
-#ifdef fullmhd
+#if (defined fullmhd) || (defined altcs)
     endif
 #endif
   end do

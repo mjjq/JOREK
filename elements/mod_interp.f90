@@ -392,7 +392,6 @@ end do
 end subroutine interp
 
 
-
 !> subroutine calculates the interpolation within one element (i_elm) for a given position
 !> (s,t) in the local coordinates, of the deltas instead of the values
 pure subroutine interp_delta(node_list, element_list, i_elm, i_var, i_harm, s, t, P, P_s, P_t, P_st, P_ss, P_tt)
@@ -605,7 +604,6 @@ Z_ss = sum(xZ*H_ss)
 Z_tt = sum(xZ*H_tt)
 
 end subroutine interp_RZ_2
-
 
 
 !> subroutine calculates the interpolation within one element (i_elm) for a given position

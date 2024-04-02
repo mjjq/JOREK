@@ -114,7 +114,7 @@ integer               :: i_psin, i_test, iimp(6), i_ne, ineu(7), ibg_tot, i_pell
 integer               :: i_full(11), i_vec_B, i_vec_V, i_vec_E, i_vec_Jpol
 integer, allocatable  :: iibg(:), iproj(:)
 character*36          :: imp_label, proj_label
-real*8                :: ratio_st
+
 
 #ifdef WITH_Impurities
 ! See https://www.jorek.eu/wiki/doku.php?id=model500_501_555 for details
@@ -436,15 +436,6 @@ end if
 
 call import_restart(node_list, element_list, 'jorek_restart', rst_format, ierr, .true.)
 
-ratio_st = 1.d0
-do i=1,node_list%n_nodes
-  do j=1,2
-    node_list%node(i)%x(1,2,j) = node_list%node(i)%x(1,2,j)/ratio_st
-    node_list%node(i)%x(1,3,j) = node_list%node(i)%x(1,3,j)/ratio_st
-    node_list%node(i)%x(1,4,j) = node_list%node(i)%x(1,4,j)/ratio_st ** 2
-  enddo
-enddo
-
 call initialise_basis                              ! define the basis functions at the Gaussian points
 
 nnos = nsub*nsub*element_list%n_elements
@@ -486,8 +477,6 @@ if (toroidal_angle .ne. 0.d0) then
   enddo
 endif
 
-open(unit=10, file='element_list_jorek2vtk.dat', status='unknown', action='write')
-
 do i=1,element_list%n_elements
 
    ! if(element_list%element(i)%n_sons.eq.0) then
@@ -501,23 +490,6 @@ do i=1,element_list%n_elements
       t = float(k-1)/float(nsub-1)
 
       call interp_RZ(node_list,element_list,i,s,t,R,R_s,R_t,R_st,R_ss,R_tt,Z,Z_s,Z_t,Z_st,Z_ss,Z_tt)
-
-      if(j .eq. 1 .and. k .eq. 1) then
-        write(10,'(A, I5)') 'inode = ', i
-        write(10,'(A, I5)') 'i_elm_find = ', i
-        write(10,'(A, ES15.6)') 's_find = ', s
-        write(10,'(A, ES15.6)') 't_find = ', t
-        write(10,'(A, ES15.6, A, ES15.6)') 'R_dst = ', node_list%node(i)%x(1,1,1), ', R_interp = ', R
-        write(10,'(A, ES15.6, A, ES15.6)') 'Z_dst = ', node_list%node(i)%x(1,1,2), ', Z_interp = ', Z
-    
-        write(10,'(A, ES15.6, A, ES15.6)') 'R_s_dst  = ', node_list%node(i)%x(1,2,1), ', R_s_interp  = ', R_s
-        write(10,'(A, ES15.6, A, ES15.6)') 'R_t_dst  = ', node_list%node(i)%x(1,3,1), ', R_t_interp  = ', R_t
-        write(10,'(A, ES15.6, A, ES15.6)') 'R_st_dst = ', node_list%node(i)%x(1,4,1), ', R_st_interp = ', R_st
-    
-        write(10,'(A, ES15.6, A, ES15.6)') 'Z_s_dst  = ', node_list%node(i)%x(1,2,2), ', Z_s_interp  = ', Z_s
-        write(10,'(A, ES15.6, A, ES15.6)') 'Z_t_dst  = ', node_list%node(i)%x(1,3,2), ', Z_t_interp  = ', Z_t
-        write(10,'(A, ES15.6, A, ES15.6)') 'Z_st_dst = ', node_list%node(i)%x(1,4,2), ', Z_st_interp = ', Z_st
-      endif
 
       xjac  = R_s * Z_t - R_t * Z_s
 
@@ -1264,7 +1236,6 @@ do i=1,element_list%n_elements
   enddo
 
 enddo  ! n_elements
-close(unit=10)
 
 #if (!defined WITH_Impurities)
   if (deuterium_adas)  ad_deuterium =  read_adf11(0,'96_h') !< for both include_radiation and include_neutral_dens

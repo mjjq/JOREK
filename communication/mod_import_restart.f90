@@ -2396,6 +2396,7 @@ subroutine regrid_from_restart(node_list_dst, element_list_dst, node_list_src, e
       ierr = 0
     else
       write(*,*) "The imported data has not been mapped, failed on all nodes!!!!"
+      ierr = -1
       return
     endif
   else

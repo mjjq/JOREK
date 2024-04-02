@@ -2245,11 +2245,11 @@ subroutine regrid_from_restart(node_list_dst, element_list_dst, node_list_src, e
   implicit none
 
   ! --- Routine parameters
-  type(type_node_list), target, intent(inout)   :: node_list_dst
-  type(type_element_list), intent(inout)        :: element_list_dst
-  type(type_node_list),    intent(in)           :: node_list_src
-  type(type_element_list), intent(in)           :: element_list_src
-  integer,                 intent(out)          :: ierr
+  type(type_node_list),     target, intent(inout) :: node_list_dst
+  type(type_element_list),          intent(inout) :: element_list_dst
+  type(type_node_list),    pointer, intent(inout) :: node_list_src
+  type(type_element_list), pointer, intent(inout) :: element_list_src
+  integer,                          intent(out)   :: ierr
  
   ! --- Local parameters
   type (type_bnd_element_list)           :: bnd_elm_list_dst
@@ -2423,8 +2423,10 @@ subroutine regrid_from_restart(node_list_dst, element_list_dst, node_list_src, e
   call update_equil_state(0,node_list_dst, element_list_dst, bnd_elm_list_dst, xpoint, xcase)
   call populate_element_rtree(node_list_dst, element_list_dst)
   
-  ! --- Would be better if use pointers and decolate node_list_src and element_list_src here
-  ! deallocate(node_list_src, element_list_src)
+  ! --- Decolate node_list_src and element_list_src here
+  deallocate(node_list_src)
+  deallocate(element_list_src)
+  write(*,*) "Temporary node_list and element_list for regrid are deallocated."
 
   return
 end subroutine regrid_from_restart

@@ -2791,7 +2791,7 @@ module exec_commands
     type(type_RHS)              :: rhs_vec, sol_vec
     type(type_SP_SOLVER)        :: solver    
 
-
+  ierr = 0
   if ((jorek_model/=500) .and. (jorek_model/=600)) then
     write(*,*) 'Sorry RHS diagnostic is only available for models 500 and 600!'
     stop

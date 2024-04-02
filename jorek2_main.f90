@@ -279,6 +279,8 @@ mpi_required = 0
   if ( restart .and. (my_id == 0) ) then
     call import_restart(node_list, element_list, 'jorek_restart', rst_format, ierr)
     if(regrid) then
+      if(.not.associated(node_list_regrid)) allocate(node_list_regrid)
+      if(.not.associated(element_list_regrid)) allocate(element_list_regrid)
       node_list_regrid = node_list
       element_list_regrid = element_list
     endif

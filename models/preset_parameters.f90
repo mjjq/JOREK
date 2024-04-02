@@ -344,7 +344,7 @@ subroutine preset_parameters
   ! ------------------------------------------
   ! --- Default boundary conditions ----------
   ! ------------------------------------------
-
+  loop_voltage = 0.d0
   ! --- Dirichlet
   bcs(:)%dirichlet%psi     = .true.
   bcs(:)%dirichlet%u       = .true.

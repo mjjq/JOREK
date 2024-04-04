@@ -225,7 +225,7 @@ real*8     :: frad_bg, Lrad_imp                               ! Retain hard-code
 #endif
 
 ! SAW energy functional (linear MHD)
-real*8     :: saw_ene_dens, saw_ene  
+real*8     :: saw_ene_dens, saw_ene, BB2_zero
 
 #ifndef NOMPIVERSION
 call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ierr) ! number of MPI procs
@@ -360,6 +360,7 @@ Tie_min_neg = 0.5*T_min_neg
 
 saw_ene_dens = 0.d0
 saw_ene      = 0.d0
+BB2_zero     = 0.d0
 
 !$omp parallel default(none)                                                                   &
 !$omp   shared(element_list,node_list, H, H_s, H_t, HZ, HZ_p, ife_min, ife_max, xpoint, xcase, &
@@ -395,7 +396,7 @@ saw_ene      = 0.d0
 !$omp          index_main_imp,                                                                 &
 #endif
 !$omp          T_1, T_max_eta, T_max_eta_ohm, eta_T_dependent,                                 &
-!$omp          saw_ene_dens, saw_ene,                                                          &
+!$omp          saw_ene_dens, saw_ene, BB2_zero,                                                &  
 !$omp          wgauss_copy, varmin, varmax)                                                    &
 !$omp   private(ife,iv,inode,element,nodes,i,j, k,in, mp, ms, mt,                              &
 !$omp           x_g, y_g, x_s, y_s, x_t, y_t, xjac, xjac_R, xjac_Z, eq_g, eq_s, eq_t, eq_p,    &
@@ -466,7 +467,7 @@ omp_tid      = 0
 !$omp                VM_int, VM_tot, Vol, P_tot, D_tot,J2_tot, J2_int, J2_ext,                &
 !$omp                heli_tot, mag_wk_tot, vpar_disp_tot, thm_wk_tot, area1, mag_src_tot,     &
 !$omp                fric_disp_tot, R2curr_tmp, Zcurr_tmp,C_intern_3d,C_ext_3d,H_impl_int,    &
-!$omp                H_impl_ext, vprp_disp_tot, saw_ene_dens, saw_ene)
+!$omp                H_impl_ext, vprp_disp_tot, saw_ene_dens, saw_ene, BB2_zero)
 
 do ife = ife_min, ife_max
 
@@ -1352,7 +1353,9 @@ do ife = ife_min, ife_max
           VM_ext = VM_ext + (dpsidx**2+dpsidy**2)/BigR**2 * xjac * BigR * wst * delta_phi
           J2_ext = J2_ext + eta_T_ohm * (ZJ0/BigR)**2.d0 * xjac * BigR * wst * delta_phi
         endif
-        saw_ene_dens = (dpsidx_3d**2 + dpsidy_3d**2) / BigR **2  - (dpsidx * dpsidx_3d + dpsidy * dpsidy_3d) ** 2 / (BigR**4 * BB2)
+        BB2_zero = (F0 **2 + (dpsidx - dpsidx_3d) **2 + (dpsidy - dpsidy_3d) **2) / BigR ** 2
+        saw_ene_dens = (F0 **2 * (dpsidx_3d**2 + dpsidy_3d**2) + ((dpsidx - dpsidx_3d) **2 + (dpsidy - dpsidy_3d) **2) * (dpsidx_3d**2 + dpsidy_3d**2) & 
+               - ((dpsidx - dpsidx_3d) * dpsidx_3d + (dpsidy - dpsidy_3d) * dpsidy_3d) ** 2) / (BigR**4 * BB2_zero)
         saw_ene = saw_ene + saw_ene_dens * xjac * BigR * wst * delta_phi ! SAW energy functional (linear MHD)
       enddo
     enddo
@@ -2284,13 +2287,13 @@ if (my_id .eq. 0) then
         res(iexpr) = current_out 
 
       case ( 'int3d_jR_tot' )
-        res(iexpr+1) = current_R_tot 
+        res(iexpr) = current_R_tot 
 
       case ( 'int3d_jR_in' )
-        res(iexpr+1) = current_R_in 
+        res(iexpr) = current_R_in 
 
       case ( 'int3d_jR_out' )
-        res(iexpr+1) = current_R_out 
+        res(iexpr) = current_R_out 
 
       case ( 'li3' )
         res(iexpr) = li3

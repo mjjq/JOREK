@@ -67,7 +67,7 @@ module exec_commands
   
   private
   public exec_command, general_help, specific_help, clean_up, average, expr_list, step_imported, qprofile, &
-         zeroD_quantities, separatrix, rectangle, eval_saw_ene_linear
+         zeroD_quantities, separatrix, rectangle
 
   
   
@@ -193,8 +193,6 @@ module exec_commands
           call set_postproc_dir(command, ierr)
         case ( 'namelist' )
           call load_namelist(command, ierr)
-        case ( 'eval_saw_ene_linear' )
-          call eval_saw_ene_linear(command, first_step, ierr)
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
           ! --- Read ADAS data and generate coronal equilibrium is needed
           call init_imp_adas(0)
@@ -243,7 +241,7 @@ module exec_commands
           'jorek-units', 'jnorm_bnd_curr', 'si-units', 'grid', 'grid_diagnostics', 'rectangle',    &
           'rectangular_torus', 'energy_spectrum', 'average_h5', 'I_halo_TPF', 'spi-state',         &
           'shards', 'zeroD_quantities', 'boundary_quantities', 'find_q_surface', 'midplane2d',     &
-          'expressions_four', 'RHS_terms_vtk','eval_saw_ene_linear')
+          'expressions_four', 'RHS_terms_vtk')
           call add_to_command_queue(command, ierr)
         case ( 'help' )
           call help(command, ierr)
@@ -2161,7 +2159,7 @@ module exec_commands
     call check_exprs_selected(ierr);           if ( ierr /= 0 ) return
     units = get_int_setting('units', ierr)
 
-    allocate(res(expr_list%n_expr+1))
+    allocate(res(expr_list%n_expr))
     res = 0.d0   
  
     write(filename,'(4a)') trim(DIR), 'integrals3D',  &
@@ -2179,7 +2177,6 @@ module exec_commands
         iostat=ierr)
     
     if ( first_step ) then
-      write(i_file,'(a)',advance='no') '# time                   '
       do i = 1, expr_list%n_expr
         s = trim(expr_list%expr(i)%name)
         write(i_file,'(a)',advance='no') s
@@ -3740,49 +3737,5 @@ module exec_commands
     write(*,*)
     
   end subroutine grid_diagnostics
-  
-
- subroutine eval_saw_ene_linear(command, first_step, ierr)
-
-    use mod_integrals3D_nompi
-
-    ! --- Routine parameters
-    type(type_command), intent(in)  :: command     !< Command to be executed
-    logical,            intent(in)  :: first_step  !< First time step of a for loop?
-    integer,            intent(out) :: ierr        !< Error flag
-
-    ! --- Local variables
-    integer :: units, i_file
-    real*8, allocatable :: res(:)
-    character(len=1024) :: filename, status, access
-
-    ierr = 0
-
-    ! --- Some checks
-    call check_step_imported(ierr);            if ( ierr /= 0 ) return
-    units = get_int_setting('units', ierr)
-   
-    allocate(res(exprs_saw_ene%n_expr))
-    res = 0.d0
-
-    write(filename,'(4a)') trim(DIR), 'saw_ene',  &
-       trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
-
-    call int3d_new(0, node_list, element_list, bnd_node_list, bnd_elm_list, exprs_saw_ene, res, units)
-
-    status = 'replace'
-    access = 'sequential'
-    if ( .not. first_step ) then
-      status = 'old'
-      access = 'append'
-    end if
-    ! --- Output SAW energy functional 
-    i_file=111
-    open(i_file, file=trim(filename), form='formatted', status=trim(status), access=trim(access),  &
-        iostat=ierr)
-    write(i_file,'(1e14.6)') res
-    close(i_file)
-
-  end subroutine eval_saw_ene_linear
   
 end module exec_commands

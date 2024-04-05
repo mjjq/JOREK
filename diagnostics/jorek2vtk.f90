@@ -386,7 +386,7 @@ if (include_radiation) then
 endif
 
 if (include_saw_ene) then
-  call add_vtk_entry('SAW_energy  ', 'SAW_energy  ',  i_saw, n_scalars, si_units, scalar_names)  ! SAW energy functional (linear MHD)
+  call add_vtk_entry('SAW_energy  ', 'SAW_ene_Jm-3 ',  i_saw, n_scalars, si_units, scalar_names)  ! SAW energy functional (linear MHD)
 endif
 
 #ifdef fullmhd
@@ -1220,7 +1220,8 @@ do i=1,element_list%n_elements
            scalars(inode,i_pellet(2)) = local_source
         endif ! use_pellet
         
-        ! SAW energy functional (linear MHD)
+        ! SAW energy functional (linear MHD), see the first term of eq. (8.31) in Freidberg's Ideal MHD
+        ! and/or the first term of eq. (2.18) in J. Plasma Phys. (2022), vol.88, 905880512
         BB2_zero = 0.d0 
         if (include_saw_ene) then
           BB2_zero = (F0 **2 + ps0_x **2 + ps0_y **2 ) / BigR**2
@@ -1749,6 +1750,9 @@ if (SI_units) then
    end do
   end if
 #endif /* WITH_Impurities */
+  if (include_saw_ene) then
+    scalars(i,i_saw) = scalars(i,i_saw)/(2*MU_ZERO)
+  endif
 #endif /* end of non-full-MHD part*/
 
   enddo  ! nnos

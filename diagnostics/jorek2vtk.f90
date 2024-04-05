@@ -1578,8 +1578,10 @@ if (SI_units) then
 
     !============================================u in m/s
     scalars(i,var_u) = scalars(i,var_u)/t_norm
-    !============================================j_phi in MA/m2
-    scalars(i,var_zj) = currdens(i) / MU_zero * 1.e-6
+    if (jorek_model .ge. 199) then
+      !============================================j_phi in MA/m2
+      scalars(i,var_zj) = currdens(i) / MU_zero * 1.e-6
+    endif
     !============================================density in 1e20m-3
     scalars(i,var_rho) = scalars(i,var_rho) * central_density
     if (with_impurities) then

@@ -2270,15 +2270,24 @@ subroutine regrid_from_restart(node_list_dst, element_list_dst, node_list_src, e
   integer                                :: n_nodes_update, n_elements_update, n_nodes_each_circle
   real*8                                 :: max_delta_RZ
   logical                                :: is_different_mesh
+  logical                                :: is_different_axis
 
   ierr = 0
   is_different_mesh = .true.
+  is_different_axis = .true.
   
   if (node_list_src%n_nodes .eq. node_list_dst%n_nodes) then
     max_delta_RZ = maxval(dsqrt(dabs(node_list_src%node(:)%x(1,1,1) - node_list_dst%node(:)%x(1,1,1))**2 &
                               + dabs(node_list_src%node(:)%x(1,1,2) - node_list_dst%node(:)%x(1,1,2))**2))
     if(max_delta_RZ .lt. 1.d-6) is_different_mesh = .false.   
   endif  
+
+  max_delta_RZ = dsqrt(dabs(node_list_src%node(1)%x(1,1,1) - node_list_dst%node(1)%x(1,1,1))**2 &
+               + dabs(node_list_src%node(1)%x(1,1,2) - node_list_dst%node(1)%x(1,1,2))**2)
+  if(max_delta_RZ .lt. 1.d-6) is_different_axis = .false.
+
+  write(*,*) "is_different_mesh = ", is_different_mesh
+  write(*,*) "is_different_axis = ", is_different_axis
 
   if(is_different_mesh) then 
     write(*,*) 'Start mapping data into new mesh ...'
@@ -2297,6 +2306,11 @@ subroutine regrid_from_restart(node_list_dst, element_list_dst, node_list_src, e
 
       !< slight difference might exist between the required (R, Z)_dst and the actual outcome (R, Z)_src
       call find_RZ_all(node_list_src,element_list_src,R,Z,R_find,Z_find,i_elm_find,s_find,t_find,ierr)
+      if(node_list_dst%node(inode)%axis_node .and. (.not.is_different_axis)) then
+        s_find = 0.d0
+        t_find = 0.d0
+        write(*,*) "Magnetic axis position is the same as the original!"
+      endif
 
       if(ierr .ne. 0) then
         n_nodes_update = min(n_nodes_update, inode - 1)

@@ -225,7 +225,7 @@ real*8     :: frad_bg, Lrad_imp                               ! Retain hard-code
 #endif
 
 ! SAW energy functional (linear MHD)
-real*8     :: saw_ene, saw_ene_tot, saw_ene_dens, BB2_zero
+real*8     :: SAW_tot, saw_energy_tot, saw_ene_dens, BB2_zero
 
 #ifndef NOMPIVERSION
 call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ierr) ! number of MPI procs
@@ -298,7 +298,7 @@ psi_off      = 0.d0
 thm_wk_tot   = 0.d0
 mag_wk_tot   = 0.d0
 mag_src_tot  = 0.d0
-saw_ene      = 0.d0
+SAW_tot      = 0.d0
 varmin   = +1.d99
 varmax   = -1.d99
 R2curr_tmp = 0.d0
@@ -373,7 +373,7 @@ Tie_min_neg = 0.5*T_min_neg
 !$omp          central_density, pellet_particles,pellet_density, pellet_volume,                &
 !$omp          local_pellet_particles, local_plasma_particles, local_pellet_volume,            &
 !$omp          heli_tot,  keep_current_prof, psi_off, visco_par, visco_par_heating, thm_wk_tot,&
-!$omp          visco, visco_T_dependent, visco_old_setup, saw_ene,                             &
+!$omp          visco, visco_T_dependent, visco_old_setup, SAW_tot,                             &
 !$omp          mag_wk_tot, vpar_disp_tot, vprp_disp_tot, fric_disp_tot, area1, mag_src_tot,                   &
 !$omp          eta_ohmic, central_mass, R2curr_tmp, Zcurr_tmp,                                 &
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
@@ -463,7 +463,7 @@ omp_tid      = 0
 !$omp                VM_int, VM_tot, Vol, P_tot, D_tot,J2_tot, J2_int, J2_ext,                &
 !$omp                heli_tot, mag_wk_tot, vpar_disp_tot, thm_wk_tot, area1, mag_src_tot,     &
 !$omp                fric_disp_tot, R2curr_tmp, Zcurr_tmp,C_intern_3d,C_ext_3d,H_impl_int,    &
-!$omp                H_impl_ext, vprp_disp_tot, saw_ene)
+!$omp                H_impl_ext, vprp_disp_tot, SAW_tot)
 
 do ife = ife_min, ife_max
 
@@ -1354,7 +1354,7 @@ do ife = ife_min, ife_max
         ! and/or the first term of eq. (2.18) in J. Plasma Phys. (2022), vol. 88, 905880512
         saw_ene_dens = (F0 **2 * (dpsidx_3d**2 + dpsidy_3d**2) + ((dpsidx - dpsidx_3d) **2 + (dpsidy - dpsidy_3d) **2) * (dpsidx_3d**2 + dpsidy_3d**2) & 
                - ((dpsidx - dpsidx_3d) * dpsidx_3d + (dpsidy - dpsidy_3d) * dpsidy_3d) ** 2) / (BigR**4 * BB2_zero)
-        saw_ene = saw_ene + saw_ene_dens * xjac * BigR * wst * delta_phi
+        SAW_tot = SAW_tot + saw_ene_dens * xjac * BigR * wst * delta_phi
       enddo
     enddo
   enddo
@@ -1803,7 +1803,7 @@ call MPI_AllReduce(VK_tot,kin_perp_tot,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_W
 call MPI_AllReduce(VM_int,mag_in,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 call MPI_AllReduce(VM_ext,mag_out,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 call MPI_AllReduce(VM_tot,mag_tot,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
-call MPI_AllReduce(saw_ene,saw_ene_tot,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+call MPI_AllReduce(SAW_tot,saw_energy_tot,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 call MPI_AllReduce(J2_int,ohm_in,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 call MPI_AllReduce(J2_ext,ohm_out,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 call MPI_AllReduce(J2_tot,ohm_tot,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
@@ -1861,7 +1861,7 @@ kin_perp_tot         = VK_tot
 mag_in               = VM_int
 mag_out              = VM_ext
 mag_tot              = VM_tot
-saw_ene_tot          = saw_ene
+saw_energy_tot       = SAW_tot
 ohm_in               = J2_int
 ohm_out              = J2_ext
 ohm_tot              = J2_tot
@@ -1969,7 +1969,7 @@ kin_perp_out         = n_period * kin_perp_out* fact_mu0  * 0.5d0
 mag_tot              = n_period * mag_tot     * fact_mu0  * 0.5d0
 mag_in               = n_period * mag_in      * fact_mu0  * 0.5d0
 mag_out              = n_period * mag_out     * fact_mu0  * 0.5d0
-saw_ene_tot          = n_period * saw_ene_tot * fact_mu0  * 0.5d0
+saw_energy_tot       = n_period * saw_energy_tot * fact_mu0  * 0.5d0
 ohm_tot              = n_period * ohm_tot     * fact_flux
 ohm_in               = n_period * ohm_in      * fact_flux
 ohm_out              = n_period * ohm_out     * fact_flux
@@ -2232,7 +2232,7 @@ if (my_id .eq. 0) then
         res(iexpr) = ohm_out 
 
       case ( 'saw_ene' )
-        res(iexpr) = saw_ene_tot
+        res(iexpr) = saw_energy_tot
 
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
       case ( 'Rad_tot' )

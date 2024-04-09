@@ -60,6 +60,7 @@ subroutine preset_parameters
   restart      = .false.
   import_equil = .false.
   regrid       = .false.
+  regrid_from_GS = .false.
   layer_cut    = 0
   rst_format   = 0             ! use 'old' format for restart import
   write_ps     = .true.           ! write postscript file at the end of the run 

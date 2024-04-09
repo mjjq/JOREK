@@ -2309,7 +2309,7 @@ subroutine regrid_from_restart(node_list_dst, element_list_dst, node_list_src, e
       if(node_list_dst%node(inode)%axis_node .and. (.not.is_different_axis)) then
         s_find = 0.d0
         t_find = 0.d0
-        write(*,*) "Magnetic axis position is the same as the original!"
+        write(*,*) "Axis position of the new grid is exactly the same as the original!"
       endif
 
       if(ierr .ne. 0) then
@@ -2324,8 +2324,8 @@ subroutine regrid_from_restart(node_list_dst, element_list_dst, node_list_src, e
       call interp_RZ(node_list_src, element_list_src, i_elm_find, s_find, t_find, R_g_tmp, R_s_tmp, R_t_tmp, R_st_tmp, R_ss_tmp, R_tt_tmp, Z_g_tmp, Z_s_tmp, Z_t_tmp, Z_st_tmp, Z_ss_tmp, Z_tt_tmp)
 
       write(*,'(A, I5, A, ES15.6, A, ES15.6)') ' i_elm_find = ', i_elm_find, ', s_find = ', s_find, ', t_find = ', t_find
-      write(*,'(A, ES15.6, A, ES15.6, A, ES15.6)') ' R (dst) = ', R, ', R_find = ', R_find, ', R_interp = ', R_g_tmp
-      write(*,'(A, ES15.6, A, ES15.6, A, ES15.6)') ' Z (dst) = ', Z, ', Z_find = ', Z_find, ', Z_interp = ', Z_g_tmp
+      write(*,'(A, ES15.6, A, ES15.6, A, ES15.6)') ' R_dst = ', R, ', R_find = ', R_find, ', R_interp = ', R_g_tmp
+      write(*,'(A, ES15.6, A, ES15.6, A, ES15.6)') ' Z_dst = ', Z, ', Z_find = ', Z_find, ', Z_interp = ', Z_g_tmp
 
       xjac = op_xjac(R_s_tmp, R_t_tmp, Z_s_tmp, Z_t_tmp)
       if(xjac .eq. 0) then

@@ -348,6 +348,12 @@ subroutine sanity_checks(my_id, n_cpu, mpi_required, mpi_provided)
     write(*,*) '  No compression will be used in this run.'
   endif
   
+  if(regrid_from_GS .and. (.not. regrid)) then
+    write(*,*) 'WARNING: The regrid option is disabled but regrid_from_GS enabled.'
+    write(*,*) '  now set regrid_from_GS = .false.' 
+    regrid_from_GS = .false.
+  endif
+
 end subroutine sanity_checks
 
 

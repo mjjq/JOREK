@@ -20,6 +20,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 rst_hdf5, rst_hdf5_version, keep_current_prof,      &
                 restart, regrid, layer_cut,                         &
                 write_ps, time_evol_theta,                          &
+                regrid_from_GS,                                     &
                 time_evol_zeta, force_horizontal_Xline,             &
                 Mach1_openBC, thermalization,                       &
                 eta_ARAZ_const, eta_ARAZ_on, eta_ARAZ_simple,       & 

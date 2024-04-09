@@ -12,8 +12,8 @@ module nodes_elements
   type (type_node_list),       pointer :: aux_node_list  !< List of grid nodes (used for particle moments)
 
 !> Used for reampping data from the loaded jorek_restart.h5 into new mesh generated based on the equlibrium
-  type (type_node_list),       pointer :: node_list_regrid      !< List of grid nodes.
-  type (type_element_list),    pointer :: element_list_regrid   !< List of grid elements.
+  type (type_node_list),       pointer :: aux_node_list_regrid      !< List of grid nodes (auxiliary for regrid).
+  type (type_element_list),    pointer :: aux_element_list_regrid   !< List of grid elements (auxiliary for regrid).
 
 #ifdef IMPORT_PERTURBATIONS
   type (type_node_list)        :: node_list2      !< List of grid nodes.

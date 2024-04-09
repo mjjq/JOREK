@@ -279,10 +279,10 @@ mpi_required = 0
   if ( restart .and. (my_id == 0) ) then
     call import_restart(node_list, element_list, 'jorek_restart', rst_format, ierr)
     if(regrid) then
-      if(.not.associated(node_list_regrid)) allocate(node_list_regrid)
-      if(.not.associated(element_list_regrid)) allocate(element_list_regrid)
-      node_list_regrid = node_list
-      element_list_regrid = element_list
+      if(.not.associated(aux_node_list_regrid)) allocate(aux_node_list_regrid)
+      if(.not.associated(aux_element_list_regrid)) allocate(aux_element_list_regrid)
+      aux_node_list_regrid = node_list
+      aux_element_list_regrid = element_list
     endif
     if ( ierr /= 0 ) stop
 
@@ -353,7 +353,7 @@ mpi_required = 0
   !*                  define grid / equilibrium                          *
   !***********************************************************************
   
-  if_not_restart: if ((.not. restart) .or. regrid) then
+  if_not_restart: if ((.not. restart) .or. regrid_from_GS) then
     call tr_resetfile()
     
     call initial_grid(node_list, element_list, bnd_node_list, bnd_elm_list, my_id, n_cpu)
@@ -429,10 +429,28 @@ mpi_required = 0
       write(*,'(A,12e16.8)') ' initial energies : ', W_mag, W_kin
 
     end if ! (my_id == 0)
-
-    ! --- regrid: map the data from node_list_regrid & element_list_regrid into node_list & element_list
-    if(regrid .and. (my_id == 0)) then
-      call regrid_from_restart (node_list, element_list, node_list_regrid, element_list_regrid, ierr)
+    
+  end if if_not_restart
+  
+    ! --- regrid: map the data from aux_node_list_regrid & aux_element_list_regrid into node_list & element_list
+  if(regrid) then
+    if(.not.regrid_from_GS) then
+      if (n_flux > 1) then
+        call flux_grid(node_list, element_list, bnd_node_list, bnd_elm_list, my_id, n_cpu)
+      else
+        call initial_grid(node_list, element_list, bnd_node_list, bnd_elm_list, my_id, n_cpu)
+        ! --- Synchronizing MPI processes avoid deadlock issues on some machine
+        call MPI_Barrier(MPI_COMM_WORLD,ierr)
+        ! --- Plot the grid
+        if ( (my_id == 0) .and. (.not. bench_without_plot) ) then
+          call plot_grid(node_list,element_list,bnd_elm_list,bnd_node_list,.true.,.false.,'initial_regrid')
+        end if
+        ! --- Check sanity of grid
+        if (.not. RZ_grid_inside_wall) call check_grid(my_id, node_list, element_list)
+      endif
+    endif
+    if (my_id == 0) then
+      call regrid_from_restart (node_list, element_list, aux_node_list_regrid, aux_element_list_regrid, ierr)
       if ( ierr /= 0 ) then
         write(*,*) ' Regridding failed for all nodes, please check!'
         stop
@@ -447,9 +465,8 @@ mpi_required = 0
       call export_restart(node_list, element_list, fileout)
       index_now = index_now + 1
     endif
-    
-  end if if_not_restart
-  
+  endif
+
   ! --- Print some grid information
   if ( my_id == 0 ) call log_grid_info(.false., node_list, element_list)
   

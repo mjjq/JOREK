@@ -71,7 +71,12 @@ module phys_module
   real*8  :: SDN_threshold        !< threshold, in absolute psi, for a symmetric-double-null grid construction
   integer :: rst_format           !< 0 == old format, 1 == new format for restart file
   logical :: restart              !< Restart a code run from the restart file jorek_restart.h5?
-  logical :: regrid               !< Map data from jorek_restart.h5 to a new mesh generated based on the initial equlibrium. The functionality of re-generating the flux-aligned grid does not work currently
+  logical :: regrid               !< Map data from jorek_restart.h5 to a new grid mesh
+  logical :: regrid_from_GS       !< Solve the Grad–Shafranov equation to generate a new grid based on the equilibrium for regrid
+                                  !< This option can only be enabled when regrid = .True.
+                                  !< If (regrid_from_GS = .True.), the new grid will be generated based on the equilibrium which is solved with the input profiles
+                                  !< If (regrid_from_GS = .False.), the new grid will be generated based on the magnetic flux read from jorek_restart.h5 file
+                                  !< The new grid can be either flux-aligned (n_flux > 0 in the input) or just polar grid (n_flux = 0 in the input)
   integer :: layer_cut            !< Remove single or several layer(s) close to the boundary when perform regrid
   logical :: import_equil         !< (presently unused)
   logical :: xpoint               !< X-point plasma or not? see also xcase

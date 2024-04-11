@@ -76,7 +76,7 @@ module phys_module
                                   !< This option can only be enabled when regrid = .True.
                                   !< If (regrid_from_GS = .True.), the new grid will be generated based on the equilibrium which is solved with the input profiles
                                   !< If (regrid_from_GS = .False.), the new grid will be generated based on the magnetic flux read from jorek_restart.h5 file
-                                  !< The new grid can be either flux-aligned (n_flux > 0 in the input) or just polar grid (n_flux = 0 in the input)
+                                  !< The new grid can be either flux-aligned (n_flux > 1 in the input) or just polar grid (n_flux = 0 in the input)
   integer :: layer_cut            !< Remove single or several layer(s) close to the boundary when perform regrid
   logical :: import_equil         !< (presently unused)
   logical :: xpoint               !< X-point plasma or not? see also xcase

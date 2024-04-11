@@ -2307,8 +2307,8 @@ subroutine regrid_from_restart(node_list_dst, element_list_dst, node_list_src, e
       !< slight difference might exist between the required (R, Z)_dst and the actual outcome (R, Z)_src
       call find_RZ_all(node_list_src,element_list_src,R,Z,R_find,Z_find,i_elm_find,s_find,t_find,ierr)
       if(node_list_dst%node(inode)%axis_node .and. (.not.is_different_axis)) then
-        s_find = 0.d0
-        t_find = 0.d0
+        s_find = 1.d-3 ! ES%s_axis ! 0.d0
+        t_find = 1.d-3 ! ES%t_axis ! 0.d0
         write(*,*) "Axis position of the new grid is exactly the same as the original!"
       endif
 

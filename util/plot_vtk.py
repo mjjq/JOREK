@@ -297,7 +297,7 @@ def read_and_plot_q(q_surface, vtk_file):
     if os.path.exists(file_q):
         data_q_surface = np.loadtxt(file_q)
         plt.plot(data_q_surface[:, 0], data_q_surface[:, 1], '.', MarkerSize = 1.0, color='black')
-        plt.text(data_q_surface[0, 0], data_q_surface[0, 1], "{:.1f}".format(abs(q_surface)), fontsize=10, ha='center', va='center', color='black')
+        plt.text(data_q_surface[0, 0], data_q_surface[0, 1], "{:.1f}".format(abs(q_surface)), fontsize=20, ha='center', va='center', color='black')
     else:
         print(f"The file {file_q} does not exist. Skipping.")
     

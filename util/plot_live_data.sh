@@ -194,5 +194,7 @@ if [ $ps -eq 0 ]; then
     # Refresh the data 
     $extract_live_data ${qtty} ${qtty}.dat.tmp -f ${file}
     mv ${qtty}.dat.tmp ${qtty}.dat
+    # Add an empty line at the end of the file
+    echo "" | tee -a ${qtty}.dat >/dev/null
   done &
 fi

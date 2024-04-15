@@ -13,7 +13,7 @@ import matplotlib as mpl
 import argparse
 
 
-def read_ascii_file(file_path, skiprows):
+def read_ascii_file(file_path, skiprows, droprows=-1):
     """
     Read data from an ASCII file.
 
@@ -32,12 +32,12 @@ def read_ascii_file(file_path, skiprows):
         column_names = lines[skiprows - 1].strip().split()
 
     # Read data from the remaining lines, converting them to a NumPy array
-    data = np.genfromtxt(lines[skiprows:], dtype=float)
+    data = np.genfromtxt(lines[skiprows:droprows], dtype=float)
 
     return column_names, data
 
 
-def plot_ascii_files(file_paths, xscaleType, yscaleType, title, xlabel, ylabel, skiprows, column_plot_for_X, columns_plot_for_Y, 
+def plot_ascii_files(file_paths, xscaleType, yscaleType, title, xlabel, ylabel, skiprows, droprows, column_plot_for_X, columns_plot_for_Y, 
                      shift_first_file, color_first_file, pow_for_X, pow_for_Y, multiplier_for_X, multiplier_for_Y, font_size, line_width, xlim, ylim, data_marker, mylegends=""):
     """
     Plot lines from multiple ASCII files in the same plot.
@@ -54,7 +54,7 @@ def plot_ascii_files(file_paths, xscaleType, yscaleType, title, xlabel, ylabel, 
 
     ilegend = 0
     for i, file_path in enumerate(file_paths):
-        column_names, data = read_ascii_file(file_path, skiprows)
+        column_names, data = read_ascii_file(file_path, skiprows, droprows)
         if column_plot_for_X >= data.shape[1]:
             print("Error: Value of -xc is out of range!!!")
             exit(-1)
@@ -143,8 +143,10 @@ if __name__ == "__main__":
                         help="Columns to be plotted (default is -1 for plotting all) as Y values.")
     parser.add_argument("-xc", "--column_plot_for_X", type=int, default=0,
                         help="Columns to be plotted (default is 0) as X value.")
-    parser.add_argument("-sk", "--skiprows", default=1,
+    parser.add_argument("-sk", "--skiprows", default=1,type=int,
                         help="Define how many rows will be skiped when reading the data.")
+    parser.add_argument("-dr", "--droprows", default=-1,type=int,
+                        help="Define since which row, data will be droped when reading the data.")
     parser.add_argument("-sf", "--shift_first_file", default=0,
                         help="Shift the data for the first file horizontally (in X direction).")
     parser.add_argument("-co", "--color_first_file", default="",
@@ -171,5 +173,5 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     plot_ascii_files(args.file_paths, args.xscale, args.yscale, args.title, args.xlabel, args.ylabel,
-                     int(args.skiprows), args.column_plot_for_X, args.columns_plot_for_Y, args.shift_first_file, args.color_first_file, 
+                     int(args.skiprows), int(args.droprows), args.column_plot_for_X, args.columns_plot_for_Y, args.shift_first_file, args.color_first_file, 
                      args.pow_for_X, args.pow_for_Y, args.multiplier_for_X, args.multiplier_for_Y, args.fontsize, args.linewidth, args.xlim, args.ylim, args.data_marker, args.legends)

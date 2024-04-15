@@ -77,13 +77,27 @@ if __name__ == "__main__":
     timefile = 'times.dat'
     if os.path.exists(timefile):
         column_names, data = pltmpf.read_ascii_file(timefile, 1)
+        new_row = np.zeros((1, data.shape[1]))
+        # Inserting the new row at the beginning
+        data = np.vstack((new_row, data))
         step_all_1d = data[:,0]
         times_all_1d = data[:,1]
-        times_1d_array = [0]
+        times_1d_array = []
         for it in tqdm(numbers_1d_array, desc="Assembling data"):
-            for i, step in enumerate(step_all_1d):
-                if it == step:
-                    times_1d_array.append(times_all_1d[i])
+            i = np.where(step_all_1d == it)[0]
+            if len(i) > 1:
+                print("Find multiple for step = ", it, " in " + timefile)
+            elif len(i) == 1:
+                times_1d_array.append(times_all_1d[i[0]])
+            else:
+                print("Do not find step = ", it, " in " + timefile)
+            # for i, step in enumerate(step_all_1d):
+            #     if it == step:
+            #         times_1d_array.append(times_all_1d[i])
+            #         break
+            #     if i == len(step_all_1d) - 1:
+            #         print("Did not find step = ", it, " in " + timefile)
+
     else:
         print("times.dat required, please firstly execute $ plot_live_data.sh -q time ")
         exit(-1)

@@ -94,6 +94,63 @@ end if
 end function variable_names
 
 
+character(len=64) pure elemental function variable_names_ext(i_var)
+
+implicit none
+
+integer,           intent(in) :: i_var !< Variable index
+!logical, optional, intent(in) :: long  !< Long output with description?
+
+character(len=20) :: name
+character(len=64) :: descr
+logical :: long2
+
+long2 = .false.
+
+if ( (i_var <= n_var) .or. (i_var > (n_var + 9)) ) then
+  name  = 'NONE'
+  descr = 'Illegal variable index!'
+  return
+else if ( i_var == n_var + 1 ) then
+  name  = 'BR'
+  descr = 'R component of magnetic field'
+else if ( i_var == n_var + 2 ) then
+  name  = 'BZ'
+  descr = 'Z component of magnetic field'
+else if ( i_var == n_var + 3 ) then
+  name  = 'Bphi'
+  descr = 'Phi component of magnetic field'
+else if ( i_var == n_var + 4 ) then
+  name  = "A_radial"
+  descr = "Radial component of magnetic vector potential"
+else if ( i_var == n_var + 5 ) then
+  name  = "A_poloidal"
+  descr = "Poloidal component of magnetic vector potential"
+else if ( i_var == n_var + 6 ) then
+  name  = "U_radial"
+  descr = "Radial component of velocity"
+else if ( i_var == n_var + 7 ) then
+  name  = "U_poloidal"
+  descr = "Poloidal component of velocity"
+else if ( i_var == n_var + 8 ) then
+  name  = "B_radial"
+  descr = "Radial component of magnetic field"
+else if ( i_var == n_var + 9 ) then
+  name  = "B_poloidal"
+  descr = "Poloidal component of magnetic field"
+else
+  write(name, "(I4)") i_var
+  descr = "Please check implementation"
+end if
+
+if ( .not. long2 ) then
+  variable_names_ext = trim(name)
+else
+  variable_names_ext = trim(name)//' ('//trim(descr)//')'
+end if
+
+end function variable_names_ext
+
 
 #ifdef MODEL_FAMILY
 

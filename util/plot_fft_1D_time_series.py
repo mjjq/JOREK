@@ -130,7 +130,7 @@ if __name__ == "__main__":
     parser.add_argument('-ylim', nargs=2, type=float, metavar=('ymin', 'ymax'),
                         help='Specify ymin, ymax for the plot.')
     parser.add_argument("-noZF", "--noZeroFreq", default=False,
-                        help="Define the fontsize of figure.")
+                        help="Remove the zero frequency component.")
     args = parser.parse_args()
     proc_ascii_files(args.file_paths, args.title, args.xlabel, args.ylabel,
                      int(args.skiprows), args.column_plot_for_X, args.columns_plot_for_Y, args.shift_first_file, 

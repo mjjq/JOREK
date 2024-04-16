@@ -21,6 +21,7 @@ use mod_impurity, only: init_imp_adas, radiation_function, radiation_function_li
 use mod_atomic_coeff_deuterium, only : atomic_coeff_deuterium
 use mod_openadas , only : read_adf11
 use mod_atomic_coeff_deuterium, only : ad_deuterium , atomic_coeff_deuterium
+use mod_math_operators
 
 implicit none
 
@@ -111,10 +112,12 @@ real*8                :: T0_corr, r0_corr, rn0_corr, ne_JOREK, T_or_Te, T_or_Te_
 integer               :: i_imp, offset_bgimp, i_bg     ! Loop for more than one background impurity
 integer               :: i_proj
 integer               :: i_psin, i_test, iimp(6), i_ne, ineu(7), ibg_tot, i_pellet(2), i_flux(8), i_neo(10), i_boot(2)
-integer               :: i_full(11), i_vec_B, i_vec_V, i_vec_E, i_vec_Jpol
+integer               :: i_full(17), i_vec_B, i_vec_V, i_vec_E, i_vec_Jpol
 integer, allocatable  :: iibg(:), iproj(:)
 character*36          :: imp_label, proj_label
 
+real*8                :: A_radial, A_poloidal, U_radial, U_poloidal, B_radial, B_poloidal
+real*8                :: A30_Z, AZ0_p, AR0_p, A30_R, BR0, BZ0, B_poloidal0, wR2r, wR2p, wZ2r, wZ2p
 
 #ifdef WITH_Impurities
 ! See https://www.jorek.eu/wiki/doku.php?id=model500_501_555 for details
@@ -395,6 +398,12 @@ endif
   call add_vtk_entry('Grad_P      ', 'Grad_P      ',    i_full( 9), n_scalars, si_units, scalar_names) 
   call add_vtk_entry('JxB         ', 'JxB         ',    i_full(10), n_scalars, si_units, scalar_names) 
   call add_vtk_entry('V_parallel  ', 'V_par_km/s  ',    i_full(11), n_scalars, si_units, scalar_names) 
+  call add_vtk_entry('A_radial    ', 'A_radial    ',    i_full(12), n_scalars, si_units, scalar_names) 
+  call add_vtk_entry('A_poloidal  ', 'A_poloidal  ',    i_full(13), n_scalars, si_units, scalar_names) 
+  call add_vtk_entry('U_radial    ', 'U_radial    ',    i_full(14), n_scalars, si_units, scalar_names) 
+  call add_vtk_entry('U_poloidal  ', 'U_poloidal  ',    i_full(15), n_scalars, si_units, scalar_names) 
+  call add_vtk_entry('B_radial    ', 'B_radial    ',    i_full(16), n_scalars, si_units, scalar_names) 
+  call add_vtk_entry('B_poloidal  ', 'B_poloidal  ',    i_full(17), n_scalars, si_units, scalar_names) 
 #endif /*fullmhd*/
 ! --- end adding scalars
 
@@ -722,6 +731,8 @@ do i=1,element_list%n_elements
 
         scalars(inode,i_full(1):i_full(size(i_full))) = 0.d0
         
+        AR    = 0.d0
+        AZ    = 0.d0
         A3    = 0.d0
         A3_R  = 0.d0  ;  AR_R  = 0.d0  ;  AZ_R  = 0.d0  ;  rho   = 0.d0  ;  TT    = 0.d0
         A3_Z  = 0.d0  ;  AR_Z  = 0.d0  ;  AZ_Z  = 0.d0  ;  rho_x = 0.d0  ;  TT_x  = 0.d0
@@ -735,7 +746,25 @@ do i=1,element_list%n_elements
 
         VR    = 0.d0  ;  VZ    = 0.d0  ;  Vp    = 0.d0
 
+        A_radial   = 0.d0
+        A_poloidal = 0.d0
+        U_radial   = 0.d0
+        U_poloidal = 0.d0
+        B_radial   = 0.d0
+        B_poloidal = 0.d0
+
         do i_tor = 1, n_tor
+
+          if(i_tor == 1) then
+            call interp(node_list,element_list,i,var_A3, i_tor,s,t,Ps0,Ps0_s,Ps0_t,Ps0_st,Ps0_ss,Ps0_tt)
+            ps0_x = op_grad_R(Ps0_s, Ps0_t, R_s, R_t, Z_s, Z_t, xjac)
+            ps0_y = op_grad_Z(Ps0_s, Ps0_t, R_s, R_t, Z_s, Z_t, xjac)
+            psi_abs = dsqrt(ps0_x * ps0_x + ps0_y * ps0_y)
+            wR2r =   ps0_x / psi_abs
+            wZ2r =   ps0_y / psi_abs
+            wR2p = - ps0_y / psi_abs
+            wZ2p =   ps0_x / psi_abs
+          endif
 
           if ( ( i_tor == 1 ) .and. ( without_n0_mode ) ) cycle ! Do not include the n=0 mode
 
@@ -775,6 +804,9 @@ do i=1,element_list%n_elements
             call interp(node_list,element_list,i,710,i_tor,s,t,F_prof  ,F_prof_s  ,F_prof_t  ,W_st,W_ss,W_tt)
             call interp(node_list,element_list,i,711,i_tor,s,t,psi_equi,psi_equi_s,psi_equi_t,W_st,W_ss,W_tt)
           endif
+          
+          AR    = AR   + AR0 * HZ(i_tor,i_plane)
+          AZ    = AZ   + AZ0 * HZ(i_tor,i_plane)
 
           AR_p  = AR_p  + AR0 * HZ_p(i_tor,i_plane)
           AR_pp = AR_pp + AR0 * HZ_pp(i_tor,i_plane)
@@ -836,6 +868,21 @@ do i=1,element_list%n_elements
 
             A3_R  = A3_R  + (   Z_t * A30_s - Z_s * A30_t ) / xjac * HZ(i_tor,i_plane)
             A3_Z  = A3_Z  + ( - R_t * A30_s + R_s * A30_t ) / xjac * HZ(i_tor,i_plane)
+            ! same result as that from (ps0_x, ps0_y), see above
+            ! if(i_tor == 1) then
+            !   A30_R  = (   Z_t * A30_s - Z_s * A30_t ) / xjac * HZ(i_tor,i_plane)
+            !   A30_Z  = ( - R_t * A30_s + R_s * A30_t ) / xjac * HZ(i_tor,i_plane)
+            !   AR0_p  = AR0 * HZ_p(i_tor,i_plane) ! = 0.d0
+            !   AZ0_p  = AZ0 * HZ_p(i_tor,i_plane) ! = 0.d0
+            !   BR0 = ( A30_Z - AZ0_p )/ R
+            !   BZ0 = ( AR0_p - A30_R )/ R 
+            !   B_poloidal0 = dsqrt(BR0 ** 2 + BZ0 ** 2)
+            !   wR2r = -BZ0/B_poloidal0
+            !   wZ2r =  BR0/B_poloidal0
+            !   wR2p = -BR0/B_poloidal0
+            !   wZ2p = -BZ0/B_poloidal0   
+            ! endif
+
             A3_RR = A3_RR + ( (A30_ss * Z_t**2 - 2.d0*A30_st * Z_s*Z_t + A30_tt * Z_s**2  &
                              + A30_s * (Z_st*Z_t - Z_tt*Z_s )                             &
                              + A30_t * (Z_st*Z_s - Z_ss*Z_t ) )    / xjac**2              &
@@ -871,7 +918,7 @@ do i=1,element_list%n_elements
 
         BR = ( A3_Z - AZ_p )/ R
         BZ = ( AR_p - A3_R )/ R 
-        BP = ( AZ_R - AR_Z )    + F_prof/ R
+        BP = ( AZ_R - AR_Z )    + F_prof/ R  
 
         ZKpar_T = ZK_par * ((max(TT, T_min_ZKpar ))/T_0)**2.5
 
@@ -913,6 +960,21 @@ do i=1,element_list%n_elements
 
         ! --- V_parallel
         scalars(inode,i_full(11))= (VR*BR + VZ*BZ + Vp*Bp)  / sqrt(BR**2 + BZ**2 + Bp**2)
+        if ((xjac .gt. 1.d-6)) then
+          A_radial   = AR * wR2r + AZ * wZ2r
+          U_radial   = VR * wR2r + VZ * wZ2r
+          B_radial   = BR * wR2r + BZ * wZ2r
+          A_poloidal = AR * wR2p + AZ * wZ2p
+          U_poloidal = VR * wR2p + VZ * wZ2p
+          B_poloidal = BR * wR2p + BZ * wZ2p
+        endif
+
+        scalars(inode,i_full(12))= A_radial
+        scalars(inode,i_full(13))= A_poloidal
+        scalars(inode,i_full(14))= U_radial
+        scalars(inode,i_full(15))= U_poloidal
+        scalars(inode,i_full(16))= B_radial
+        scalars(inode,i_full(17))= B_poloidal
 
         psi_norm = get_psi_n(A3, Z)
 

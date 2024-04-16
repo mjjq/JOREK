@@ -392,11 +392,13 @@ module mod_straight_field_line
       
       ! --- Find field line starting position via bisections.
       if ( mapping%nstpts == 1 ) then
-        mapping%psin(k) = PsiNRange(1)
+        mapping%psin(k) = dsqrt(PsiNRange(1)) ! here psin is r = sqrt(psin)
       else
-        mapping%psin(k) = PsiNRange(1) + real(k-1)/ real(mapping%nstpts-1) *                       &
-          ( PsiNRange(2) - PsiNRange(1) )
+        mapping%psin(k) = dsqrt(PsiNRange(1)) + real(k-1)/ real(mapping%nstpts-1) *                       &
+          ( dsqrt(PsiNRange(2)) - dsqrt(PsiNRange(1)) ) ! here psin is r = sqrt(psin)
       end if
+      ! --- The 1D grid is set uniform in r = sqrt(psin) coordinate
+      mapping%psin(k) = max(PsiNRange(1), min((mapping%psin(k)) ** 2, PsiNRange(2)))
       Rleft  = equil_state%R_axis
       Rright = equil_state%R_midpl(2)
       do

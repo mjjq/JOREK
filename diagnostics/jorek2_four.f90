@@ -1,10 +1,10 @@
 !> Allows to Fourier-analyse the physical variables of a JOREK restart file in magnetic coordinates.
 program JOREK2_FOUR
 
-  use mod_parameters,     only: n_tor, n_var, n_period, variable_names
+  use mod_parameters,     only: n_tor, n_var, n_period, variable_names, variable_names_ext
   use nodes_elements, only: element_list, node_list
   use fourier,        only: t_theta_mapping, determine_theta_mag, transform_qttys
-  use phys_module,    only: rst_format, xpoint, xcase
+  use phys_module,    only: rst_format, xpoint, xcase, index_start, more_outfile_digits
   use mod_import_restart
   use equil_info
   use data_structure
@@ -19,13 +19,14 @@ program JOREK2_FOUR
   type (type_bnd_element_list) :: bnd_elm_list
   type (type_bnd_node_list)    :: bnd_node_list
   complex, allocatable         :: vfour(:,:,:,:) ! Transformed quantities (m,n,irad,ivar)
-  character(len=128)           :: filename
+  character(len=128)           :: filename, foldername
   character(len=64), parameter :: THIS_ROUTINE_NAME = 'JOREK2_FOUR'
+  integer                      :: n_cut, m_cut
 
   ! ---Field line tracing parameters
   integer                  :: nstpts, nmaxsteps, nsmallsteps, nmaxsteps_corr
   real*8                   :: deltaphi, rad_range(2), deltaphi_corr
-  namelist / four_params / nstpts, nmaxsteps, deltaphi, nsmallsteps ,rad_range, nTht
+  namelist / four_params / nstpts, nmaxsteps, deltaphi, nsmallsteps ,rad_range, nTht, n_cut, m_cut
   
   ! --- Initialize mode and mode_type arrays
   call det_modes()
@@ -36,7 +37,7 @@ program JOREK2_FOUR
   call initialise_parameters(0, "__NO_FILENAME__")                 ! default values and namelist input
   call log_parameters(0)
   call initialise_basis                         ! define the basis functions at the Gaussian points
-  call import_restart(node_list,element_list, 'jorek_restart', rst_format, ierr, .true.)   ! read restart file
+  call import_restart(node_list,element_list, 'jorek_four', rst_format, ierr, .true.)   ! read restart file
 
   call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.)
 
@@ -48,6 +49,8 @@ program JOREK2_FOUR
   deltaphi    = 0.3
   nsmallsteps = 3
   rad_range   = (/0.001, 0.999/)
+  n_cut       = 10
+  m_cut       = 60
   !   --- If four_params.nml file exists, read field line tracing parameters from that file.
   open(42, file='./four_params.nml', action='READ', status='OLD', iostat=err)
   if ( err == 0 ) then
@@ -57,7 +60,6 @@ program JOREK2_FOUR
   else
     write(*,*) 'WARNING: Could not find file four_params.nml -- using default parameters.'
   end if
-  write(42,'(a)') '#      Psi_N     absolute_value     real_part    imaginary_part      phase'
   deltaphi_corr  = min(0.3d0, 20.d0 / real(nTht), deltaphi) !###
   nmaxsteps_corr = max(nmaxsteps, int(400 / deltaphi_corr)) !###
   
@@ -96,24 +98,49 @@ program JOREK2_FOUR
   ! --- Output Fourier modes of the physical quantities.
   write(*,*)
   write(*,*) '>>> Writing the data to ascii files <<<'
-  do ivar = 1, n_var
-    do j = 1, (n_tor+1)/2 ! tor
-    
-      write(filename,'(a,a,i3.3)') trim(variable_names(ivar)), '_modes_n', (j-1)*n_period
-      open(42, file=trim(filename), status='REPLACE', action='WRITE')
-      l = 0
 
+  foldername = "four_results"
+  call execute_command_line('mkdir '//trim(foldername))
+
+#ifdef fullmhd
+#define n_var_max (n_var + 9)
+#else
+#define n_var_max (n_var)
+#endif
+  do ivar = 1, n_var_max
+    do j = 1, (n_tor+1)/2 ! tor
+      if((j-1)*n_period > n_cut) cycle ! Skip output for results where n is too large
+      l = 0
       do i = 1, nTht/2+1
-        write(42,'("# ",I3,":   m=",I3,", n=",I3)') l, i-1, (j-1)*n_period
+        if((i-1) > m_cut) cycle ! Skip output for results where m is too large
+        if(ivar .le. n_var) then
+          if ( more_outfile_digits) then
+            write(filename,'(a,a,i3.3,a,i3.3,a,i6.6)') trim(variable_names(ivar)), '_n', (j-1)*n_period, '_m', i-1, '_step', index_start
+          else
+            write(filename,'(a,a,i3.3,a,i3.3,a,i5.5)') trim(variable_names(ivar)), '_n', (j-1)*n_period, '_m', i-1, '_step', index_start
+          endif
+#ifdef fullmhd
+        else
+          if ( more_outfile_digits) then
+            write(filename,'(a,a,i3.3,a,i3.3,a,i6.6)') trim(variable_names_ext(ivar)), '_n', (j-1)*n_period, '_m', i-1, '_step', index_start
+          else
+            write(filename,'(a,a,i3.3,a,i3.3,a,i5.5)') trim(variable_names_ext(ivar)), '_n', (j-1)*n_period, '_m', i-1, '_step', index_start
+          endif
+#endif
+        endif
+        filename = trim(foldername)//'/'//trim(filename)
+        open(42, file=trim(filename), status='REPLACE', action='WRITE')
+        ! write(42,'("# ",I3,":   m=",I3,", n=",I3)') l, i-1, (j-1)*n_period
+        write(42,'(a)') 'Psi_N     absolute_value     real_part    imaginary_part      phase'
         l = l + 1
         do k = 1, mapping%nstpts
           write(42,'(5es16.7)') mapping%psin(k), ABS(vfour(i,j,k,ivar)), REAL(vfour(i,j,k,ivar)), AIMAG(vfour(i,j,k,ivar)), ATAN2(AIMAG(vfour(i,j,k,ivar)), REAL(vfour(i,j,k,ivar)))
         end do
         write(42,*)
         write(42,*)
-        
+        close(42)
+
       end do
-      close(42)
       
     end do
   end do

@@ -5,6 +5,48 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 from scipy import interpolate
 
+def high_freuqncy_pass(signal, cutoff_freq, sampling_rate):
+    # Step 1: Apply FFT to the signal
+    fft_result = np.fft.fft(signal)
+    
+    # Step 2: Frequency domain representation
+    # Generate frequency axis
+    n = len(signal)
+    freqs = np.fft.fftfreq(n, d=1/sampling_rate)
+    
+    # Identify the indices corresponding to frequencies
+    low_freq_indices = np.where(np.abs(freqs) < cutoff_freq)[0]
+    
+    # Step 3: Remove or attenuate low-frequency components
+    # Set low-frequency components to zero
+    fft_result[low_freq_indices] = 0
+    
+    # Step 4: Apply inverse FFT
+    filtered_signal = np.fft.ifft(fft_result)
+    
+    return filtered_signal.real  # Return real part of the filtered signal
+
+def low_freuqncy_pass(signal, cutoff_freq, sampling_rate):
+    # Step 1: Apply FFT to the signal
+    fft_result = np.fft.fft(signal)
+    
+    # Step 2: Frequency domain representation
+    # Generate frequency axis
+    n = len(signal)
+    freqs = np.fft.fftfreq(n, d=1/sampling_rate)
+    
+    # Identify the indices corresponding to frequencies
+    low_freq_indices = np.where(np.abs(freqs) > cutoff_freq)[0]
+    
+    # Step 3: Remove or attenuate low-frequency components
+    # Set low-frequency components to zero
+    fft_result[low_freq_indices] = 0
+    
+    # Step 4: Apply inverse FFT
+    filtered_signal = np.fft.ifft(fft_result)
+    
+    return filtered_signal.real  # Return real part of the filtered signal
+
 def window_fft(timeInput, signalInput, window_size):
     data_len = len(signalInput)
     if data_len != len(timeInput):

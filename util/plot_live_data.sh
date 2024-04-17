@@ -164,7 +164,8 @@ if [ -z "$logy" ]; then
   logy="1"
 fi
 $extract_live_data ${qtty} ${qtty}.dat -f $file
-
+# Add an empty line at the end of the file
+echo "" | tee -a ${qtty}.dat >/dev/null
 if [ $noplot -eq 1 ]; then
   echo "Only extract data: ${qtty} into ${qtty}.dat, but do not plot it"
   exit

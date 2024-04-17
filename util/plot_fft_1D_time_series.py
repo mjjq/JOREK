@@ -16,7 +16,8 @@ from scipy import interpolate
 
 
 def proc_ascii_files(file_paths, title, xlabel, ylabel, skiprows, column_plot_for_X, columns_plot_for_Y, 
-                     shift_first_file, multiplier_for_X, multiplier_for_Y, font_size, line_width, xlim, ylim, data_marker, noZeroFreq, complex_data, columns_imag_plot_for_Y):
+                     shift_first_file, multiplier_for_X, multiplier_for_Y, font_size, line_width, xlim, ylim, data_marker, noZeroFreq, complex_data, columns_imag_plot_for_Y,
+                     high_freuqncy_pass, high_freuqncy_pass_cut, low_freuqncy_pass, low_freuqncy_pass_cut):
     for i, file_path in enumerate(file_paths):
 
         column_names, data = plmf.read_ascii_file(file_path, skiprows)
@@ -62,10 +63,19 @@ def proc_ascii_files(file_paths, title, xlabel, ylabel, skiprows, column_plot_fo
                 f_interp = interpolate.interp1d(x, y[:,j])
             data_1d = f_interp(time_1d)
             time_new, signal_new, times_2d, freq_2d, spec_2d = myFFT.window_fft(time_1d, data_1d, fft_window_width)
-            if noZeroFreq:
+
+            if (noZeroFreq):
                 spec_2d[:,0] = 0.e0
             
-            # spec_2d[np.where(times_2d < 20)] = 0.e0
+            spec_2d[np.where(times_2d < 2)] = 0.e0
+                
+            if (high_freuqncy_pass):
+                signal_new = myFFT.high_freuqncy_pass(signal_new, high_freuqncy_pass_cut, 1.0/(time_new[1] - time_new[0]))
+                complex_data = False
+
+            if (low_freuqncy_pass):
+                signal_new = myFFT.low_freuqncy_pass(signal_new, low_freuqncy_pass_cut, 1.0/(time_new[1] - time_new[0]))
+                complex_data = False
 
             # Plot the signal
             plt.figure(figsize=(12, 9))  # Adjust the figure size as needed
@@ -76,8 +86,18 @@ def proc_ascii_files(file_paths, title, xlabel, ylabel, skiprows, column_plot_fo
                 plt.plot(time_new, signal_new.real, '', linestyle='-', linewidth = line_width, label='Time Domain Signal (real, interpolated)')
                 plt.plot(time_new, signal_new.imag, '', linestyle='--', linewidth = line_width, label='Time Domain Signal (imag, interpolated)')
             else:
-                plt.plot(x, y[:,j], data_marker, label=f'{column_names[j + 1]} ({file_path})')
+                if ((not high_freuqncy_pass) and (not low_freuqncy_pass)):
+                    plt.plot(x, y[:,j], data_marker, label=f'{column_names[j + 1]} ({file_path})')
                 plt.plot(time_new, signal_new, '', linestyle='--', linewidth = line_width, label='Time Domain Signal (interpolated)')
+                # # fit to calculate Quality factor, Q, of pendulum
+                # omega = 0.1 * 2 * np.pi
+                # A     = 1.0 * np.max(np.abs(signal_new)) * 0.5
+                # b     = 0.6
+                # k     = omega ** 2
+                # Q     = np.sqrt(k)/b
+                # tsft  = 0. # shift in time
+                # signal_fit = A * np.exp(-b/2.0 * time_new) * np.cos(np.sqrt(k - b**2) * time_new)
+                # plt.plot(time_new + tsft, signal_fit, '', linestyle=':', linewidth = line_width, label='Fitted (m = 1), Q = ' + "{:.3f}".format(Q) + ', k = ' + "{:.3f}".format(k) + ', b = ' + "{:.3f}".format(b) )
             if xlim:
                 xmin, xmax = xlim
                 plt.xlim(xmin, xmax)
@@ -143,14 +163,24 @@ if __name__ == "__main__":
                         help='Specify xmin, xmax for the plot.')
     parser.add_argument('-ylim', nargs=2, type=float, metavar=('ymin', 'ymax'),
                         help='Specify ymin, ymax for the plot.')
-    parser.add_argument("-cmpx", "--complex_data", default=False,
+    parser.add_argument("-cmpx", "--complex_data", type=lambda x: (str(x).lower() in ['true', '1', 'yes']), default=False,
                         help="Remove the zero frequency component.")
     parser.add_argument("-ycj", "--columns_imag_plot_for_Y", type=int, nargs="+", default=-1,
                         help="Columns (for imaginary data) to be plotted (default is -1 for plotting all) as Y values.")
-    parser.add_argument("-noZF", "--noZeroFreq", default=False,
+    parser.add_argument("-noZF", "--noZeroFreq", type=lambda x: (str(x).lower() in ['true', '1', 'yes']), default=False,
                         help="Remove the zero frequency component.")
+    parser.add_argument("-hp", "--high_freuqncy_pass", type=lambda x: (str(x).lower() in ['true', '1', 'yes']), default=False,
+                        help="Only allow the high frequency to pass.")
+    parser.add_argument("-hpcut", "--high_freuqncy_pass_cut", type=float, default=0.0,
+                        help="Only allow the high frequency larger than this value to pass.")
+    parser.add_argument("-lp", "--low_freuqncy_pass", type=lambda x: (str(x).lower() in ['true', '1', 'yes']), default=False,
+                        help="Only allow the low frequency to pass.")
+    parser.add_argument("-lpcut", "--low_freuqncy_pass_cut", type=float, default=1.e8,
+                        help="Only allow the low frequency smaller than this value to pass.")
+
     args = parser.parse_args()
     proc_ascii_files(args.file_paths, args.title, args.xlabel, args.ylabel,
                      int(args.skiprows), args.column_plot_for_X, args.columns_plot_for_Y, args.shift_first_file, 
                      args.multiplier_for_X, args.multiplier_for_Y, args.fontsize, args.linewidth, args.xlim, args.ylim, 
-                     args.data_marker, args.noZeroFreq, args.complex_data, args.columns_imag_plot_for_Y)
+                     args.data_marker, args.noZeroFreq, args.complex_data, args.columns_imag_plot_for_Y, 
+                     args.high_freuqncy_pass, args.high_freuqncy_pass_cut, args.low_freuqncy_pass, args.low_freuqncy_pass_cut)

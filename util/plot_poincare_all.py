@@ -108,9 +108,9 @@ if __name__ == "__main__":
                         help="Define the fontsize of figure.")
     parser.add_argument("-tm", "--multiplier_for_time", type=float, default=1.0,
                         help="Multiple the time-data with the specified value.")
-    parser.add_argument("-cful", "--colorful", type=bool, default=False,
+    parser.add_argument("-cful", "--colorful", type=lambda x: (str(x).lower() in ['true', '1', 'yes']), default=False,
                         help="Set different colors for lines.")
-    parser.add_argument("-png", "--png_output", type=bool, default=False,
+    parser.add_argument("-png", "--png_output", type=lambda x: (str(x).lower() in ['true', '1', 'yes']), default=False,
                         help="Save results into figures.")
     args = parser.parse_args()
 

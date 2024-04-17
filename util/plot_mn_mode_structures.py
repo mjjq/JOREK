@@ -81,7 +81,7 @@ if __name__ == "__main__":
                         help='Specify ymin, ymax for the plot.')
     parser.add_argument("-tm", "--multiplier_for_time", type=float, default=1.0,
                         help="Multiple the time-data with the specified value.")
-    parser.add_argument("-ex", "--extract_time_series", type=bool, default=False,
+    parser.add_argument("-ex", "--extract_time_series", type=lambda x: (str(x).lower() in ['true', '1', 'yes']), default=False,
                         help="Extract the time series.")
     parser.add_argument("-er", "--radial_location_for_extract_time_series", type=float, default=0.5,
                         help="Radial location for extracting the time series.")

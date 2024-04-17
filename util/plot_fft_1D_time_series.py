@@ -16,7 +16,7 @@ from scipy import interpolate
 
 
 def proc_ascii_files(file_paths, title, xlabel, ylabel, skiprows, column_plot_for_X, columns_plot_for_Y, 
-                     shift_first_file, multiplier_for_X, multiplier_for_Y, font_size, line_width, xlim, ylim, data_marker, noZeroFreq):
+                     shift_first_file, multiplier_for_X, multiplier_for_Y, font_size, line_width, xlim, ylim, data_marker, noZeroFreq, complex_data, columns_imag_plot_for_Y):
     for i, file_path in enumerate(file_paths):
 
         column_names, data = plmf.read_ascii_file(file_path, skiprows)
@@ -36,8 +36,13 @@ def proc_ascii_files(file_paths, title, xlabel, ylabel, skiprows, column_plot_fo
 
         if columns_plot_for_Y == -1:
             columns_plot_for_Y_mdf = range(y.shape[1])  # Plot all columns
+            if(complex_data):
+                complex_data = False
+                print("WARNING: Disable imaginary data in case of all columns being plotted.")
         elif i == 0:
             columns_plot_for_Y_mdf = [j - 1 for j in columns_plot_for_Y]
+            if(complex_data):
+                columns_imag_plot_for_Y_mdf = [j - 1 for j in columns_imag_plot_for_Y]
 
         data_len = len(x) * 10
         fft_window_width = int(data_len / 20)
@@ -46,12 +51,15 @@ def proc_ascii_files(file_paths, title, xlabel, ylabel, skiprows, column_plot_fo
         print("fft window width         = ", fft_window_width)
         print("fft window width in time = ", fft_window_width * (np.max(x) - np.min(x))/(data_len - 1.0))
 
-        for j in columns_plot_for_Y_mdf:
+        for icol, j in enumerate(columns_plot_for_Y_mdf):
             if j >= y.shape[1]:
                 print("Error: Value of -yc is out of range!!!")
                 print("file_path: ", file_path)
                 exit(-2)
-            f_interp = interpolate.interp1d(x, y[:,j])
+            if(complex_data):
+                f_interp = interpolate.interp1d(x, y[:,j] + 1j * y[:,columns_imag_plot_for_Y_mdf[icol]])
+            else:
+                f_interp = interpolate.interp1d(x, y[:,j])
             data_1d = f_interp(time_1d)
             time_new, signal_new, times_2d, freq_2d, spec_2d = myFFT.window_fft(time_1d, data_1d, fft_window_width)
             if noZeroFreq:
@@ -62,8 +70,14 @@ def proc_ascii_files(file_paths, title, xlabel, ylabel, skiprows, column_plot_fo
             # Plot the signal
             plt.figure(figsize=(12, 9))  # Adjust the figure size as needed
             plt.subplot(2, 1, 1)
-            plt.plot(x, y[:,j], data_marker, label=f'{column_names[j + 1]} ({file_path})')
-            plt.plot(time_new, signal_new, '', linestyle='--', linewidth = line_width, label='Time Domain Signal (interpolated)')
+            if(complex_data):
+                plt.plot(x, y[:,j], data_marker, label=f'{column_names[j + 1]} ({file_path})')
+                plt.plot(x, y[:,columns_imag_plot_for_Y_mdf[icol]], data_marker, label=f'{column_names[columns_imag_plot_for_Y_mdf[icol] + 1]} ({file_path})')
+                plt.plot(time_new, signal_new.real, '', linestyle='-', linewidth = line_width, label='Time Domain Signal (real, interpolated)')
+                plt.plot(time_new, signal_new.imag, '', linestyle='--', linewidth = line_width, label='Time Domain Signal (imag, interpolated)')
+            else:
+                plt.plot(x, y[:,j], data_marker, label=f'{column_names[j + 1]} ({file_path})')
+                plt.plot(time_new, signal_new, '', linestyle='--', linewidth = line_width, label='Time Domain Signal (interpolated)')
             if xlim:
                 xmin, xmax = xlim
                 plt.xlim(xmin, xmax)
@@ -109,7 +123,7 @@ if __name__ == "__main__":
     parser.add_argument("-yl", "--ylabel", default="", help="Manually define the ylabel.")
     parser.add_argument("-dm", "--data_marker", default=".", help="Manually define the marker for the data.")
     parser.add_argument("-yc", "--columns_plot_for_Y", type=int, nargs="+", default=-1,
-                        help="Columns to be plotted (default is -1 for plotting all) as Y values.")
+                        help="Columns (for real data) to be plotted (default is -1 for plotting all) as Y values.")
     parser.add_argument("-xc", "--column_plot_for_X", type=int, default=0,
                         help="Columns to be plotted (default is 0) as X value.")
     parser.add_argument("-sk", "--skiprows", default=1,
@@ -129,10 +143,14 @@ if __name__ == "__main__":
                         help='Specify xmin, xmax for the plot.')
     parser.add_argument('-ylim', nargs=2, type=float, metavar=('ymin', 'ymax'),
                         help='Specify ymin, ymax for the plot.')
+    parser.add_argument("-cmpx", "--complex_data", default=False,
+                        help="Remove the zero frequency component.")
+    parser.add_argument("-ycj", "--columns_imag_plot_for_Y", type=int, nargs="+", default=-1,
+                        help="Columns (for imaginary data) to be plotted (default is -1 for plotting all) as Y values.")
     parser.add_argument("-noZF", "--noZeroFreq", default=False,
                         help="Remove the zero frequency component.")
     args = parser.parse_args()
     proc_ascii_files(args.file_paths, args.title, args.xlabel, args.ylabel,
                      int(args.skiprows), args.column_plot_for_X, args.columns_plot_for_Y, args.shift_first_file, 
                      args.multiplier_for_X, args.multiplier_for_Y, args.fontsize, args.linewidth, args.xlim, args.ylim, 
-                     args.data_marker, args.noZeroFreq)
+                     args.data_marker, args.noZeroFreq, args.complex_data, args.columns_imag_plot_for_Y)

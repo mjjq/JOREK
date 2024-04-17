@@ -437,9 +437,14 @@ module mod_straight_field_line
           ! - Determine element number and s and t coordinates for given (R, Z) position.
           call find_RZ(node_list,element_list,rn,zn,R_out,Z_out,i_elm_out,s_out,t_out,ifail)
           if ( ifail /= 0 ) then
-            write(*,*) 'ERROR in '//trim(THIS_ROUTINE_NAME)//' calling find_RZ (1).'
-            ierr = 100
-	    cycle
+            write(*,*) 'ERROR in '//trim(THIS_ROUTINE_NAME)//' calling find_RZ (1). Field line: ', k
+            write(*,*) 'Try to use approximate solutions from find_RZ_all (1). Field line: ', k
+            call find_RZ_all(node_list,element_list,rn,zn,R_out,Z_out,i_elm_out,s_out,t_out,ifail)
+            if( ifail /= 0 ) then
+              write(*,*) 'ERROR in '//trim(THIS_ROUTINE_NAME)//' calling find_RZ_all (1). Field line: ', k
+              ierr = 100
+	            cycle
+            end if
           end if
           ! - Interpolate Psi to current position.
           call interp0(node_list, element_list, i_elm_out,1,1,s_out,t_out,P,P_s,P_t)
@@ -457,9 +462,14 @@ module mod_straight_field_line
           ! - Determine element number and s and t coordinates for given (R, Z) position.
           call find_RZ(node_list,element_list,rh,zh,R_out,Z_out,i_elm_out,s_out,t_out,ifail)
           if ( ifail /= 0 ) then
-            write(*,*) 'Error in '//trim(THIS_ROUTINE_NAME)//' calling find_RZ (2).'
-            ierr = 100
-	    cycle
+            write(*,*) 'ERROR in '//trim(THIS_ROUTINE_NAME)//' calling find_RZ (2). Field line: ', k
+            write(*,*) 'Try to use approximate solutions from find_RZ_all (2). Field line: ', k
+            call find_RZ_all(node_list,element_list,rh,zh,R_out,Z_out,i_elm_out,s_out,t_out,ifail)
+            if( ifail /= 0 ) then
+              write(*,*) 'ERROR in '//trim(THIS_ROUTINE_NAME)//' calling find_RZ_all (2). Field line: ', k
+              ierr = 100
+	            cycle
+            end if
           end if
           ! - Interpolate Psi to current position.
           call interp0(node_list, element_list, i_elm_out,1,1,s_out,t_out,P,P_s,P_t)

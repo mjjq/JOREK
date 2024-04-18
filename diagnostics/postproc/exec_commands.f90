@@ -2161,7 +2161,7 @@ module exec_commands
     call check_exprs_selected(ierr);           if ( ierr /= 0 ) return
     units = get_int_setting('units', ierr)
 
-    allocate(res(expr_list%n_expr+1))
+    allocate(res(expr_list%n_expr))
     res = 0.d0   
  
     write(filename,'(4a)') trim(DIR), 'integrals3D',  &
@@ -2179,7 +2179,6 @@ module exec_commands
         iostat=ierr)
     
     if ( first_step ) then
-      write(i_file,'(a)',advance='no') '# time                   '
       do i = 1, expr_list%n_expr
         s = trim(expr_list%expr(i)%name)
         write(i_file,'(a)',advance='no') s
@@ -3832,9 +3831,5 @@ module exec_commands
     write(*,*)
     
   end subroutine grid_diagnostics
-  
-  
-  
-  
   
 end module exec_commands

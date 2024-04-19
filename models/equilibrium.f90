@@ -679,7 +679,9 @@ if (my_id == 0) then
     ES%Z_xpoint = Z_xpoint
     ES%xpoint   = xpoint
     ES%xcase    = xcase
+#ifndef fullmhd
     call q_profile(node_list,element_list,surface_list,psi_axis,psi_bnd,psi_xpoint,Z_xpoint)
+#endif
   endif
   
   !================ Temperature and density profiles =f(psi_norm) similar to q(psi_norm) needed to calculate neoclassical coef===========

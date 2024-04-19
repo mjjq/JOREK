@@ -9,7 +9,7 @@ use mod_poiss
 use equil_info
 use mod_interp, only: interp
 use mod_F_profile
-
+use mod_q_profile_fmhd, only: q_profile_fmhd
 implicit none
 
 type (type_node_list)    :: node_list
@@ -200,8 +200,7 @@ do in=2,n_tor
 
 enddo
 
-
-
+call q_profile_fmhd(node_list,element_list)
 
 return
 end

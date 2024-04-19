@@ -90,13 +90,16 @@ def proc_ascii_files(file_paths, title, xlabel, ylabel, skiprows, column_plot_fo
                     plt.plot(x, y[:,j], data_marker, label=f'{column_names[j + 1]} ({file_path})')
                 plt.plot(time_new, signal_new, '', linestyle='--', linewidth = line_width, label='Time Domain Signal (interpolated)')
                 # # fit to calculate Quality factor, Q, of pendulum
-                # omega = 0.1 * 2 * np.pi
-                # A     = 1.0 * np.max(np.abs(signal_new)) * 0.5
-                # b     = 0.6
+                # omega = 0.5 * 2 * np.pi
+                # A     = 1.0 * np.max(np.abs(signal_new)) * 0.4
+                # b     = 0.2
                 # k     = omega ** 2
                 # Q     = np.sqrt(k)/b
                 # tsft  = 0. # shift in time
-                # signal_fit = A * np.exp(-b/2.0 * time_new) * np.cos(np.sqrt(k - b**2) * time_new)
+                # if((k - b**2/4) > 0.):
+                #     signal_fit = A * np.exp(-b/2.0 * time_new) * np.cos(np.sqrt(k - b**2/4) * time_new)
+                # else:
+                #     signal_fit = A * np.exp(-b/2.0 * time_new) * np.exp(-np.sqrt(np.abs(k - b**2/4)) * time_new)
                 # plt.plot(time_new + tsft, signal_fit, '', linestyle=':', linewidth = line_width, label='Fitted (m = 1), Q = ' + "{:.3f}".format(Q) + ', k = ' + "{:.3f}".format(k) + ', b = ' + "{:.3f}".format(b) )
             if xlim:
                 xmin, xmax = xlim

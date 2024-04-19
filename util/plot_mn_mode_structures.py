@@ -28,7 +28,7 @@ def generate_unique_colors(length):
       A list of length 'length' containing unique RGB color tuples.
   """
   # Set the random seed, to generate reproducible random
-  random.seed(20)
+  random.seed(42)
   colors = set()
   while len(colors) < length:
     # Generate random RGB values
@@ -221,7 +221,7 @@ if __name__ == "__main__":
                 if args.title:
                     title = args.title
                 else:
-                    title = "time = " + "{:.3f}".format(time) + ", mode structures: "
+                    title = "time = " + "{:.3f}".format(time) + ", "
                 if args.method == "am" or args.method == "al":
                     plt.figure(3*ivar_st + 1)
                     legend = plt.legend()

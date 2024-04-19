@@ -9,7 +9,7 @@ use mod_poiss
 use equil_info
 use mod_interp, only: interp, interp_RZ
 use mod_F_profile
-
+use mod_q_profile_fmhd, only: q_profile_fmhd
 ! #define DEBUG_tauIC_initial
 
 implicit none
@@ -496,8 +496,7 @@ do in=2,n_tor
 
 enddo
 
-
-
+call q_profile_fmhd(node_list,element_list)
 
 return
 end

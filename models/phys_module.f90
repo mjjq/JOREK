@@ -94,7 +94,8 @@ module phys_module
   logical :: RZ_grid_inside_wall  !< build the rectangular grid inside first wall
   real*8  :: RZ_grid_jump_thres   !< threshold to change R-resolution as RZ-grid gets sqeezed by limiter contour
   real*8  :: manipulate_psi_map(5,5) !< Option to manipulate Psi_boundary for the initial grid
-  logical :: adaptive_time        !< (presently not useful)
+  logical :: adaptive_time        !< (Only implemented in full MHD models)
+  real*8  :: cfl                  !< tstep = cfl * min(h_elm) / max(v)
   logical :: equil                !< compute equilibrium
   logical :: no_mach1_bc          !< Never apply Mach-1 BCs
   logical :: Mach1_openBC         !< Full-MHD: Apply Mach-1 BCs inside mod_boundary_matrix_open.f90 (or mod_boundary_conditions.f90)
@@ -351,7 +352,8 @@ module phys_module
   
   !> @name Timestepping parameters
   real*8  :: tstep             		!< Size of the timesteps (\f$ \Delta t \f$)
-  real*8  :: tstep_prev                 !< Previous time-step if using variable dt Gears
+  real*8  :: tstep_cfl         		!< Size of the timesteps for each MPI when using CFL condition (\f$ \Delta t \f$)
+  real*8  :: tstep_prev           !< Previous time-step if using variable dt Gears
   real*8  :: tstep_n(10)       		!< Alternative to tstep: Up to ten values may be given
   integer :: nstep             		!< Number of timesteps to perform
   integer :: nstep_n(10)       		!< Alternative to nstep: Up to ten values may be given

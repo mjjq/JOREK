@@ -158,6 +158,16 @@ if __name__ == "__main__":
                     psin_2d, times_2d = np.meshgrid(psin_1d, times_1d)
                     r2d = np.sqrt(psin_2d)
 
+                    plt.figure(figsize=(10, 5)) 
+                    plt.contourf(times_2d, r2d, phase_2d, 50, levels = np.linspace(-np.pi, np.pi, 50), cmap='jet')
+                    plt.colorbar()
+                    plt.title(r'radial phase distribution of ' + variable + '(m/n = ' + str(impol) + '/' + str(intor) + ') versus time' if args.title == "" else args.title, fontsize=args.fontsize)
+                    plt.xlabel(r'time', fontsize=args.fontsize)        
+                    plt.ylabel( r"$\sqrt{\psi_n}$", fontsize=args.fontsize)
+                    plt.xticks(fontsize=args.fontsize)
+                    plt.yticks(fontsize=args.fontsize)
+                    plt.tight_layout(); plt.show()
+
                     id_target = np.abs(np.sqrt(psin_1d) - args.radial_location_for_extract_time_series).argmin()
                     data_slice_plt = data_2d[:,id_target]
                     phase_slice_plt = phase_2d[:,id_target]

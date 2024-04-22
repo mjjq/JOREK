@@ -665,7 +665,8 @@ subroutine preset_parameters
   manipulate_psi_map(:,4) = 0.1
   manipulate_psi_map(:,5) = 0.1
   
-  adaptive_time      = .false.              ! requires no_mpi for Pastix library
+  adaptive_time      = .false.              
+  cfl                = 1.d0
   
   equil              = .true.               ! compute equilibrium
   

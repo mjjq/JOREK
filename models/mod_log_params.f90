@@ -1152,6 +1152,7 @@ write(*,'(1x,a)',advance='no') ' RTREE_H               : '
   write(*,LOGI_FMT) 'force_central_node    ', force_central_node
   write(*,LOGI_FMT) 'grid_to_wall          ', grid_to_wall
   write(*,LOGI_FMT) 'adaptive_time         ', adaptive_time
+  write(*,REAL_FMT) 'cfl                   ', cfl
   write(*,LOGI_FMT) 'equil                 ', equil
   write(*,LOGI_FMT) 'bench_without_plot    ', bench_without_plot
   write(*,LOGI_FMT) 'more_outfile_digits   ', more_outfile_digits

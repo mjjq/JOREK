@@ -114,7 +114,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 use_pastix, use_murge, use_murge_element,           &
                 refinement, grid_to_wall,                           &
                 fix_axis_nodes,                                     &
-                adaptive_time, equil, bench_without_plot,           &
+                adaptive_time, cfl, equil, bench_without_plot,      &
                 eta_T_dependent, visco_T_dependent,ZKpar_T_dependent,&
                 produce_live_data, gmres, gmres_max_iter,           &
                 iter_precon, gmres_4, gmres_m, gmres_tol,           &

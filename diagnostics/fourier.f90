@@ -132,7 +132,7 @@ module fourier
             else
 	            basis_function = sin(2.*PI*nn*REAL(j-1)/REAL(nequidist_tor))
             end if
-#if 1
+#ifdef fullmhd
             do l = 1, n_var
               call interp(node_list,element_list,i_elm_out,l,iharm,s_out,t_out,eq,eq_s,eq_t,eq_st,eq_ss,eq_tt)
               !$omp atomic

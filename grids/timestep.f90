@@ -26,7 +26,7 @@ subroutine timestep(my_id, node_list, element_list, local_elms, n_local_elms, cf
   real*8, dimension(n_vertex_max) :: AR_s, AR_t, AZ_s, AZ_t, A3_s, A3_t
 
   tstep_cfl = 1.d10
-
+#ifdef fullmhd
 !   do ielm = 1, element_list%n_elements
   do i = 1, n_local_elms
     ielm = local_elms(i)
@@ -104,5 +104,9 @@ subroutine timestep(my_id, node_list, element_list, local_elms, n_local_elms, cf
 
   enddo ! i or ielm
   ! write(*,*) "my_id = ", my_id, ", tstep_cfl = ", tstep_cfl
+#else
+  write(*,*) "Warning, adaptive_time has not been implemented in reduced MHD models."
+  stop
+#endif
 
 end subroutine timestep

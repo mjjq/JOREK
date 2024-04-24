@@ -342,7 +342,6 @@ subroutine sanity_checks(my_id, n_cpu, mpi_required, mpi_provided)
   endif
 #endif
 
-
 #ifndef USE_BLOCK
   write(*,*) 'WARNING: You are not using USE_BLOCK=1 which might be inefficient.'
   write(*,*) '  Consider setting USE_BLOCK=1 in your Makefile.inc'

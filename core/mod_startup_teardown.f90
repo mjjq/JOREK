@@ -337,8 +337,8 @@ subroutine sanity_checks(my_id, n_cpu, mpi_required, mpi_provided)
 #ifdef WITH_Impurities
   if (D_prof_imp_neg_thresh .gt. -1.d3) then
 	write(*,*) 'WARNING: You are using a value for D_prof_imp_neg_thresh that is likely to activate the correction for negative impurity density.' 
-        write(*,*) '  No problem if you know what you are doing, but this could lead to convergence issues'
-        write(*,*) '  in particular at the beginning of impurity injection when nimp is oscillating around zero.'
+	write(*,*) '  No problem if you know what you are doing, but this could lead to convergence issues'
+	write(*,*) '  in particular at the beginning of impurity injection when nimp is oscillating around zero.'
   endif
 #endif
 

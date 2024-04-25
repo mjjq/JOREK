@@ -117,6 +117,8 @@ subroutine preset_parameters
   
   n_ext        = 0
 
+  export_polar_boundary = .false.
+
   psi_axis_init = -0.1d0
   XR_r(:)       = 999.d0
   SIG_r(:)      = 999.d0
@@ -126,6 +128,8 @@ subroutine preset_parameters
   SIG_z(:)      = 999.d0
   bgf_r         = 0.7
   bgf_z         = 0.7
+  bgf_rpolar    = 0.6
+  bgf_tht       = 0.6
 
   SIG_closed  = 0.1d0
   SIG_open    = 0.1d0
@@ -197,6 +201,7 @@ subroutine preset_parameters
   force_horizontal_Xline = .false.
   Z_xpoint_limit(1) = -0.4d0
   Z_xpoint_limit(2) =  0.4d0
+  xpoint_search_tries = 500
 
   xr1  = 9999.d0
   sig1 = 9999.d0
@@ -344,7 +349,7 @@ subroutine preset_parameters
   ! ------------------------------------------
   ! --- Default boundary conditions ----------
   ! ------------------------------------------
-
+  loop_voltage = 0.d0
   ! --- Dirichlet
   bcs(:)%dirichlet%psi     = .true.
   bcs(:)%dirichlet%u       = .true.
@@ -574,6 +579,7 @@ subroutine preset_parameters
   linear_run         = .false.
   
   export_for_nemec   = .false.
+  export_aux_node_list = .true.
   
   ! Use iterative solver by default if n_tor>1.
   if ( n_tor == 1) then

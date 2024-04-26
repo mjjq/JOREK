@@ -190,6 +190,7 @@ module mod_expression
     call add(exprs_all, 'Vperp_i     ', 'Ion Perpendicular Velocity                            ')
     call add(exprs_all, 'V_ExB_pol   ', 'Poloidal component of ExB Velocity                    ')
     call add(exprs_all, 'V_ExB_R     ', 'R component of ExB Velocity                           ')
+    call add(exprs_all, 'V_ExB_Z     ', 'Z component of ExB Velocity                           ')
     call add(exprs_all, 'Vstar_e     ', 'Electron Diamagnetic Velocity                         ')
     call add(exprs_all, 'Vstar_i     ', 'Ion Diamagnetic Velocity                              ')
     call add(exprs_all, 'ki_neo      ', 'Neoclassical Heat Diffusivity                         ')
@@ -334,6 +335,7 @@ module mod_expression
     call add(exprs_all_int, 'LCFS_deltaU ', 'Upper triangularity   (as in PPCF 55 (2013) 095009)   ')
     call add(exprs_all_int, 'LCFS_deltaL ', 'Lower triangularity   (as in PPCF 55 (2013) 095009)   ')
     call add(exprs_all_int, 'tot_radiated', 'Total radiated power by the main impurities           ')
+    call add(exprs_all_int, 'saw_ene     ', 'SAW energy functional (linear MHD)                    ')
 
     call add(exprs_all_four, 'absolute    ', 'Absolute value of 2D Fourier analysis                 ')
     call add(exprs_all_four, 'real        ', 'Real part      of 2D Fourier analysis                 ')
@@ -1914,6 +1916,9 @@ module mod_expression
 
               case ( 'V_ExB_R' )
                 res = -R*u0_Z / fact_time 
+ 
+              case ( 'V_ExB_Z' )
+                res = R*u0_R / fact_time
 
               case ( 'Vstar_e' )
                 res = Vstar_e / fact_time

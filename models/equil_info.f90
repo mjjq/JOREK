@@ -721,6 +721,7 @@ module equil_info
     104 format(1x,a,i3,2f10.5)
     105 format(1x,a,i3.3,a,f10.5)
     106 format(1x,a,i3.3,a,i10)
+    107 format(1x,a,L8)
     
     ! --- General description of the plasma.
     write(*,*)
@@ -845,7 +846,7 @@ module equil_info
       write(*,102) 'kappa              =', ES%LCFS_kappa   
       write(*,102) 'delta_U            =', ES%LCFS_deltaU  
       write(*,102) 'delta_L            =', ES%LCFS_deltaL  
-      write(*,102) 'LCFS_is_lost       =', ES%LCFS_is_lost
+      write(*,107) 'LCFS_is_lost       =', ES%LCFS_is_lost
     end if
     
     write(*,*) '=============================================================='
@@ -1172,7 +1173,9 @@ module equil_info
 
 
 
-
+  ! --- Checks whether the LCFS was lost in the the past by checking the time
+  ! --- history of the magnetic axis, if it got too close to the grid boundary,
+  ! --- then we assume that the LCFS was lost
   logical function is_LCFS_lost(node_list, element_list, bnd_elm_list)
 
     implicit none
@@ -1207,7 +1210,7 @@ module equil_info
         
         distance = sqrt( (R_elm-R_axis_t(i_time))**2  + (Z_elm-Z_axis_t(i_time))**2)
 
-        if (minval(distance)< R_geo/30.d0) then   ! --- Axis is considered lost when minor decreases by a factor 10
+        if (minval(distance)< R_geo/30.d0) then   ! --- Axis is considered lost the distance to boundary is 3% of R_geo
           is_LCFS_lost = .true.
           exit
         endif

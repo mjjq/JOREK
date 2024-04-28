@@ -32,13 +32,13 @@ do i=1,4 ! Loop over sides of element 1
     n2 = elm2%vertex(mod([j-1,j],4)+1)
     ! If match cross or straight (i.e. 1->2/2->1 or 1->1/2->2)
     ! Four different cases
-    if      (n1(1) .eq. n2(2)) then
+    if            (node_same_pos(node_list, n1(1), n2(2))) then
       neighbours = node_same_pos(node_list, n1(2), n2(1))
-    else if (n1(2) .eq. n2(1)) then
+    else if       (node_same_pos(node_list, n1(2), n2(1))) then
       neighbours = node_same_pos(node_list, n1(1), n2(2))
-    else if (n1(1) .eq. n2(1)) then
+    else if       (node_same_pos(node_list, n1(1), n2(1))) then
       neighbours = node_same_pos(node_list, n1(2), n2(2))
-    else if (n1(2) .eq. n2(2)) then
+    else if       (node_same_pos(node_list, n1(2), n2(2))) then
       neighbours = node_same_pos(node_list, n1(1), n2(1))
     end if
     if (neighbours) then
@@ -273,9 +273,10 @@ do i=1, element_list%n_elements
         ;     ! this is a boundary, should not have a neighbour
       elseif ((sqrt( (node_list%node(iv1)%x(1,1,1) - node_list%node(iv2)%x(1,1,1))**2 &
                     +(node_list%node(iv1)%x(1,1,2) - node_list%node(iv2)%x(1,1,2))**2) .lt. 1d-8) ) then
-        ;     ! these two corners of the element are conciding, thus no neighbour
+        ;     ! these two corners of the element are coinciding, thus no neighbour
       else
         write(*,*) 'ERROR neighbours : ',i,j,element_list%element(i)%neighbours(j)
+        write(*,*) 'boundary check ',iv1,iv2,node_list%node(iv1)%boundary,node_list%node(iv2)%boundary
       endif
     endif
   enddo
@@ -306,7 +307,7 @@ enddo
 !$omp end parallel
 call cpu_time(t2)
 
-write(*,'(A,e12.4)') 'neighbours cpu_time, init tree     : ',t1-t0 
-write(*,'(A,e12.4)') 'neighbours cpu_time, init eighbours: ',t2-t1 
+write(*,'(A,e12.4)') 'neighbours cpu_time, init tree      : ',t1-t0 
+write(*,'(A,e12.4)') 'neighbours cpu_time, init neighbours: ',t2-t1 
 end subroutine update_neighbours
 end module mod_neighbours

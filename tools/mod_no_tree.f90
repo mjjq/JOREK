@@ -29,10 +29,13 @@ if (element_list%n_elements .le. 0) return
 no_tree_bounding_box(1,:) =  1.d33
 no_tree_bounding_box(2,:) = -1.d33
 
-if (.not. allocated(no_tree_r_min)) then
-  allocate(no_tree_r_min(element_list%n_elements), no_tree_r_max(element_list%n_elements), &
-           no_tree_z_min(element_list%n_elements), no_tree_z_max(element_list%n_elements))
-endif
+if (allocated(no_tree_r_min)) deallocate(no_tree_r_min)
+if (allocated(no_tree_r_max)) deallocate(no_tree_r_max)
+if (allocated(no_tree_z_min)) deallocate(no_tree_z_min)
+if (allocated(no_tree_z_max)) deallocate(no_tree_z_max)
+
+allocate(no_tree_r_min(element_list%n_elements), no_tree_r_max(element_list%n_elements), &
+         no_tree_z_min(element_list%n_elements), no_tree_z_max(element_list%n_elements))
 
 do i=1, element_list%n_elements
 

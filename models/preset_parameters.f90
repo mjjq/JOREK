@@ -49,9 +49,15 @@ subroutine preset_parameters
 
   visco = 1.d-5
   T_max_visco   = 1.d99
+#ifdef fullmhd
+  visco_par = 0.d0
+#else
   visco_par = 1.d-5
+#endif
+  visco_par_par = 0.d0
   visco_heating     = 0.d0
   visco_par_heating = 0.d0
+  visco_par_par_heating = 0.d0
   visco_old_setup   = .false.
   
   central_density = 1.d0        ! the central density in units 10^20 m^-3

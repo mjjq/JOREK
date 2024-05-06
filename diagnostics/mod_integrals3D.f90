@@ -149,6 +149,7 @@ real*8  :: varmin(n_var), varmax(n_var), V_min(n_var), V_max(n_var)
 real*8  :: R_curr_cent, Z_curr_cent, Zcurr_tmp, R2curr_tmp, R2curr
 real*8  :: heating_impl_in, heating_impl_out, H_impl_int, H_impl_ext,heating_impl_tot
 real*8  :: Tie_min_neg, lnA
+real*8  :: Bnorm, int_B_norm , L
 #if (defined WITH_Neutrals)
 real*8  :: source_neutral, source_neutral_drift
 real*8  :: source_neutral_arr(n_inj_max), source_neutral_drift_arr(n_inj_max)
@@ -309,6 +310,10 @@ Dperp_part_flux  = 0.d0
 vpar_part_flux   = 0.d0
 vperp_part_flux  = 0.d0
 neut_part_flux   = 0.d0
+
+Bnorm = 0.d0
+L = 0.d0 
+int_B_norm = 0.d0
 
 local_pellet_particles = 0.d0
 local_plasma_particles = 0.d0
@@ -1595,6 +1600,7 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
       drhoimpdy = ( - R_t * rhoimp_s + R_s * rhoimp_t ) / xjac
 
       BB2    = (F0*F0 + dpsidx*dpsidx + dpsidy*dpsidy) / BigR**2
+      Bnorm    = (dpsidx * grad_t(1) - dpsidy * grad_t(2)) / BigR   ! normal magnetic field to the JOREK boundary
 
       ! --- get normalized flux 
       psi_n = get_psi_n(ps0,Z)
@@ -1761,7 +1767,9 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
       viscopar_flux = viscopar_flux  +  viscopar_f  * wgauss(ms) * delta_phi
       poynting_flux = poynting_flux  + poynting_tmp * wgauss(ms) * delta_phi
 
+      int_B_norm = int_B_norm + Bnorm**2 / BB2 * wgauss(ms) * delta_phi  
     enddo
+    L = L + sqrt(R_s**2 + Z_s**2) * wgauss(ms)
   enddo
 
 enddo !--- bnd elements, end of calculation of boundary fluxes
@@ -2014,7 +2022,7 @@ vpar_part_flux       =  n_period * vpar_part_flux * fact_part / t_norm2
 vperp_part_flux      =  n_period * vperp_part_flux* fact_part / t_norm2
 neut_part_flux       =  n_period * neut_part_flux * fact_part / t_norm2
 poynting_flux        =  n_period * poynting_flux  * fact_flux
-
+int_B_norm           =  n_period * int_B_norm
 ! --- Derived quantities
 E_tot        = mag_tot + pressure     + kin_par_tot + kin_perp_tot 
 E_in         = mag_in  + pressure_in  + kin_par_in  + kin_perp_in 
@@ -2331,6 +2339,9 @@ if (my_id .eq. 0) then
 
       case ( 'TPF_halo' )
         res(iexpr) = TPF 
+
+      case ('surface_int_B_norm')
+        res(iexpr) = int_B_norm
 
       case ( 'LCFS_Rgeo' )
         res(iexpr) = ES%LCFS_Rgeo 

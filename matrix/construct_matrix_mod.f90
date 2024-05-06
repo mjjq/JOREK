@@ -70,7 +70,7 @@ contains
         thread_struct(omp_tid)%eq_p, thread_struct(omp_tid)%eq_ss, thread_struct(omp_tid)%eq_st,   &
         thread_struct(omp_tid)%eq_tt, thread_struct(omp_tid)%delta_g,                              &
         thread_struct(omp_tid)%delta_s, thread_struct(omp_tid)%delta_t, i_tor_min, i_tor_max,      &
-        aux_nodes, thread_struct(omp_tid)%ELM_pnn)
+        aux_nodes, thread_struct(omp_tid)%ELM_pnn, thread_struct(omp_tid)%ELM_knn)
     else
       ! (use the element matrix by toroidal integration in case of very few harmonics or in case
       ! of direct construction of the harmonic matrices used in preconditioning)
@@ -197,7 +197,7 @@ contains
         thread_struct(omp_tid)%RHS_p, thread_struct(omp_tid)%RHS_k,  thread_struct(omp_tid)%eq_g, thread_struct(omp_tid)%eq_s, &
         thread_struct(omp_tid)%eq_t, thread_struct(omp_tid)%eq_p, thread_struct(omp_tid)%eq_ss, thread_struct(omp_tid)%eq_st, &
         thread_struct(omp_tid)%eq_tt, thread_struct(omp_tid)%delta_g, thread_struct(omp_tid)%delta_s, &
-        thread_struct(omp_tid)%delta_t, i_tor_min, i_tor_max, aux_nodes, thread_struct(omp_tid)%ELM_pnn)
+        thread_struct(omp_tid)%delta_t, i_tor_min, i_tor_max, aux_nodes, thread_struct(omp_tid)%ELM_pnn, thread_struct(omp_tid)%ELM_knn)
       if (     (jorek_model .eq. 303) &
           .or. (jorek_model .eq. 333) &
           .or. (jorek_model .eq. 500) &

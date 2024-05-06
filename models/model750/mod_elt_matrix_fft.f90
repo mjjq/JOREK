@@ -7,7 +7,7 @@ contains
 subroutine element_matrix_fft(element, nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, &
                               ELM, RHS, tid, ELM_p, ELM_n, ELM_k, ELM_kn, RHS_p, RHS_k,                               &
                               eq_g, eq_s, eq_t, eq_p, eq_ss, eq_st, eq_tt, delta_g, delta_s, delta_t,                 & 
-                              i_tor_min, i_tor_max, aux_nodes, ELM_pnn)
+                              i_tor_min, i_tor_max, aux_nodes, ELM_pnn, ELM_knn)
 
 ! NOT YET IMPLEMENTED
 
@@ -387,6 +387,7 @@ real*8, dimension(n_var,n_var)   :: amat, Pjac, Qjac_p, Qjac_k, Qjac_n, Qjac_kn
 ! --- Ohmic heating, for details please see:
 ! https://www.jorek.eu/wiki/doku.php?id=ohmic_heating
 real*8, dimension(DIM1, DIM2, DIM2), intent(inout) :: ELM_pnn
+real*8, dimension(DIM1, DIM2, DIM2), intent(inout) :: ELM_knn ! unused
 real*8, dimension(n_plane,n_var,n_gauss,n_gauss) :: eq_pp, eq_sp, eq_tp
 real*8, dimension(n_var,n_var)   :: Qjac_pnn
 real*8     :: AR0_Rp, AR0_Zp, AR0_sp, AR0_tp

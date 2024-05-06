@@ -6,7 +6,7 @@ contains
 
 subroutine element_matrix_fft(element, nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS, tid, &
                               ELM_p, ELM_n, ELM_k, ELM_kn, RHS_p, RHS_k,  eq_g, eq_s, eq_t, eq_p, eq_ss, eq_st, eq_tt, delta_g, delta_s, delta_t, & 
-                              i_tor_min, i_tor_max, aux_nodes, ELM_pnn)
+                              i_tor_min, i_tor_max, aux_nodes, ELM_pnn, ELM_knn)
 ! NOT YET IMPLEMENTED
 
 use mod_parameters
@@ -323,7 +323,7 @@ real*8     :: drho0_corr_dn, dTi0_corr_dT, dTe0_corr_dT
 
 ! --- Matrix
 real*8, dimension(n_var      )   :: rhs_p_ij, rhs_k_ij, Pvec_prev, Qvec_p, Qvec_k
-real*8, dimension(n_var,n_var)   :: amat, Pjac, Qjac_p, Qjac_k, Qjac_n, Qjac_kn, Qjac_pkn
+real*8, dimension(n_var,n_var)   :: amat, Pjac, Qjac_p, Qjac_k, Qjac_n, Qjac_kn
 
 ! --- Ohmic heating, for details please see:
 ! https://www.jorek.eu/wiki/doku.php?id=ohmic_heating
@@ -373,6 +373,9 @@ real*8     :: vsp, vsp_UR__p, vsp_UR__n, vsp_UR__nn, vsp_UZ__p, vsp_UZ__n, vsp_U
 
 #ifdef ENABLE_VISCO_PAR_AND_PARPAR
 !  --- For visco_par and visco_par_par
+! real*8, dimension(n_var,n_var)                     :: Qjac_pkn
+real*8, dimension(n_var,n_var)                     :: Qjac_knn
+real*8, dimension(DIM1, DIM2, DIM2), intent(inout) :: ELM_knn
 real*8     :: qparR, qparZ, qparPhi, qparpar, qparparR, qparparZ, qparparPhi
 real*8     :: grad_BRVstar_R, grad_BRVstar_Z, grad_BRVstar_phi, grad_BRVstar_phi_k
 real*8     :: grad_BpVstar_R, grad_BpVstar_Z, grad_BpVstar_phi, grad_BpVstar_phi_k
@@ -5101,6 +5104,10 @@ do i=1,n_vertex_max
 
                         amat(ivar,kvar)  = - tstep * theta * Qjac_pnn(ivar,kvar)
                         ELM_pnn(mp,kl,ij)= ELM_pnn(mp,kl,ij) +  wst * amat(ivar,kvar) * R * xjac
+#ifdef ENABLE_VISCO_PAR_AND_PARPAR
+                        amat(ivar,kvar)  = - tstep * theta * Qjac_knn(ivar,kvar)
+                        ELM_knn(mp,kl,ij)= ELM_knn(mp,kl,ij) +  wst * amat(ivar,kvar) * R * xjac
+#endif
                       enddo
                     enddo
                   else
@@ -5124,6 +5131,10 @@ do i=1,n_vertex_max
 
                         amat(ivar,kvar) = - tstep * theta * Qjac_pnn(ivar,kvar)
                         ELM(ij,kl)      = ELM(ij,kl) + wst * amat(ivar,kvar) * R * xjac
+#ifdef ENABLE_VISCO_PAR_AND_PARPAR
+                        amat(ivar,kvar) = - tstep * theta * Qjac_knn(ivar,kvar)
+                        ELM(ij,kl)      = ELM(ij,kl) + wst * amat(ivar,kvar) * R * xjac
+#endif
                       enddo
                     enddo
                   endif
@@ -5401,6 +5412,61 @@ do i=1,n_vertex_max
             enddo
 
           endif
+
+#ifdef ENABLE_VISCO_PAR_AND_PARPAR
+          if (maxval(abs(ELM_knn(1:n_plane,j_loc, i_v))) .ne. 0.d0) then
+
+            in_fft =  ELM_knn(1:n_plane,j_loc, i_v)
+
+#ifdef USE_FFTW
+            call dfftw_execute_dft_r2c(fftw_plan, in_fft, out_fft)
+#else
+            call my_fft(in_fft, out_fft, n_plane)
+#endif
+
+            do m=1,(n_tor+1)/2
+
+              im      = max(2*(m-1),1)
+              index_m = n_tor*(j_loc-1) + max(2*(m-1),1)
+
+              do k=1,(n_tor+1)/2
+
+                ik      = max(2*(k-1),1)
+                index_k = n_tor*(i_loc-1) + max(2*(k-1),1)
+
+                l = (k-1) + (m-1)
+                if ( (l .ge. 0) .and. (l .le. n_plane/2) ) then
+                  ELM(index_k,  index_m  ) = ELM(index_k,  index_m)   - imag(out_fft(l+1)) * float(mode(im)**2) * float(mode(ik))
+                  ELM(index_k+1,index_m  ) = ELM(index_k+1,index_m)   + real(out_fft(l+1)) * float(mode(im)**2) * float(mode(ik))
+                  ELM(index_k,  index_m+1) = ELM(index_k,  index_m+1) + real(out_fft(l+1)) * float(mode(im)**2) * float(mode(ik))
+                  ELM(index_k+1,index_m+1) = ELM(index_k+1,index_m+1) + imag(out_fft(l+1)) * float(mode(im)**2) * float(mode(ik))
+                elseif ( (l .lt. 0) .and. (abs(l) .le. n_plane/2) ) then 
+                  ELM(index_k,  index_m  ) = ELM(index_k,  index_m)   + imag(out_fft(abs(l)+1)) * float(mode(im)**2) * float(mode(ik))
+                  ELM(index_k+1,index_m  ) = ELM(index_k+1,index_m)   - real(out_fft(abs(l)+1)) * float(mode(im)**2) * float(mode(ik))
+                  ELM(index_k,  index_m+1) = ELM(index_k,  index_m+1) - real(out_fft(abs(l)+1)) * float(mode(im)**2) * float(mode(ik))
+                  ELM(index_k+1,index_m+1) = ELM(index_k+1,index_m+1) - imag(out_fft(abs(l)+1)) * float(mode(im)**2) * float(mode(ik))
+                endif
+
+                l = (k-1) - (m-1)
+
+                if ( (l .ge. 0) .and. (l .le. n_plane/2) ) then
+                  ELM(index_k,  index_m  ) = ELM(index_k,  index_m)   - imag(out_fft(l+1)) * float(mode(im)**2) * float(mode(ik))
+                  ELM(index_k+1,index_m  ) = ELM(index_k+1,index_m)   + real(out_fft(l+1)) * float(mode(im)**2) * float(mode(ik))
+                  ELM(index_k,  index_m+1) = ELM(index_k,  index_m+1) - real(out_fft(l+1)) * float(mode(im)**2) * float(mode(ik))
+                  ELM(index_k+1,index_m+1) = ELM(index_k+1,index_m+1) - imag(out_fft(l+1)) * float(mode(im)**2) * float(mode(ik))
+                elseif ( (l .lt. 0) .and. (abs(l) .le. n_plane/2) ) then
+                  ELM(index_k,  index_m  ) = ELM(index_k,  index_m)   - imag(out_fft(abs(l)+1)) * float(mode(im)**2) * float(mode(ik))
+                  ELM(index_k+1,index_m  ) = ELM(index_k+1,index_m)   - real(out_fft(abs(l)+1)) * float(mode(im)**2) * float(mode(ik))
+                  ELM(index_k,  index_m+1) = ELM(index_k,  index_m+1) + real(out_fft(abs(l)+1)) * float(mode(im)**2) * float(mode(ik))
+                  ELM(index_k+1,index_m+1) = ELM(index_k+1,index_m+1) - imag(out_fft(abs(l)+1)) * float(mode(im)**2) * float(mode(ik))
+                endif
+
+              enddo
+
+            enddo
+
+          endif
+#endif
 
         enddo
 

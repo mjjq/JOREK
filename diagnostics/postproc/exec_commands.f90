@@ -2876,6 +2876,7 @@ module exec_commands
       allocate(test_struct(i)%ELM(   dim0, dim0      ) )
       allocate(test_struct(i)%RHS(   dim0            ) )
       allocate(test_struct(i)%ELM_pnn(dim1, dim2, dim2) )
+      allocate(test_struct(i)%ELM_knn(dim1, dim2, dim2) )
   
       test_struct(i)%ELM_p   = 0.d0
       test_struct(i)%ELM_n   = 0.d0
@@ -2886,6 +2887,7 @@ module exec_commands
       test_struct(i)%ELM     = 0.d0
       test_struct(i)%RHS     = 0.d0
       test_struct(i)%ELM_pnn = 0.d0
+      test_struct(i)%ELM_knn = 0.d0
   
       allocate(test_struct(i)%eq_g    (n_plane,n_var,n_gauss,n_gauss) )
       allocate(test_struct(i)%eq_s    (n_plane,n_var,n_gauss,n_gauss) )
@@ -3025,7 +3027,7 @@ module exec_commands
        test_struct(omp_tid)%eq_p, test_struct(omp_tid)%eq_ss, test_struct(omp_tid)%eq_st,   &
        test_struct(omp_tid)%eq_tt, test_struct(omp_tid)%delta_g,                              &
        test_struct(omp_tid)%delta_s, test_struct(omp_tid)%delta_t, 1, n_tor, nodes,         &
-       test_struct(omp_tid)%ELM_pnn, get_terms=get_terms)
+       test_struct(omp_tid)%ELM_pnn, test_struct(omp_tid)%ELM_knn, get_terms=get_terms)
 
       do i_term=1, max_terms
   

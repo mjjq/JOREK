@@ -3613,28 +3613,26 @@ do i=1,n_vertex_max
 
                   Qjac_n(var_UZ, var_AZ) = Qjac_n(var_UZ, var_AZ) + &
                   -visco_par*( &
-                  -1.d0/BB2**2*(BB2_AZ__p+BB2_AZ__n)*( &
+                  -1.d0/BB2**2*(BB2_AZ__n)*( &
                    (grad_BdotU0_R-1.d0/BB2*B_dot_U0*BB2_R)*grad_BZVstar_R &
                   +(grad_BdotU0_Z-1.d0/BB2*B_dot_U0*BB2_Z)*grad_BZVstar_Z &
                   +(grad_BdotU0_phi-1.d0/BB2*B_dot_U0*BB2_phi)*(grad_BZVstar_phi)/R**2) &
                   +1.d0/BB2*( &
-                   ((grad_B_AZ_dot_U__R__p+grad_B_AZ_dot_U__R__n) + 1.d0/BB2**2*(BB2_AZ__p+BB2_AZ__n)*B_dot_U0*BB2_R &
-                  -1.d0/BB2*(B_AZ_dot_U__p+B_AZ_dot_U__n)*BB2_R-1.d0/BB2*B_dot_U0*(grad_BB2_AZ__R__p+grad_BB2_AZ__R__n+grad_BB2_AZ__R__nn))*grad_BZVstar_R &
-                  +(grad_BdotU0_R-1.d0/BB2*B_dot_U0*BB2_R)*(v*grad_BZ_AZ__R+BZ0_AZ*v_R) &
-                  +((grad_B_AZ_dot_U__Z__p+grad_B_AZ_dot_U__Z__n)+1.d0/BB2**2*(BB2_AZ__p+BB2_AZ__n)*B_dot_U0*BB2_Z &
-                  -1.d0/BB2*(B_AZ_dot_U__p+B_AZ_dot_U__n)*BB2_Z-1.d0/BB2*B_dot_U0*(grad_BB2_AZ__Z__p+grad_BB2_AZ__Z__n+grad_BB2_AZ__Z__nn))*grad_BZVstar_Z &
-                  +(grad_BdotU0_Z-1.d0/BB2*B_dot_U0*BB2_Z)*(v*grad_BZ_AZ__Z+BZ0_AZ*v_Z) &
-                  +((grad_B_AZ_dot_U__phi__p+grad_B_AZ_dot_U__phi__n+grad_B_AZ_dot_U__phi__nn)+1.d0/BB2**2*(BB2_AZ__p+BB2_AZ__n)*B_dot_U0*BB2_phi &
-                  -1.d0/BB2*(B_AZ_dot_U__p+B_AZ_dot_U__n)*BB2_phi-1.d0/BB2*B_dot_U0*(grad_BB2_AZ__phi__p+grad_BB2_AZ__phi__n+grad_BB2_AZ__phi__nn))*(grad_BZVstar_phi)/R**2 &
-                  +(grad_BdotU0_phi-1.d0/BB2*B_dot_U0*BB2_phi)*(v*grad_BZ_AZ__phi)/R**2) &
+                   ((grad_B_AZ_dot_U__R__n) + 1.d0/BB2**2*(BB2_AZ__n)*B_dot_U0*BB2_R &
+                  -1.d0/BB2*(B_AZ_dot_U__n)*BB2_R-1.d0/BB2*B_dot_U0*(grad_BB2_AZ__R__n))*grad_BZVstar_R &
+                  +((grad_B_AZ_dot_U__Z__n)+1.d0/BB2**2*(BB2_AZ__n)*B_dot_U0*BB2_Z &
+                  -1.d0/BB2*(B_AZ_dot_U__n)*BB2_Z-1.d0/BB2*B_dot_U0*(grad_BB2_AZ__Z__n))*grad_BZVstar_Z &
+                  +((grad_B_AZ_dot_U__phi__n)+1.d0/BB2**2*(BB2_AZ__n)*B_dot_U0*BB2_phi &
+                  -1.d0/BB2*(B_AZ_dot_U__n)*BB2_phi-1.d0/BB2*B_dot_U0*(grad_BB2_AZ__phi__n))*(grad_BZVstar_phi)/R**2 &
+                  ) &
                   ) &
                   -visco_par_par*( &
-                  -2.d0/BB2**3*(BB2_AZ__p+BB2_AZ__n)*(-1.d0/BB2*B_dot_grad_BB2*B_dot_U0+B_dot_grad_BdotU0)*(B_dot_grad_BZVstar__p) &
+                  -2.d0/BB2**3*(BB2_AZ__n)*(-1.d0/BB2*B_dot_grad_BB2*B_dot_U0+B_dot_grad_BdotU0)*(B_dot_grad_BZVstar__p) &
                   +1.d0/BB2**2*(( &
-                   1.d0/BB2**2*(BB2_AZ__p+BB2_AZ__n)*B_dot_grad_BB2*B_dot_U0-1.d0/BB2*(B_dot_grad_BB2__AZ__p+B_dot_grad_BB2__AZ__n+B_dot_grad_BB2__AZ__nn)*B_dot_U0 &
-                  -1.d0/BB2*B_dot_grad_BB2*(B_AZ_dot_U__p+B_AZ_dot_U__n)+(B_AZ_dot_grad_BdotU0__p+B_AZ_dot_grad_BdotU0__n)+(B_dot_grad__BdotU0_AZ__p+B_dot_grad__BdotU0_AZ__n+B_dot_grad__BdotU0_AZ__nn) &
+                   1.d0/BB2**2*(BB2_AZ__n)*B_dot_grad_BB2*B_dot_U0-1.d0/BB2*(B_dot_grad_BB2__AZ__n)*B_dot_U0 &
+                  -1.d0/BB2*B_dot_grad_BB2*(B_AZ_dot_U__n)+(B_AZ_dot_grad_BdotU0__n)+(B_dot_grad__BdotU0_AZ__n) &
                   )*(B_dot_grad_BZVstar__p) &
-                  +(-1.d0/BB2*B_dot_grad_BB2*B_dot_U0+B_dot_grad_BdotU0)*(B_dot_grad_BZVstar__AZ__p+B_dot_grad_BZVstar__AZ__n+B_dot_grad_BZVstar__AZ__nn)) &
+                  +(-1.d0/BB2*B_dot_grad_BB2*B_dot_U0+B_dot_grad_BdotU0)*(B_dot_grad_BZVstar__AZ__n)) &
                   )
 
                   Qjac_k(var_UZ, var_AZ) = Qjac_k(var_UZ, var_AZ) + &
@@ -5437,28 +5435,28 @@ do i=1,n_vertex_max
                 l = (k-1) + (m-1)
                 if ( (l .ge. 0) .and. (l .le. n_plane/2) ) then
                   ELM(index_k,  index_m  ) = ELM(index_k,  index_m)   - imag(out_fft(l+1)) * float(mode(im)**2) * float(mode(ik))
-                  ELM(index_k+1,index_m  ) = ELM(index_k+1,index_m)   + real(out_fft(l+1)) * float(mode(im)**2) * float(mode(ik))
-                  ELM(index_k,  index_m+1) = ELM(index_k,  index_m+1) + real(out_fft(l+1)) * float(mode(im)**2) * float(mode(ik))
+                  ELM(index_k+1,index_m  ) = ELM(index_k+1,index_m)   - real(out_fft(l+1)) * float(mode(im)**2) * float(mode(ik))
+                  ELM(index_k,  index_m+1) = ELM(index_k,  index_m+1) - real(out_fft(l+1)) * float(mode(im)**2) * float(mode(ik))
                   ELM(index_k+1,index_m+1) = ELM(index_k+1,index_m+1) + imag(out_fft(l+1)) * float(mode(im)**2) * float(mode(ik))
                 elseif ( (l .lt. 0) .and. (abs(l) .le. n_plane/2) ) then 
-                  ELM(index_k,  index_m  ) = ELM(index_k,  index_m)   + imag(out_fft(abs(l)+1)) * float(mode(im)**2) * float(mode(ik))
+                  ELM(index_k,  index_m  ) = ELM(index_k,  index_m)   - imag(out_fft(abs(l)+1)) * float(mode(im)**2) * float(mode(ik))
                   ELM(index_k+1,index_m  ) = ELM(index_k+1,index_m)   - real(out_fft(abs(l)+1)) * float(mode(im)**2) * float(mode(ik))
                   ELM(index_k,  index_m+1) = ELM(index_k,  index_m+1) - real(out_fft(abs(l)+1)) * float(mode(im)**2) * float(mode(ik))
-                  ELM(index_k+1,index_m+1) = ELM(index_k+1,index_m+1) - imag(out_fft(abs(l)+1)) * float(mode(im)**2) * float(mode(ik))
+                  ELM(index_k+1,index_m+1) = ELM(index_k+1,index_m+1) + imag(out_fft(abs(l)+1)) * float(mode(im)**2) * float(mode(ik))
                 endif
 
                 l = (k-1) - (m-1)
 
                 if ( (l .ge. 0) .and. (l .le. n_plane/2) ) then
                   ELM(index_k,  index_m  ) = ELM(index_k,  index_m)   - imag(out_fft(l+1)) * float(mode(im)**2) * float(mode(ik))
-                  ELM(index_k+1,index_m  ) = ELM(index_k+1,index_m)   + real(out_fft(l+1)) * float(mode(im)**2) * float(mode(ik))
-                  ELM(index_k,  index_m+1) = ELM(index_k,  index_m+1) - real(out_fft(l+1)) * float(mode(im)**2) * float(mode(ik))
+                  ELM(index_k+1,index_m  ) = ELM(index_k+1,index_m)   - real(out_fft(l+1)) * float(mode(im)**2) * float(mode(ik))
+                  ELM(index_k,  index_m+1) = ELM(index_k,  index_m+1) + real(out_fft(l+1)) * float(mode(im)**2) * float(mode(ik))
                   ELM(index_k+1,index_m+1) = ELM(index_k+1,index_m+1) - imag(out_fft(l+1)) * float(mode(im)**2) * float(mode(ik))
                 elseif ( (l .lt. 0) .and. (abs(l) .le. n_plane/2) ) then
-                  ELM(index_k,  index_m  ) = ELM(index_k,  index_m)   - imag(out_fft(abs(l)+1)) * float(mode(im)**2) * float(mode(ik))
+                  ELM(index_k,  index_m  ) = ELM(index_k,  index_m)   + imag(out_fft(abs(l)+1)) * float(mode(im)**2) * float(mode(ik))
                   ELM(index_k+1,index_m  ) = ELM(index_k+1,index_m)   - real(out_fft(abs(l)+1)) * float(mode(im)**2) * float(mode(ik))
                   ELM(index_k,  index_m+1) = ELM(index_k,  index_m+1) + real(out_fft(abs(l)+1)) * float(mode(im)**2) * float(mode(ik))
-                  ELM(index_k+1,index_m+1) = ELM(index_k+1,index_m+1) - imag(out_fft(abs(l)+1)) * float(mode(im)**2) * float(mode(ik))
+                  ELM(index_k+1,index_m+1) = ELM(index_k+1,index_m+1) + imag(out_fft(abs(l)+1)) * float(mode(im)**2) * float(mode(ik))
                 endif
 
               enddo

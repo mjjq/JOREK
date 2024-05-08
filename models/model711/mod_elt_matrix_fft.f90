@@ -85,7 +85,7 @@ real*8, dimension(n_var)              :: TG_NUM
 real*8, dimension(n_tor,n_plane) :: HHZ, HHZ_p, HHZ_pp
 
 ! --- Variables inside the OMP loop
-integer    :: k, l, index_ij, index_kl, ij, kl
+integer    :: k, l, index_ij, index_kl, ij, kl, sgn_l
 
 real*8     :: AR0,  AR0_R,  AR0_Z,  AR0_p,  AR0_s,  AR0_t, AR0_ss, AR0_tt, AR0_st, AR0_RR, AR0_ZZ, AR0_RZ, AR0_pp
 real*8     :: AZ0,  AZ0_R,  AZ0_Z,  AZ0_p,  AZ0_s,  AZ0_t, AZ0_ss, AZ0_tt, AZ0_st, AZ0_RR, AZ0_ZZ, AZ0_RZ, AZ0_pp
@@ -456,6 +456,9 @@ Qjac_k    = 0.d0
 Qjac_n    = 0.d0
 Qjac_kn   = 0.d0
 Qjac_pnn  = 0.d0
+#ifdef ENABLE_VISCO_PAR_AND_PARPAR
+Qjac_knn  = 0.d0
+#endif
 Pvec_prev = 0.d0
 Qvec_p    = 0.d0
 Qvec_k    = 0.d0
@@ -5177,13 +5180,13 @@ do i=1,n_vertex_max
                 ELM(index_k+1,index_m+1) = ELM(index_k+1,index_m+1) - real(out_fft(l+1))
               endif
 
-              l = (k-1) - (m-1)
+              l = abs((k-1) - (m-1)); sgn_l = sign(1, (k-m))
 
-              if (abs(l) .le. n_plane/2) then
-                ELM(index_k,  index_m  ) = ELM(index_k,  index_m)   +              real(out_fft(abs(l)+1))
-                ELM(index_k+1,index_m  ) = ELM(index_k+1,index_m)   - sign(1, l) * imag(out_fft(abs(l)+1))
-                ELM(index_k,  index_m+1) = ELM(index_k,  index_m+1) + sign(1, l) * imag(out_fft(abs(l)+1))
-                ELM(index_k+1,index_m+1) = ELM(index_k+1,index_m+1) +              real(out_fft(abs(l)+1))
+              if (l .le. n_plane/2) then
+                ELM(index_k,  index_m  ) = ELM(index_k,  index_m)   +         real(out_fft(l+1))
+                ELM(index_k+1,index_m  ) = ELM(index_k+1,index_m)   - sgn_l * imag(out_fft(l+1))
+                ELM(index_k,  index_m+1) = ELM(index_k,  index_m+1) + sgn_l * imag(out_fft(l+1))
+                ELM(index_k+1,index_m+1) = ELM(index_k+1,index_m+1) +         real(out_fft(l+1))
               endif
 
             enddo
@@ -5216,13 +5219,13 @@ do i=1,n_vertex_max
                   ELM(index_k+1,index_m+1) = ELM(index_k+1,index_m+1) - imag(out_fft(l+1)) * float(mode(im))
                 endif
 
-                l = (k-1) - (m-1)
+                l = abs((k-1) - (m-1)); sgn_l = sign(1, (k-m))
 
-                if (abs(l) .le. n_plane/2) then
-                  ELM(index_k,  index_m  ) = ELM(index_k,  index_m)   - sign(1, l) * imag(out_fft(abs(l)+1)) * float(mode(im))
-                  ELM(index_k+1,index_m  ) = ELM(index_k+1,index_m)   -              real(out_fft(abs(l)+1)) * float(mode(im))
-                  ELM(index_k,  index_m+1) = ELM(index_k,  index_m+1) +              real(out_fft(abs(l)+1)) * float(mode(im))
-                  ELM(index_k+1,index_m+1) = ELM(index_k+1,index_m+1) - sign(1, l) * imag(out_fft(abs(l)+1)) * float(mode(im))
+                if (l .le. n_plane/2) then
+                  ELM(index_k,  index_m  ) = ELM(index_k,  index_m)   - sgn_l * imag(out_fft(l+1)) * float(mode(im))
+                  ELM(index_k+1,index_m  ) = ELM(index_k+1,index_m)   -         real(out_fft(l+1)) * float(mode(im))
+                  ELM(index_k,  index_m+1) = ELM(index_k,  index_m+1) +         real(out_fft(l+1)) * float(mode(im))
+                  ELM(index_k+1,index_m+1) = ELM(index_k+1,index_m+1) - sgn_l * imag(out_fft(l+1)) * float(mode(im))
                 endif
 
               enddo
@@ -5259,13 +5262,13 @@ do i=1,n_vertex_max
                   ELM(index_k+1,index_m+1) = ELM(index_k+1,index_m+1) - imag(out_fft(l+1)) * float(mode(ik))
                 endif
 
-                l = (k-1) - (m-1)
+                l = abs((k-1) - (m-1)); sgn_l = sign(1, (k-m))
 
-                if (abs(l) .le. n_plane/2) then
-                  ELM(index_k,  index_m  ) = ELM(index_k,  index_m)   + sign(1, l) * imag(out_fft(abs(l)+1)) * float(mode(ik))
-                  ELM(index_k+1,index_m  ) = ELM(index_k+1,index_m)   +              real(out_fft(abs(l)+1)) * float(mode(ik))
-                  ELM(index_k,  index_m+1) = ELM(index_k,  index_m+1) -              real(out_fft(abs(l)+1)) * float(mode(ik))
-                  ELM(index_k+1,index_m+1) = ELM(index_k+1,index_m+1) + sign(1, l) * imag(out_fft(abs(l)+1)) * float(mode(ik))
+                if (l .le. n_plane/2) then
+                  ELM(index_k,  index_m  ) = ELM(index_k,  index_m)   + sgn_l * imag(out_fft(l+1)) * float(mode(ik))
+                  ELM(index_k+1,index_m  ) = ELM(index_k+1,index_m)   +         real(out_fft(l+1)) * float(mode(ik))
+                  ELM(index_k,  index_m+1) = ELM(index_k,  index_m+1) -         real(out_fft(l+1)) * float(mode(ik))
+                  ELM(index_k+1,index_m+1) = ELM(index_k+1,index_m+1) + sgn_l * imag(out_fft(l+1)) * float(mode(ik))
                 endif
 
               enddo
@@ -5303,13 +5306,13 @@ do i=1,n_vertex_max
                   ELM(index_k+1,index_m+1) = ELM(index_k+1,index_m+1) + real(out_fft(l+1)) * float(mode(im)) * float(mode(ik))
                 endif
 
-                l = (k-1) - (m-1)
+                l = abs((k-1) - (m-1)); sgn_l = sign(1, (k-m))
 
-                if (abs(l) .le. n_plane/2) then
-                  ELM(index_k,  index_m  ) = ELM(index_k,  index_m)   +              real(out_fft(abs(l)+1)) * float(mode(im)) * float(mode(ik))
-                  ELM(index_k+1,index_m  ) = ELM(index_k+1,index_m)   - sign(1, l) * imag(out_fft(abs(l)+1)) * float(mode(im)) * float(mode(ik))
-                  ELM(index_k,  index_m+1) = ELM(index_k,  index_m+1) + sign(1, l) * imag(out_fft(abs(l)+1)) * float(mode(im)) * float(mode(ik))
-                  ELM(index_k+1,index_m+1) = ELM(index_k+1,index_m+1) +              real(out_fft(abs(l)+1)) * float(mode(im)) * float(mode(ik))
+                if (l .le. n_plane/2) then
+                  ELM(index_k,  index_m  ) = ELM(index_k,  index_m)   +         real(out_fft(l+1)) * float(mode(im)) * float(mode(ik))
+                  ELM(index_k+1,index_m  ) = ELM(index_k+1,index_m)   - sgn_l * imag(out_fft(l+1)) * float(mode(im)) * float(mode(ik))
+                  ELM(index_k,  index_m+1) = ELM(index_k,  index_m+1) + sgn_l * imag(out_fft(l+1)) * float(mode(im)) * float(mode(ik))
+                  ELM(index_k+1,index_m+1) = ELM(index_k+1,index_m+1) +         real(out_fft(l+1)) * float(mode(im)) * float(mode(ik))
                 endif
 
               enddo
@@ -5346,13 +5349,13 @@ do i=1,n_vertex_max
                   ELM(index_k+1,index_m+1) = ELM(index_k+1,index_m+1) + real(out_fft(l+1)) * float(mode(im)**2)
                 endif
 
-                l = (k-1) - (m-1)
+                l = abs((k-1) - (m-1)); sgn_l = sign(1, (k-m))
 
-                if (abs(l) .le. n_plane/2) then
-                  ELM(index_k,  index_m  ) = ELM(index_k,  index_m)   -              real(out_fft(abs(l)+1)) * float(mode(im)**2)
-                  ELM(index_k+1,index_m  ) = ELM(index_k+1,index_m)   + sign(1, l) * imag(out_fft(abs(l)+1)) * float(mode(im)**2)
-                  ELM(index_k,  index_m+1) = ELM(index_k,  index_m+1) - sign(1, l) * imag(out_fft(abs(l)+1)) * float(mode(im)**2)
-                  ELM(index_k+1,index_m+1) = ELM(index_k+1,index_m+1) -              real(out_fft(abs(l)+1)) * float(mode(im)**2)
+                if (l .le. n_plane/2) then
+                  ELM(index_k,  index_m  ) = ELM(index_k,  index_m)   -         real(out_fft(l+1)) * float(mode(im)**2)
+                  ELM(index_k+1,index_m  ) = ELM(index_k+1,index_m)   + sgn_l * imag(out_fft(l+1)) * float(mode(im)**2)
+                  ELM(index_k,  index_m+1) = ELM(index_k,  index_m+1) - sgn_l * imag(out_fft(l+1)) * float(mode(im)**2)
+                  ELM(index_k+1,index_m+1) = ELM(index_k+1,index_m+1) -         real(out_fft(l+1)) * float(mode(im)**2)
                 endif
 
               enddo
@@ -5391,13 +5394,13 @@ do i=1,n_vertex_max
                   ELM(index_k+1,index_m+1) = ELM(index_k+1,index_m+1) + imag(out_fft(l+1)) * float(mode(im)**2) * float(mode(ik))
                 endif
 
-                l = (k-1) - (m-1)
+                l = abs((k-1) - (m-1)); sgn_l = sign(1, (k-m))
 
-                if (abs(l) .le. n_plane/2) then
-                  ELM(index_k,  index_m  ) = ELM(index_k,  index_m)   - sign(1, l) * imag(out_fft(abs(l)+1)) * float(mode(im)**2) * float(mode(ik))
-                  ELM(index_k+1,index_m  ) = ELM(index_k+1,index_m)   -              real(out_fft(abs(l)+1)) * float(mode(im)**2) * float(mode(ik))
-                  ELM(index_k,  index_m+1) = ELM(index_k,  index_m+1) +              real(out_fft(abs(l)+1)) * float(mode(im)**2) * float(mode(ik))
-                  ELM(index_k+1,index_m+1) = ELM(index_k+1,index_m+1) - sign(1, l) * imag(out_fft(abs(l)+1)) * float(mode(im)**2) * float(mode(ik))
+                if (l .le. n_plane/2) then
+                  ELM(index_k,  index_m  ) = ELM(index_k,  index_m)   - sgn_l * imag(out_fft(l+1)) * float(mode(im)**2) * float(mode(ik))
+                  ELM(index_k+1,index_m  ) = ELM(index_k+1,index_m)   -         real(out_fft(l+1)) * float(mode(im)**2) * float(mode(ik))
+                  ELM(index_k,  index_m+1) = ELM(index_k,  index_m+1) +         real(out_fft(l+1)) * float(mode(im)**2) * float(mode(ik))
+                  ELM(index_k+1,index_m+1) = ELM(index_k+1,index_m+1) - sgn_l * imag(out_fft(l+1)) * float(mode(im)**2) * float(mode(ik))
                 endif
 
               enddo

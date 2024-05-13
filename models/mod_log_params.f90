@@ -553,6 +553,8 @@ write(*,'(1x,a)',advance='no') ' RTREE_H               : '
   write(*,REAL_FMT) 'visco_heating         ', visco_heating
   write(*,REAL_FMT) 'visco_par             ', visco_par
   write(*,REAL_FMT) 'visco_par_heating     ', visco_par_heating
+  write(*,REAL_FMT) 'visco_par_par         ', visco_par_par
+  write(*,REAL_FMT) 'visco_par_par_heating ', visco_par_par_heating
   write(*,LOGI_FMT) 'restart               ', restart
   write(*,INTG_FMT) 'rst_format            ', rst_format
   write(*,INTG_FMT) 'rst_hdf5              ', rst_hdf5

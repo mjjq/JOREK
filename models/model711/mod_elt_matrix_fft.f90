@@ -2584,6 +2584,9 @@ do i=1,n_vertex_max
                   Qjac_n    = 0.d0 ! rest of the LHS (toroidal part with phi-derivatives of the basis-functions)
                   Qjac_kn   = 0.d0 ! rest of the LHS (toroidal part with phi-derivatives of the basis-functions and the test-functions)
                   Qjac_pnn  = 0.d0 ! rest of the LHS (toroidal part with second-order phi-derivatives of the basis-functions)
+#ifdef ENABLE_VISCO_PAR_AND_PARPAR
+                  Qjac_knn  = 0.d0 ! rest of the LHS (toroidal part with second-order phi-derivatives of the basis-functions and phi-derivatives of the test-function)
+#endif
 
                   !###################################################################################################
                   !#  equation 1   (R component induction equation)                                                  #

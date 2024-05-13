@@ -19,7 +19,9 @@ contains
     use phys_module,              only : bc_natural_open, bc_natural_flux, n_tor_fft_thresh, grid_to_wall, n_wall_blocks, keep_n0_const
     USE data_structure,           only : type_element, type_node, type_node_list, thread_struct
     use mod_boundary_matrix_open, only : boundary_matrix_open
+#ifndef fullmhd
     use mod_elt_matrix,           only : element_matrix
+#endif
     use mod_elt_matrix_fft,       only : element_matrix_fft
     use mpi_mod
 
@@ -56,10 +58,11 @@ contains
     call MPI_COMM_RANK(MPI_COMM_WORLD, rank, ierr)
     my_id = rank
 #endif
-
+#ifndef fullmhd
     ! --- Call element_matrix
     if ( ( (i_tor_min .eq. 1) .and. (i_tor_max .eq. n_tor) .and. (n_tor .ge. n_tor_fft_thresh) )   &
       .or. (unified_element_matrix) ) then
+#endif
       ! (use the FFT element matrix construction or the unified one in case it has been combined
       ! for the respective model)
       call element_matrix_fft(element,nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd,   &
@@ -71,6 +74,7 @@ contains
         thread_struct(omp_tid)%eq_tt, thread_struct(omp_tid)%delta_g,                              &
         thread_struct(omp_tid)%delta_s, thread_struct(omp_tid)%delta_t, i_tor_min, i_tor_max,      &
         aux_nodes, thread_struct(omp_tid)%ELM_pnn, thread_struct(omp_tid)%ELM_knn)
+#ifndef fullmhd
     else
       ! (use the element matrix by toroidal integration in case of very few harmonics or in case
       ! of direct construction of the harmonic matrices used in preconditioning)
@@ -78,7 +82,7 @@ contains
         R_xpoint, Z_xpoint, thread_struct(omp_tid)%ELM, thread_struct(omp_tid)%RHS, omp_tid,       &
         i_tor_min, i_tor_max, aux_nodes)
     endif
-    
+#endif
     ! --- Apply sheath boundary conditions at the targets
     if (bc_natural_open) then
       ! --- Loop over the 4 nodes
@@ -205,8 +209,18 @@ contains
           .or. (jorek_model .eq. 711) &
           .or. (jorek_model .eq. 712) &
          ) n_tor_fft_thresh = 300
+#ifndef fullmhd
       call element_matrix    (element,nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, &
         thread_struct(omp_tid)%ELM,  thread_struct(omp_tid)%RHS,  omp_tid, i_tor_min, i_tor_max, aux_nodes)
+#else
+      call element_matrix_fft(element,nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, &
+      thread_struct(omp_tid)%ELM2, thread_struct(omp_tid)%RHS2, omp_tid, &
+      thread_struct(omp_tid)%ELM_p, thread_struct(omp_tid)%ELM_n, thread_struct(omp_tid)%ELM_k, thread_struct(omp_tid)%ELM_kn, &
+      thread_struct(omp_tid)%RHS_p, thread_struct(omp_tid)%RHS_k,  thread_struct(omp_tid)%eq_g, thread_struct(omp_tid)%eq_s, &
+      thread_struct(omp_tid)%eq_t, thread_struct(omp_tid)%eq_p, thread_struct(omp_tid)%eq_ss, thread_struct(omp_tid)%eq_st, &
+      thread_struct(omp_tid)%eq_tt, thread_struct(omp_tid)%delta_g, thread_struct(omp_tid)%delta_s, &
+      thread_struct(omp_tid)%delta_t, i_tor_min, i_tor_max, aux_nodes, thread_struct(omp_tid)%ELM_pnn, thread_struct(omp_tid)%ELM_knn)
+#endif
       
       ! --- Compare right hand side
       write(*,*)
@@ -278,7 +292,9 @@ subroutine construct_matrix(mhd_sim, local_elms, n_local_elms, a_mat, rhs_vec, h
   use vacuum_response, only: vacuum_boundary_integral
   use mod_ch_nod_rhs_elm
   use mod_boundary_matrix_open
+#ifndef fullmhd
   use mod_elt_matrix
+#endif
   use mod_elt_matrix_fft
   use mpi_mod
   use mod_boundary_conditions, only : boundary_conditions

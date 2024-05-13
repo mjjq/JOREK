@@ -666,11 +666,12 @@ mpi_required = 0
         end if
 
       end if
-    
+      
+      write(*,*) 'LOOP VOLTAGE CONTROL  ', my_id, index_now, loop_voltage_control
     end if
 
     call MPI_BCAST(loop_voltage_control,   1, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)  
-    write(*,*) 'LOOP VOLTAGE CONTROL  ', my_id, index_now, loop_voltage_control
+    
 
     index_now = index_now + 1
     tstep = tstep_n(jstep)

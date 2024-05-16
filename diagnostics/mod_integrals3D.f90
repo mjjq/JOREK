@@ -1767,7 +1767,7 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
       viscopar_flux = viscopar_flux  +  viscopar_f  * wgauss(ms) * delta_phi
       poynting_flux = poynting_flux  + poynting_tmp * wgauss(ms) * delta_phi
 
-      int_B_norm = int_B_norm + Bnorm**2 / BB2 * wgauss(ms) * delta_phi  
+      int_B_norm = int_B_norm + sqrt(R_s**2 + Z_s**2) * Bnorm**2 / BB2 * wgauss(ms) * delta_phi  
     enddo
     L = L + sqrt(R_s**2 + Z_s**2) * wgauss(ms)
   enddo
@@ -2022,7 +2022,7 @@ vpar_part_flux       =  n_period * vpar_part_flux * fact_part / t_norm2
 vperp_part_flux      =  n_period * vperp_part_flux* fact_part / t_norm2
 neut_part_flux       =  n_period * neut_part_flux * fact_part / t_norm2
 poynting_flux        =  n_period * poynting_flux  * fact_flux
-int_B_norm           =  n_period * int_B_norm
+int_B_norm           =  n_period * int_B_norm / (2 * PI * L)
 ! --- Derived quantities
 E_tot        = mag_tot + pressure     + kin_par_tot + kin_perp_tot 
 E_in         = mag_in  + pressure_in  + kin_par_in  + kin_perp_in 
@@ -2340,7 +2340,7 @@ if (my_id .eq. 0) then
       case ( 'TPF_halo' )
         res(iexpr) = TPF 
 
-      case ('surface_int_B_norm')
+      case ('int_dBn_norm')
         res(iexpr) = int_B_norm
 
       case ( 'LCFS_Rgeo' )

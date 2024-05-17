@@ -231,11 +231,11 @@ subroutine remove_file(rank,filename,ifail)
   integer,intent(in)          :: rank
   character(len=*),intent(in) :: filename
   integer                     :: u, stat
-  call MPI_Barrier(MPI_COMM_WORLD,ifail)
   if(rank.eq.master_rank) then
     open(newunit=u, iostat=stat, file=trim(filename), status='old')
     if (stat .eq. 0) close(u, status='delete')
   endif
+  call MPI_Barrier(MPI_COMM_WORLD,ifail)
 end subroutine remove_file
 
 !> Helper function for allocating particles

@@ -1400,7 +1400,13 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
         do mp=1, n_plane 
           do in=1, n_tor
             if (present(exclude_n0)) then 
-              if (exclude_n0 .and. in == 1 ) cycle
+              if (exclude_n0 .and. in == 1) then
+                if (n_tor > 1) then
+                  cycle
+                else  
+                  write(*,*) 'n_tor = 1 , cannot exclude axisymmetric part'
+                endif
+              endif  
             endif
             eq_g_1D(mp,k,:) = eq_g_1D(mp,k,:) + node_k%values(in,k_dir,k) * k_size * H1(k_vertex,k_dof,:)   * HZ(in,mp)
             eq_s_1D(mp,k,:) = eq_s_1D(mp,k,:) + node_k%values(in,k_dir,k) * k_size * H1_s(k_vertex,k_dof,:) * HZ(in,mp)
@@ -1517,7 +1523,13 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
 
       do in = 1,n_tor
         if (present(exclude_n0)) then
-          if (exclude_n0 .and. in == 1 ) cycle
+          if (exclude_n0 .and. in == 1) then
+            if (n_tor > 1) then
+              cycle
+            else
+              write(*,*) 'n_tor = 1 , cannot exclude axisymmetric part'
+            endif
+          endif
         endif
         call interp(node_list,element_list,m_elm,var_psi,in,sg,tg,PS,PS_s,PS_t,PS_st,PS_ss,PS_tt)
         psi_s = psi_s + PS_s * HZ(in,mp)

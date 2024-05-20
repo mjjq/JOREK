@@ -2583,7 +2583,6 @@ module exec_commands
  
     call int3d_new(0, node_list, element_list, bnd_node_list, bnd_elm_list, exprs_all_int, res, units)        
 
-
     if (.not. present(res_out)) then
       call write_ascii_0d(ierr, ES, expr_list, res, FORM_TABLE, header=.false.,                   &
         filename=filename, append=.true., blanks=.false.)

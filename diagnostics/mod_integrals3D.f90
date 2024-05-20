@@ -41,7 +41,7 @@ module mod_integrals3D
   contains
 
 
-subroutine int3d_new(my_id, node_list, element_list, bnd_node_list, bnd_elm_list, expr_list, res, units)
+subroutine int3d_new(my_id, node_list, element_list, bnd_node_list, bnd_elm_list, expr_list, res, units, exclude_n0)
 
 !$ use omp_lib
  
@@ -54,6 +54,7 @@ type (type_bnd_element_list), intent(in)    :: bnd_elm_list
 type (t_expr_list),           intent(in)    :: expr_list
 real*8,                    intent(inout)    :: res(:)
 integer,                      intent(in)    :: units
+logical, optional,            intent(in)    :: exclude_n0     !< Ommit n=0 component
 
 ! --- Local variables
 type (type_element)      :: element, elm_k
@@ -1397,7 +1398,8 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
 
       do k=1,n_var
         do mp=1, n_plane 
-          do in=1,n_tor
+          do in=1, n_tor
+            if (exclude_n0 .and. in == 1 ) cycle
             eq_g_1D(mp,k,:) = eq_g_1D(mp,k,:) + node_k%values(in,k_dir,k) * k_size * H1(k_vertex,k_dof,:)   * HZ(in,mp)
             eq_s_1D(mp,k,:) = eq_s_1D(mp,k,:) + node_k%values(in,k_dir,k) * k_size * H1_s(k_vertex,k_dof,:) * HZ(in,mp)
 
@@ -1512,6 +1514,7 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
       vpar_s = 0.d0; vpar_t = 0.d0; 
 
       do in = 1,n_tor
+        if (exclude_n0 .and. in == 1 ) cycle
         call interp(node_list,element_list,m_elm,var_psi,in,sg,tg,PS,PS_s,PS_t,PS_st,PS_ss,PS_tt)
         psi_s = psi_s + PS_s * HZ(in,mp)
         psi_t = psi_t + PS_t * HZ(in,mp)
@@ -1767,9 +1770,9 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
       viscopar_flux = viscopar_flux  +  viscopar_f  * wgauss(ms) * delta_phi
       poynting_flux = poynting_flux  + poynting_tmp * wgauss(ms) * delta_phi
 
-      int_B_norm = int_B_norm + sqrt(R_s**2 + Z_s**2) * Bnorm**2 / BB2 * wgauss(ms) * delta_phi  
+      int_B_norm = int_B_norm +  Bnorm**2 / BB2 * sqrt(x_s_1D(ms)**2 + y_s_1D(ms)**2) * wgauss(ms) * delta_phi  
     enddo
-    L = L + sqrt(R_s**2 + Z_s**2) * wgauss(ms)
+    L = L + sqrt(x_s_1D(ms)**2 + y_s_1D(ms)**2) * wgauss(ms)
   enddo
 
 enddo !--- bnd elements, end of calculation of boundary fluxes
@@ -2022,7 +2025,7 @@ vpar_part_flux       =  n_period * vpar_part_flux * fact_part / t_norm2
 vperp_part_flux      =  n_period * vperp_part_flux* fact_part / t_norm2
 neut_part_flux       =  n_period * neut_part_flux * fact_part / t_norm2
 poynting_flux        =  n_period * poynting_flux  * fact_flux
-int_B_norm           =  n_period * int_B_norm / (2 * PI * L)
+int_B_norm           =  sqrt(n_period * int_B_norm / (2 * PI * L ))
 ! --- Derived quantities
 E_tot        = mag_tot + pressure     + kin_par_tot + kin_perp_tot 
 E_in         = mag_in  + pressure_in  + kin_par_in  + kin_perp_in 

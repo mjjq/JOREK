@@ -54,7 +54,8 @@ module exec_commands
   logical,             private, save :: dir_created   = .false. !< Postproc directory created?
   logical,             private, save :: verbose
   logical,             private, save :: debug
-  type(t_expr_list),            save :: expr_list, expr_list_four
+  logical,             private, save :: exclude_n0  
+type(t_expr_list),            save :: expr_list, expr_list_four
   real*8, allocatable, private, save :: result(:,:,:,:), res2d(:,:,:), res1d(:,:), res0d(:), the_sum(:)
   complex*16, allocatable, private, save :: cp(:,:,:,:)
   real*8,              private, save :: time_now !< Time of current restart file in selected units
@@ -2152,7 +2153,7 @@ module exec_commands
     character(len=1024) :: filename, status, access
     real*8, allocatable :: res(:)
     character(len=23)   :: s
-
+    !logical  :: exclude_n0 
     ierr = 0
 
     ! --- Some checks
@@ -2186,8 +2187,9 @@ module exec_commands
       write(i_file,'(a)')
     end if
     close(i_file)
- 
-   call int3d_new(0, node_list, element_list, bnd_node_list, bnd_elm_list, expr_list, res, units)        
+   exclude_n0 = .false.
+   exclude_n0 = get_log_setting('exclude_n0', ierr) 
+   call int3d_new(0, node_list, element_list, bnd_node_list, bnd_elm_list, expr_list, res, units, exclude_n0)        
 
    call write_ascii_0d(ierr, ES, expr_list, res, FORM_TABLE, header=.false.,                   &
      filename=filename, append=.true., blanks=.false.)
@@ -2579,6 +2581,7 @@ module exec_commands
     close(i_file)
  
     call int3d_new(0, node_list, element_list, bnd_node_list, bnd_elm_list, exprs_all_int, res, units)        
+
 
     if (.not. present(res_out)) then
       call write_ascii_0d(ierr, ES, expr_list, res, FORM_TABLE, header=.false.,                   &

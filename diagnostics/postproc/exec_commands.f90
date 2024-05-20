@@ -2152,8 +2152,8 @@ module exec_commands
     integer :: i_file, i, units
     character(len=1024) :: filename, status, access
     real*8, allocatable :: res(:)
-    character(len=23)   :: s 
-    
+    character(len=23)   :: s
+
     ierr = 0
 
     ! --- Some checks

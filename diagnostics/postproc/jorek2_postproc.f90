@@ -49,7 +49,7 @@ program jorek2_postproc
   call set_setting('only_itor',      '-1',     ierr, 'select a single toroidal harmonic for calculations ')
   call set_setting('exclude_n0',      'false', ierr, 'when true it excludes the axisymmetric part, keeping all higher toroidal harmonics' ) 
   
-! --- Print getting started information
+  ! --- Print getting started information
   call specific_help('getting_started')
 
   do ! (main loop: Read, parse, and execute one command after the other)

@@ -55,7 +55,7 @@ module exec_commands
   logical,             private, save :: verbose
   logical,             private, save :: debug
   logical,             private, save :: exclude_n0  
-type(t_expr_list),            save :: expr_list, expr_list_four
+  type(t_expr_list),            save :: expr_list, expr_list_four
   real*8, allocatable, private, save :: result(:,:,:,:), res2d(:,:,:), res1d(:,:), res0d(:), the_sum(:)
   complex*16, allocatable, private, save :: cp(:,:,:,:)
   real*8,              private, save :: time_now !< Time of current restart file in selected units
@@ -2152,8 +2152,7 @@ type(t_expr_list),            save :: expr_list, expr_list_four
     integer :: i_file, i, units
     character(len=1024) :: filename, status, access
     real*8, allocatable :: res(:)
-    character(len=23)   :: s
-    !logical  :: exclude_n0 
+    character(len=23)   :: s 
     ierr = 0
 
     ! --- Some checks

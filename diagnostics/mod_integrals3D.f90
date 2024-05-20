@@ -1399,7 +1399,9 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
       do k=1,n_var
         do mp=1, n_plane 
           do in=1, n_tor
-            if (exclude_n0 .and. in == 1 ) cycle
+            if present(exclude_n0) then 
+              if (exclude_n0 .and. in == 1 ) cycle
+            endif
             eq_g_1D(mp,k,:) = eq_g_1D(mp,k,:) + node_k%values(in,k_dir,k) * k_size * H1(k_vertex,k_dof,:)   * HZ(in,mp)
             eq_s_1D(mp,k,:) = eq_s_1D(mp,k,:) + node_k%values(in,k_dir,k) * k_size * H1_s(k_vertex,k_dof,:) * HZ(in,mp)
 
@@ -1514,7 +1516,9 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
       vpar_s = 0.d0; vpar_t = 0.d0; 
 
       do in = 1,n_tor
-        if (exclude_n0 .and. in == 1 ) cycle
+        if present(exclude_n0)
+          if (exclude_n0 .and. in == 1 ) cycle
+        endif
         call interp(node_list,element_list,m_elm,var_psi,in,sg,tg,PS,PS_s,PS_t,PS_st,PS_ss,PS_tt)
         psi_s = psi_s + PS_s * HZ(in,mp)
         psi_t = psi_t + PS_t * HZ(in,mp)
@@ -1603,7 +1607,7 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
       drhoimpdy = ( - R_t * rhoimp_s + R_s * rhoimp_t ) / xjac
 
       BB2    = (F0*F0 + dpsidx*dpsidx + dpsidy*dpsidy) / BigR**2
-      Bnorm    = (dpsidx * grad_t(1) - dpsidy * grad_t(2)) / BigR   ! normal magnetic field to the JOREK boundary
+      Bnorm  = (dpsidx * grad_t(1) - dpsidy * grad_t(2)) / BigR   ! normal magnetic field to the JOREK boundary
 
       ! --- get normalized flux 
       psi_n = get_psi_n(ps0,Z)
@@ -2026,6 +2030,7 @@ vperp_part_flux      =  n_period * vperp_part_flux* fact_part / t_norm2
 neut_part_flux       =  n_period * neut_part_flux * fact_part / t_norm2
 poynting_flux        =  n_period * poynting_flux  * fact_flux
 int_B_norm           =  sqrt(n_period * int_B_norm / (2 * PI * L ))
+
 ! --- Derived quantities
 E_tot        = mag_tot + pressure     + kin_par_tot + kin_perp_tot 
 E_in         = mag_in  + pressure_in  + kin_par_in  + kin_perp_in 

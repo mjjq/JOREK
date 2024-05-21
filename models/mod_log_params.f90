@@ -1178,6 +1178,8 @@ write(*,'(1x,a)',advance='no') ' RTREE_H               : '
     write(*,LOGI_FMT) 'tauIC_initial         ', tauIC_initial
     write(*,LOGI_FMT) 'tauIC_ARAZ_on         ', tauIC_ARAZ_on
     write(*,LOGI_FMT) 'tauIC_AP_on           ', tauIC_AP_on
+    write(*,LOGI_FMT) 'tauIC_rho_on          ', tauIC_rho_on
+    write(*,LOGI_FMT) 'tauIC_tem_on          ', tauIC_tem_on
     write(*,LOGI_FMT) 'tauIC_tanh            ', tauIC_tanh
     write(*,REAL_FMT) 'tauIC_shift           ', tauIC_shift
     write(*,REAL_FMT) 'tauIC_steep           ', tauIC_steep

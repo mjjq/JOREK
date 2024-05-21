@@ -687,6 +687,8 @@ subroutine preset_parameters
   tauIC_initial      = .false.              !< Full-MHD: add initial velocity to balance the ion-diamagnetic drift, which equals to -v_dia
   tauIC_ARAZ_on      = .true.               !< Full-MHD: to switch on/off diamagnetic terms for AR and AZ equations
   tauIC_AP_on        = .true.               !< Full-MHD: to switch on/off diamagnetic terms for A_phi equation
+  tauIC_rho_on       = .true.               !< Full-MHD: to switch on/off diamagnetic terms for rho equation
+  tauIC_tem_on       = .true.               !< Full-MHD: to switch on/off diamagnetic terms for temperature equation
   tauIC_tanh         = .false.              !< Full-MHD: suppress the diamagnetic term near the boundary
   tauIC_shift        = 0.02                 !< Full-MHD: tau_IC = tauIC * (0.5e0 - 0.5e0 * np.tanh(-(distance_bnd - tauIC_shift)/tauIC_steep) )
   tauIC_steep        = 0.01                 !< Full-MHD: tau_IC = tauIC * (0.5e0 - 0.5e0 * np.tanh(-(distance_bnd - tauIC_shift)/tauIC_steep) )

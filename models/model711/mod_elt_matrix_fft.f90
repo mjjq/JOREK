@@ -36,6 +36,7 @@ real*8,  intent(in)    :: R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint(2), Z_xpoi
 #define DIM2 1:n_vertex_max*n_var*n_degrees
 
 #define ENABLE_VISCO_PAR_AND_PARPAR
+#define ENABLE_DIA_DRIFT_TEMPERATURE
 
 real*8, dimension (DIM0,DIM0)  :: ELM
 real*8, dimension (DIM0)       :: RHS
@@ -74,7 +75,7 @@ real*8     :: Jb, Jb_0
 real*8     :: amu_neo_prof(n_gauss,n_gauss), aki_neo_prof(n_gauss,n_gauss)
 real*8     :: V_source(n_gauss,n_gauss), dV_dpsi_source(n_gauss,n_gauss),dV_dz_source(n_gauss,n_gauss)
 real*8     :: dV_dpsi2,dV_dz2,dV_dpsi_dz,dV_dpsi3,dV_dpsi_dz2, dV_dpsi2_dz
-real*8     :: eta_ARAZ, tauIC_ARAZ, tauIC_AP
+real*8     :: eta_ARAZ, tauIC_ARAZ, tauIC_AP, tauIC_rho, tauIC_tem
 logical    :: use_fft
 
 
@@ -435,9 +436,13 @@ visco_pp_diff = visco_par_par - visco_par
 eta_ARAZ  = 0.d0  ! =0.0 to switch off resistive   terms for AR and AZ equations
 tauIC_ARAZ= 0.d0  ! =0.0 to switch off diamagnetic terms for AR and AZ equations
 tauIC_AP  = 0.d0  ! =0.0 to switch off diamagnetic terms for A_phi equation
+tauIC_rho = 0.d0
+tauIC_tem = 0.d0
 if (eta_ARAZ_on  ) eta_ARAZ   = 1.d0 ! switched on by default
 if (tauIC_ARAZ_on) tauIC_ARAZ = 1.d0 ! switched on by default
 if (tauIC_AP_on)   tauIC_AP   = 1.d0 ! switched on by default
+if (tauIC_rho_on)  tauIC_rho  = 1.d0 ! switched on by default
+if (tauIC_tem_on)  tauIC_tem  = 1.d0 ! switched on by default
 
 ! --- Initialise
 ELM_p  = 0.d0
@@ -1559,12 +1564,12 @@ do j=1,n_degrees
             Pvec_prev(var_rho) =   v * delta_g(mp,var_rho,ms,mt)
 
             Qvec_p(var_rho) = - v * ( rho0 * divU + UgradRho )                  &
-                              + rho0 * VdiaGradVstar__p                         &
+                              + tauIC_rho * rho0 * VdiaGradVstar__p             &
                               - D_prof * gradRho_gradVstar__p                   &
                               - (D_par_prof-D_prof) * BgradVstar__p * BgradRho / BB2 &
                               + v * particle_source(ms,mt)                      &
                               - D_perp_num * lap_Vstar * lap_Rho
-            Qvec_k(var_rho) = + rho0 * VdiaGradVstar__k                         &
+            Qvec_k(var_rho) = + tauIC_rho * rho0 * VdiaGradVstar__k             &
                               - D_prof * gradRho_gradVstar__k                   &
                               - (D_par_prof-D_prof) * BgradVstar__k * BgradRho / BB2
 
@@ -1583,6 +1588,15 @@ do j=1,n_degrees
                              - ZK_i_perp_num * lap_Vstar * lap_Ti
             Qvec_k(var_Ti) = - ZKi_prof * gradTi_gradVstar__k                                  &
                              - (ZKi_par_T-ZKi_prof) * BgradVstar__k * BgradTi / BB2
+#ifdef ENABLE_DIA_DRIFT_TEMPERATURE
+            Qvec_p(var_Ti) = Qvec_p(var_Ti)                                                    &
+                             + tauIC_tem * (gamma-1.d0) * v                                    & 
+                             * (Ti0 * (VdiaR0 * rho0_R + VdiaZ0 * rho0_Z + VdiaP0 * rho0_p / R)&
+                             + rho0 * (VdiaR0 * Ti0_R + VdiaZ0 * Ti0_Z + VdiaP0 * Ti0_p / R))  &
+                             + tauIC_tem * gamma * rho0 * Ti0 * VdiaGradVstar__p
+            Qvec_k(var_Ti) = Qvec_k(var_Ti)                                                    &
+                             + tauIC_tem * gamma * rho0 * Ti0 * VdiaGradVstar__k
+#endif
 
 
             !###################################################################################################
@@ -1601,6 +1615,15 @@ do j=1,n_degrees
                              - ZK_e_perp_num * lap_Vstar * lap_Te
             Qvec_k(var_Te) = - ZKe_prof * gradTe_gradVstar__k                                  &
                              - (ZKe_par_T-ZKe_prof) * BgradVstar__k * BgradTe / BB2
+#ifdef ENABLE_DIA_DRIFT_TEMPERATURE
+            Qvec_p(var_Te) = Qvec_p(var_Te)                                                    &
+                             + tauIC_tem * (gamma-1.d0) * v                                    & 
+                             * (Te0 * (VdiaR0 * rho0_R + VdiaZ0 * rho0_Z + VdiaP0 * rho0_p / R)&
+                             + rho0 * (VdiaR0 * Te0_R + VdiaZ0 * Te0_Z + VdiaP0 * Te0_p / R))  &
+                             + tauIC_tem * gamma * rho0 * Te0 * VdiaGradVstar__p
+            Qvec_k(var_Te) = Qvec_k(var_Te)                                                    &
+                             + tauIC_tem * gamma * rho0 * Te0 * VdiaGradVstar__k
+#endif
 
             if (use_vms) call add_vms_to_rhs()
             
@@ -4525,48 +4548,48 @@ do j=1,n_degrees
                   !###################################################################################################
                   Pjac   (var_rho,var_rho) =   v * rho
 
-                  Qjac_p (var_rho,var_AR)  = + rho0 * VdiaGradVstar_AR__p &
+                  Qjac_p (var_rho,var_AR)  = + tauIC_rho * rho0 * VdiaGradVstar_AR__p &
                                              - (D_par_prof-D_prof) * BgradVstar_AR__p * BgradRho       / BB2 &
                                              - (D_par_prof-D_prof) * BgradVstar__p    * BgradRho_AR__p / BB2 &
                                              + (D_par_prof-D_prof) * BgradVstar__p    * BgradRho       / BB2**2 * BB2_AR__p
-                  Qjac_n (var_rho,var_AR)  = + rho0 * VdiaGradVstar_AR__n &
+                  Qjac_n (var_rho,var_AR)  = + tauIC_rho * rho0 * VdiaGradVstar_AR__n &
                                              - (D_par_prof-D_prof) * BgradVstar_AR__n * BgradRho       / BB2 &
                                              - (D_par_prof-D_prof) * BgradVstar__p    * BgradRho_AR__n / BB2 &
                                              + (D_par_prof-D_prof) * BgradVstar__p    * BgradRho       / BB2**2 * BB2_AR__n
-                  Qjac_k (var_rho,var_AR)  = + rho0 * VdiaGradVstar_AR__k &
+                  Qjac_k (var_rho,var_AR)  = + tauIC_rho * rho0 * VdiaGradVstar_AR__k &
                                              - (D_par_prof-D_prof) * BgradVstar_AR__k * BgradRho       / BB2 &
                                              - (D_par_prof-D_prof) * BgradVstar__k    * BgradRho_AR__p / BB2 &
                                              + (D_par_prof-D_prof) * BgradVstar__k    * BgradRho       / BB2**2 * BB2_AR__p
-                  Qjac_kn(var_rho,var_AR)  = + rho0 * VdiaGradVstar_AR__kn &
+                  Qjac_kn(var_rho,var_AR)  = + tauIC_rho * rho0 * VdiaGradVstar_AR__kn &
                                              - (D_par_prof-D_prof) * BgradVstar__k    * BgradRho_AR__n / BB2 &
                                              + (D_par_prof-D_prof) * BgradVstar__k    * BgradRho       / BB2**2 * BB2_AR__n
 
-                  Qjac_p (var_rho,var_AZ)  = + rho0 * VdiaGradVstar_AZ__p &
+                  Qjac_p (var_rho,var_AZ)  = + tauIC_rho * rho0 * VdiaGradVstar_AZ__p &
                                              - (D_par_prof-D_prof) * BgradVstar_AZ__p * BgradRho       / BB2 &
                                              - (D_par_prof-D_prof) * BgradVstar__p    * BgradRho_AZ__p / BB2 &
                                              + (D_par_prof-D_prof) * BgradVstar__p    * BgradRho       / BB2**2 * BB2_AZ__p
-                  Qjac_n (var_rho,var_AZ)  = + rho0 * VdiaGradVstar_AZ__n &
+                  Qjac_n (var_rho,var_AZ)  = + tauIC_rho * rho0 * VdiaGradVstar_AZ__n &
                                              - (D_par_prof-D_prof) * BgradVstar_AZ__n * BgradRho       / BB2 &
                                              - (D_par_prof-D_prof) * BgradVstar__p    * BgradRho_AZ__n / BB2 &
                                              + (D_par_prof-D_prof) * BgradVstar__p    * BgradRho       / BB2**2 * BB2_AZ__n
-                  Qjac_k (var_rho,var_AZ)  = + rho0 * VdiaGradVstar_AZ__k &
+                  Qjac_k (var_rho,var_AZ)  = + tauIC_rho * rho0 * VdiaGradVstar_AZ__k &
                                              - (D_par_prof-D_prof) * BgradVstar_AZ__k * BgradRho       / BB2 &
                                              - (D_par_prof-D_prof) * BgradVstar__k    * BgradRho_AZ__p / BB2 &
                                              + (D_par_prof-D_prof) * BgradVstar__k    * BgradRho       / BB2**2 * BB2_AZ__p
-                  Qjac_kn(var_rho,var_AZ)  = + rho0 * VdiaGradVstar_AZ__kn &
+                  Qjac_kn(var_rho,var_AZ)  = + tauIC_rho * rho0 * VdiaGradVstar_AZ__kn &
                                              - (D_par_prof-D_prof) * BgradVstar__k    * BgradRho_AZ__n / BB2 &
                                              + (D_par_prof-D_prof) * BgradVstar__k    * BgradRho       / BB2**2 * BB2_AZ__n
 
-                  Qjac_p (var_rho,var_A3)  = + rho0 * VdiaGradVstar_A3__p &
+                  Qjac_p (var_rho,var_A3)  = + tauIC_rho * rho0 * VdiaGradVstar_A3__p &
                                              - (D_par_prof-D_prof) * BgradVstar_A3__p * BgradRho    / BB2 &
                                              - (D_par_prof-D_prof) * BgradVstar__p    * BgradRho_A3 / BB2 &
                                              + (D_par_prof-D_prof) * BgradVstar__p    * BgradRho    / BB2**2 * BB2_A3
-                  Qjac_n (var_rho,var_A3)  = + rho0 * VdiaGradVstar_A3__n
-                  Qjac_k (var_rho,var_A3)  = + rho0 * VdiaGradVstar_A3__k &
+                  Qjac_n (var_rho,var_A3)  = + tauIC_rho * rho0 * VdiaGradVstar_A3__n
+                  Qjac_k (var_rho,var_A3)  = + tauIC_rho * rho0 * VdiaGradVstar_A3__k &
                                              - (D_par_prof-D_prof) * BgradVstar_A3__k * BgradRho    / BB2 &
                                              - (D_par_prof-D_prof) * BgradVstar__k    * BgradRho_A3 / BB2 &
                                              + (D_par_prof-D_prof) * BgradVstar__k    * BgradRho    / BB2**2 * BB2_A3
-                  Qjac_kn(var_rho,var_A3)  = + rho0 * VdiaGradVstar_A3__kn
+                  Qjac_kn(var_rho,var_A3)  = + tauIC_rho * rho0 * VdiaGradVstar_A3__kn
 
                   Qjac_p (var_rho,var_UR)  = - v * ( rho0 * divU_UR + UgradRho_UR )
 
@@ -4576,24 +4599,24 @@ do j=1,n_degrees
                   Qjac_n (var_rho,var_Up)  = - v * ( rho0 * divU_Up__n )
 
                   Qjac_p (var_rho,var_rho) = - v * ( rho * divU + UgradRho_rho__p )                   &
-                                             + rho  * VdiaGradVstar__p &
-                                             + rho0 * VdiaGradVstar_rho__p &
+                                             + tauIC_rho * rho  * VdiaGradVstar__p &
+                                             + tauIC_rho * rho0 * VdiaGradVstar_rho__p &
                                              - D_prof * gradRho_gradVstar_rho__p                      &
                                              - (D_par_prof-D_prof) * BgradVstar__p * BgradRho_rho__p / BB2 &
                                              - D_perp_num * lap_Vstar * lap_bf
                   Qjac_n (var_rho,var_rho) = - v * (UgradRho_rho__n )                                 &
-                                             + rho0 * VdiaGradVstar_rho__n &
+                                             + tauIC_rho * rho0 * VdiaGradVstar_rho__n &
                                              - (D_par_prof-D_prof) * BgradVstar__p * BgradRho_rho__n / BB2
-                  Qjac_k (var_rho,var_rho) = + rho0 * VdiaGradVstar_rho__k &
+                  Qjac_k (var_rho,var_rho) = + tauIC_rho * rho0 * VdiaGradVstar_rho__k &
                                              - (D_par_prof-D_prof) * BgradVstar__k * BgradRho_rho__p / BB2
-                  Qjac_kn(var_rho,var_rho) = + rho0 * VdiaGradVstar_rho__kn &
+                  Qjac_kn(var_rho,var_rho) = + tauIC_rho * rho0 * VdiaGradVstar_rho__kn &
                                              - D_prof * gradRho_gradVstar_rho__kn                     &
                                              - (D_par_prof-D_prof) * BgradVstar__k * BgradRho_rho__n / BB2
 
-                  Qjac_p (var_rho,var_Ti ) = + rho0 * VdiaGradVstar_Ti__p
-                  Qjac_n (var_rho,var_Ti ) = + rho0 * VdiaGradVstar_Ti__n
-                  Qjac_k (var_rho,var_Ti ) = + rho0 * VdiaGradVstar_Ti__k
-                  Qjac_kn(var_rho,var_Ti ) = + rho0 * VdiaGradVstar_Ti__kn
+                  Qjac_p (var_rho,var_Ti ) = + tauIC_rho * rho0 * VdiaGradVstar_Ti__p
+                  Qjac_n (var_rho,var_Ti ) = + tauIC_rho * rho0 * VdiaGradVstar_Ti__n
+                  Qjac_k (var_rho,var_Ti ) = + tauIC_rho * rho0 * VdiaGradVstar_Ti__k
+                  Qjac_kn(var_rho,var_Ti ) = + tauIC_rho * rho0 * VdiaGradVstar_Ti__kn
 
                   !###################################################################################################
                   !#  equation 8   (Ion Temperature  equation)                                                       #
@@ -4613,6 +4636,23 @@ do j=1,n_degrees
                   Qjac_kn(var_Ti,var_AR)  = - (ZKi_par_T-ZKi_prof) * BgradVstar__k    * BgradTi_AR__n / BB2                &
                                             + (ZKi_par_T-ZKi_prof) * BgradVstar__k    * BgradTi       / BB2**2 * BB2_AR__n
 
+#ifdef ENABLE_DIA_DRIFT_TEMPERATURE
+                  Qjac_p(var_Ti,var_AR) = Qjac_p(var_Ti,var_AR)                                                            &
+                                          + tauIC_tem * (gamma-1.d0) * v                                                   &
+                                          * (Ti0 * (VdiaR0_AR__p * rho0_R + VdiaZ0_AR__p * rho0_Z + VdiaP0_AR__p * rho0_p / R) &
+                                          + rho0 * (VdiaR0_AR__p * Ti0_R + VdiaZ0_AR__p * Ti0_Z + VdiaP0_AR__p * Ti0_p / R))   &
+                                          + tauIC_tem * gamma * rho0 * Ti0 * VdiaGradVstar_AR__p
+                  Qjac_n(var_Ti,var_AR) = Qjac_n(var_Ti,var_AR)                                                            &
+                                          + tauIC_tem * (gamma-1.d0) * v                                                   &
+                                          * (Ti0 * (VdiaR0_AR__n * rho0_R + VdiaZ0_AR__n * rho0_Z + VdiaP0_AR__n * rho0_p / R) &
+                                          + rho0 * (VdiaR0_AR__n * Ti0_R + VdiaZ0_AR__n * Ti0_Z + VdiaP0_AR__n * Ti0_p / R))   &
+                                          + tauIC_tem * gamma * rho0 * Ti0 * VdiaGradVstar_AR__n
+                  Qjac_k(var_Ti,var_AR) = Qjac_k(var_Ti,var_AR)                                                            &
+                                          + tauIC_tem * gamma * rho0 * Ti0 * VdiaGradVstar_AR__k
+                  Qjac_kn(var_Ti,var_AR) = Qjac_kn(var_Ti,var_AR)                                                          &
+                                          + tauIC_tem * gamma * rho0 * Ti0 * VdiaGradVstar_AR__kn
+#endif
+
                   Qjac_p (var_Ti,var_AZ)  = - (ZKi_par_T-ZKi_prof) * BgradVstar_AZ__p * BgradTi       / BB2                &
                                             - (ZKi_par_T-ZKi_prof) * BgradVstar__p    * BgradTi_AZ__p / BB2                &
                                             + (ZKi_par_T-ZKi_prof) * BgradVstar__p    * BgradTi       / BB2**2 * BB2_AZ__p
@@ -4625,12 +4665,45 @@ do j=1,n_degrees
                   Qjac_kn(var_Ti,var_AZ)  = - (ZKi_par_T-ZKi_prof) * BgradVstar__k    * BgradTi_AZ__n / BB2                &
                                             + (ZKi_par_T-ZKi_prof) * BgradVstar__k    * BgradTi       / BB2**2 * BB2_AZ__n
 
+#ifdef ENABLE_DIA_DRIFT_TEMPERATURE
+                  Qjac_p(var_Ti,var_AZ) = Qjac_p(var_Ti,var_AZ)                                                            &
+                                          + tauIC_tem * (gamma-1.d0) * v                                                   &
+                                          * (Ti0 * (VdiaR0_AZ__p * rho0_R + VdiaZ0_AZ__p * rho0_Z + VdiaP0_AZ__p * rho0_p / R) &
+                                          + rho0 * (VdiaR0_AZ__p * Ti0_R + VdiaZ0_AZ__p * Ti0_Z + VdiaP0_AZ__p * Ti0_p / R))   &
+                                          + tauIC_tem * gamma * rho0 * Ti0 * VdiaGradVstar_AZ__p
+                  Qjac_n(var_Ti,var_AZ) = Qjac_n(var_Ti,var_AZ)                                                            &
+                                          + tauIC_tem * (gamma-1.d0) * v                                                   &
+                                          * (Ti0 * (VdiaR0_AZ__n * rho0_R + VdiaZ0_AZ__n * rho0_Z + VdiaP0_AZ__n * rho0_p / R) &
+                                          + rho0 * (VdiaR0_AZ__n * Ti0_R + VdiaZ0_AZ__n * Ti0_Z + VdiaP0_AZ__n * Ti0_p / R))   &
+                                          + tauIC_tem * gamma * rho0 * Ti0 * VdiaGradVstar_AZ__n
+                  Qjac_k(var_Ti,var_AZ) = Qjac_k(var_Ti,var_AZ)                                                            &
+                                          + tauIC_tem * gamma * rho0 * Ti0 * VdiaGradVstar_AZ__k
+                  Qjac_kn(var_Ti,var_AZ) = Qjac_kn(var_Ti,var_AZ)                                                          &
+                                          + tauIC_tem * gamma * rho0 * Ti0 * VdiaGradVstar_AZ__kn
+#endif
+
                   Qjac_p (var_Ti,var_A3)  = - (ZKi_par_T-ZKi_prof) * BgradVstar_A3__p * BgradTi    / BB2             &
                                             - (ZKi_par_T-ZKi_prof) * BgradVstar__p    * BgradTi_A3 / BB2             &
                                             + (ZKi_par_T-ZKi_prof) * BgradVstar__p    * BgradTi    / BB2**2 * BB2_A3
                   Qjac_k (var_Ti,var_A3)  = - (ZKi_par_T-ZKi_prof) * BgradVstar_A3__k * BgradTi    / BB2             &
                                             - (ZKi_par_T-ZKi_prof) * BgradVstar__k    * BgradTi_A3 / BB2             &
                                             + (ZKi_par_T-ZKi_prof) * BgradVstar__k    * BgradTi    / BB2**2 * BB2_A3
+#ifdef ENABLE_DIA_DRIFT_TEMPERATURE
+                  Qjac_p(var_Ti,var_A3) = Qjac_p(var_Ti,var_A3)                                                            &
+                                          + tauIC_tem * (gamma-1.d0) * v                                                   &
+                                          * (Ti0 * (VdiaR0_A3__p * rho0_R + VdiaZ0_A3__p * rho0_Z + VdiaP0_A3__p * rho0_p / R) &
+                                          + rho0 * (VdiaR0_A3__p * Ti0_R + VdiaZ0_A3__p * Ti0_Z + VdiaP0_A3__p * Ti0_p / R))   &
+                                          + tauIC_tem * gamma * rho0 * Ti0 * VdiaGradVstar_A3__p
+                  Qjac_n(var_Ti,var_A3) = Qjac_n(var_Ti,var_A3)                                                            &
+                                          + tauIC_tem * (gamma-1.d0) * v                                                   &
+                                          * (Ti0 * (VdiaR0_A3__n * rho0_R + VdiaZ0_A3__n * rho0_Z + VdiaP0_A3__n * rho0_p / R) &
+                                          + rho0 * (VdiaR0_A3__n * Ti0_R + VdiaZ0_A3__n * Ti0_Z + VdiaP0_A3__n * Ti0_p / R))   &
+                                          + tauIC_tem * gamma * rho0 * Ti0 * VdiaGradVstar_A3__n
+                  Qjac_k(var_Ti,var_A3) = Qjac_k(var_Ti,var_A3)                                                            &
+                                          + tauIC_tem * gamma * rho0 * Ti0 * VdiaGradVstar_A3__k
+                  Qjac_kn(var_Ti,var_A3) = Qjac_kn(var_Ti,var_A3)                                                          &
+                                          + tauIC_tem * gamma * rho0 * Ti0 * VdiaGradVstar_A3__kn
+#endif
 
                   Qjac_p (var_Ti,var_UR)  = + v * ( - rho0 * UgradTi_UR - Ti0 * UgradRho_UR  -  gamma * pi0 * divU_UR) &
                                             + v * (gamma-1.d0) * Qvisc_T_UR__p
@@ -4649,6 +4722,31 @@ do j=1,n_degrees
                                             + v * ddTi_e_drho
                   Qjac_n (var_Ti,var_rho) = + v * (                 - Ti0 * UgradRho_rho__n                             )
 
+#ifdef ENABLE_DIA_DRIFT_TEMPERATURE
+                  Qjac_p(var_Ti,var_rho) = Qjac_p(var_Ti,var_rho)                                                            &
+                                          + tauIC_tem * (gamma-1.d0) * v                                                     &
+                                          * (Ti0 * (VdiaR0_rho__p * rho0_R + VdiaZ0_rho__p * rho0_Z + VdiaP0_rho__p * rho0_p / R) &
+                                          + rho0 * (VdiaR0_rho__p * Ti0_R + VdiaZ0_rho__p * Ti0_Z + VdiaP0_rho__p * Ti0_p / R))   &
+                                          + tauIC_tem * (gamma-1.d0) * v                                                     &
+                                          * (Ti0 * (VdiaR0 * rho_R + VdiaZ0 * rho_Z)                                         &
+                                          + rho * (VdiaR0 * Ti0_R + VdiaZ0 * Ti0_Z + VdiaP0 * Ti0_p / R))                    &
+                                          + tauIC_tem * gamma * rho0 * Ti0 * VdiaGradVstar_rho__p                            &
+                                          + tauIC_tem * gamma * rho * Ti0 * VdiaGradVstar__p
+                  Qjac_n(var_Ti,var_rho) = Qjac_n(var_Ti,var_rho)                                                            &
+                                          + tauIC_tem * (gamma-1.d0) * v                                                     &
+                                          * (Ti0 * (VdiaR0_rho__n * rho0_R + VdiaZ0_rho__n * rho0_Z + VdiaP0_rho__n * rho0_p / R) &
+                                          + rho0 * (VdiaR0_rho__n * Ti0_R + VdiaZ0_rho__n * Ti0_Z + VdiaP0_rho__n * Ti0_p / R))   &
+                                          + tauIC_tem * (gamma-1.d0) * v                                                     & 
+                                          * (Ti0 * (VdiaP0 * rho_p__n / R))                                                  &                                          
+                                          + tauIC_tem * gamma * rho0 * Ti0 * VdiaGradVstar_rho__n                          
+
+                  Qjac_k(var_Ti,var_rho) = Qjac_k(var_Ti,var_rho)                                                            &
+                                          + tauIC_tem * gamma * rho0 * Ti0 * VdiaGradVstar_rho__k                            &
+                                          + tauIC_tem * gamma * rho * Ti0 * VdiaGradVstar__k
+                  Qjac_kn(var_Ti,var_rho) = Qjac_kn(var_Ti,var_rho)                                                          &
+                                          + tauIC_tem * gamma * rho0 * Ti0 * VdiaGradVstar_rho__kn
+#endif
+
                   Qjac_p (var_Ti,var_Ti)  = + v * ( - rho0 * UgradTi_Ti__p - Ti * UgradRho - gamma * (rho0*Ti) * divU ) &
                                             + v * (gamma-1.d0) * Qvisc_T_T__p                                           &
                                             - ZKi_prof * gradTi_gradVstar_Ti__p                                         &
@@ -4663,6 +4761,31 @@ do j=1,n_degrees
                                             - (dZKi_par_dT*Ti    ) * BgradVstar__k * BgradTi       / BB2
                   Qjac_kn(var_Ti,var_Ti)  = - ZKi_prof * gradTi_gradVstar_Ti__kn                                        &
                                             - (ZKi_par_T-ZKi_prof) * BgradVstar__k * BgradTi_Ti__n / BB2
+
+#ifdef ENABLE_DIA_DRIFT_TEMPERATURE
+                  Qjac_p(var_Ti,var_Ti) = Qjac_p(var_Ti,var_Ti)                                                              &
+                                          + tauIC_tem * (gamma-1.d0) * v                                                     &
+                                          * (Ti0 * (VdiaR0_Ti__p * rho0_R + VdiaZ0_Ti__p * rho0_Z + VdiaP0_Ti__p * rho0_p / R) &
+                                          + rho0 * (VdiaR0_Ti__p * Ti0_R + VdiaZ0_Ti__p * Ti0_Z + VdiaP0_Ti__p * Ti0_p / R))   &
+                                          + tauIC_tem * (gamma-1.d0) * v                                                     &
+                                          * (Ti * (VdiaR0 * rho0_R + VdiaZ0 * rho0_Z + VdiaP0 * rho0_p / R)                  &
+                                          + rho0 * (VdiaR0 * Ti_R + VdiaZ0 * Ti_Z))                                          &
+                                          + tauIC_tem * gamma * rho0 * Ti0 * VdiaGradVstar_Ti__p                             &
+                                          + tauIC_tem * gamma * rho0 * Ti * VdiaGradVstar__p
+                  Qjac_n(var_Ti,var_Ti) = Qjac_n(var_Ti,var_Ti)                                                              &
+                                          + tauIC_tem * (gamma-1.d0) * v                                                     &
+                                          * (Ti0 * (VdiaR0_Ti__n * rho0_R + VdiaZ0_Ti__n * rho0_Z + VdiaP0_Ti__n * rho0_p / R) &
+                                          + rho0 * (VdiaR0_Ti__n * Ti0_R + VdiaZ0_Ti__n * Ti0_Z + VdiaP0_Ti__n * Ti0_p / R))   &
+                                          + tauIC_tem * (gamma-1.d0) * v                                                     &
+                                          * (rho0 * (VdiaP0 * Ti_p__n / R))                                                  &
+                                          + tauIC_tem * gamma * rho0 * Ti0 * VdiaGradVstar_Ti__n                                            
+
+                  Qjac_k(var_Ti,var_Ti) = Qjac_k(var_Ti,var_Ti)                                                              &
+                                          + tauIC_tem * gamma * rho0 * Ti0 * VdiaGradVstar_Ti__k                             &
+                                          + tauIC_tem * gamma * rho0 * Ti * VdiaGradVstar__k
+                  Qjac_kn(var_Ti,var_Ti) = Qjac_kn(var_Ti,var_Ti)                                                            &
+                                          + tauIC_tem * gamma * rho0 * Ti0 * VdiaGradVstar_Ti__kn
+#endif
 
                   Qjac_p (var_Ti,var_Te)  = + v * ddTi_e_dTe
 
@@ -4687,6 +4810,23 @@ do j=1,n_degrees
                                             + (ZKe_par_T-ZKe_prof) * BgradVstar__k    * BgradTe       / BB2**2 * BB2_AR__n
                   Qjac_pnn(var_Te,var_AR) = v * (gamma-1.0d0) * eta_T_ohm * JJ2_AR__nn
 
+#ifdef ENABLE_DIA_DRIFT_TEMPERATURE
+                  Qjac_p(var_Te,var_AR) = Qjac_p(var_Te,var_AR)                                                            &
+                                          + tauIC_tem * (gamma-1.d0) * v                                                   &
+                                          * (Te0 * (VdiaR0_AR__p * rho0_R + VdiaZ0_AR__p * rho0_Z + VdiaP0_AR__p * rho0_p / R) &
+                                          + rho0 * (VdiaR0_AR__p * Te0_R + VdiaZ0_AR__p * Te0_Z + VdiaP0_AR__p * Te0_p / R))   &
+                                          + tauIC_tem * gamma * rho0 * Te0 * VdiaGradVstar_AR__p
+                  Qjac_n(var_Te,var_AR) = Qjac_n(var_Te,var_AR)                                                            &
+                                          + tauIC_tem * (gamma-1.d0) * v                                                   &
+                                          * (Te0 * (VdiaR0_AR__n * rho0_R + VdiaZ0_AR__n * rho0_Z + VdiaP0_AR__n * rho0_p / R) &
+                                          + rho0 * (VdiaR0_AR__n * Te0_R + VdiaZ0_AR__n * Te0_Z + VdiaP0_AR__n * Te0_p / R))   &
+                                          + tauIC_tem * gamma * rho0 * Te0 * VdiaGradVstar_AR__n
+                  Qjac_k(var_Te,var_AR) = Qjac_k(var_Te,var_AR)                                                            &
+                                          + tauIC_tem * gamma * rho0 * Te0 * VdiaGradVstar_AR__k
+                  Qjac_kn(var_Te,var_AR) = Qjac_kn(var_Te,var_AR)                                                          &
+                                          + tauIC_tem * gamma * rho0 * Te0 * VdiaGradVstar_AR__kn
+#endif
+
                   Qjac_p (var_Te,var_AZ)  = - (ZKe_par_T-ZKe_prof) * BgradVstar_AZ__p * BgradTe       / BB2                &
                                             - (ZKe_par_T-ZKe_prof) * BgradVstar__p    * BgradTe_AZ__p / BB2                &
                                             + (ZKe_par_T-ZKe_prof) * BgradVstar__p    * BgradTe       / BB2**2 * BB2_AZ__p &
@@ -4702,6 +4842,23 @@ do j=1,n_degrees
                                             + (ZKe_par_T-ZKe_prof) * BgradVstar__k    * BgradTe       / BB2**2 * BB2_AZ__n
                   Qjac_pnn(var_Te,var_AZ) = v * (gamma-1.0d0) * eta_T_ohm * JJ2_AZ__nn
 
+#ifdef ENABLE_DIA_DRIFT_TEMPERATURE
+                  Qjac_p(var_Te,var_AZ) = Qjac_p(var_Te,var_AZ)                                                            &
+                                          + tauIC_tem * (gamma-1.d0) * v                                                   &
+                                          * (Te0 * (VdiaR0_AZ__p * rho0_R + VdiaZ0_AZ__p * rho0_Z + VdiaP0_AZ__p * rho0_p / R) &
+                                          + rho0 * (VdiaR0_AZ__p * Te0_R + VdiaZ0_AZ__p * Te0_Z + VdiaP0_AZ__p * Te0_p / R))   &
+                                          + tauIC_tem * gamma * rho0 * Te0 * VdiaGradVstar_AZ__p
+                  Qjac_n(var_Te,var_AZ) = Qjac_n(var_Te,var_AZ)                                                            &
+                                          + tauIC_tem * (gamma-1.d0) * v                                                   &
+                                          * (Te0 * (VdiaR0_AZ__n * rho0_R + VdiaZ0_AZ__n * rho0_Z + VdiaP0_AZ__n * rho0_p / R) &
+                                          + rho0 * (VdiaR0_AZ__n * Te0_R + VdiaZ0_AZ__n * Te0_Z + VdiaP0_AZ__n * Te0_p / R))   &
+                                          + tauIC_tem * gamma * rho0 * Te0 * VdiaGradVstar_AZ__n
+                  Qjac_k(var_Te,var_AZ) = Qjac_k(var_Te,var_AZ)                                                            &
+                                          + tauIC_tem * gamma * rho0 * Te0 * VdiaGradVstar_AZ__k
+                  Qjac_kn(var_Te,var_AZ) = Qjac_kn(var_Te,var_AZ)                                                          &
+                                          + tauIC_tem * gamma * rho0 * Te0 * VdiaGradVstar_AZ__kn
+#endif
+
                   Qjac_p (var_Te,var_A3)  = - (ZKe_par_T-ZKe_prof) * BgradVstar_A3__p * BgradTe    / BB2             &
                                             - (ZKe_par_T-ZKe_prof) * BgradVstar__p    * BgradTe_A3 / BB2             &
                                             + (ZKe_par_T-ZKe_prof) * BgradVstar__p    * BgradTe    / BB2**2 * BB2_A3 &
@@ -4711,6 +4868,23 @@ do j=1,n_degrees
                                             + (ZKe_par_T-ZKe_prof) * BgradVstar__k    * BgradTe    / BB2**2 * BB2_A3
                   Qjac_n (var_Te,var_A3)  = v * (gamma-1.0d0) * eta_T_ohm * JJ2_A3__n
                   Qjac_pnn(var_Te,var_A3) = v * (gamma-1.0d0) * eta_T_ohm * JJ2_A3__nn
+
+#ifdef ENABLE_DIA_DRIFT_TEMPERATURE
+                  Qjac_p(var_Te,var_A3) = Qjac_p(var_Te,var_A3)                                                            &
+                                          + tauIC_tem * (gamma-1.d0) * v                                                   &
+                                          * (Te0 * (VdiaR0_A3__p * rho0_R + VdiaZ0_A3__p * rho0_Z + VdiaP0_A3__p * rho0_p / R) &
+                                          + rho0 * (VdiaR0_A3__p * Te0_R + VdiaZ0_A3__p * Te0_Z + VdiaP0_A3__p * Te0_p / R))   &
+                                          + tauIC_tem * gamma * rho0 * Te0 * VdiaGradVstar_A3__p
+                  Qjac_n(var_Te,var_A3) = Qjac_n(var_Te,var_A3)                                                            &
+                                          + tauIC_tem * (gamma-1.d0) * v                                                   &
+                                          * (Te0 * (VdiaR0_A3__n * rho0_R + VdiaZ0_A3__n * rho0_Z + VdiaP0_A3__n * rho0_p / R) &
+                                          + rho0 * (VdiaR0_A3__n * Te0_R + VdiaZ0_A3__n * Te0_Z + VdiaP0_A3__n * Te0_p / R))   &
+                                          + tauIC_tem * gamma * rho0 * Te0 * VdiaGradVstar_A3__n
+                  Qjac_k(var_Te,var_A3) = Qjac_k(var_Te,var_A3)                                                            &
+                                          + tauIC_tem * gamma * rho0 * Te0 * VdiaGradVstar_A3__k
+                  Qjac_kn(var_Te,var_A3) = Qjac_kn(var_Te,var_A3)                                                          &
+                                          + tauIC_tem * gamma * rho0 * Te0 * VdiaGradVstar_A3__kn
+#endif
 
                   Qjac_p (var_Te,var_UR)  = + v * ( - rho0 * UgradTe_UR - Te0 * UgradRho_UR - gamma * pe0 * divU_UR  ) &
                                             + v * (gamma-1.d0) * Qvisc_T_UR__p
@@ -4729,6 +4903,31 @@ do j=1,n_degrees
                                             + v * ddTe_i_drho
                   Qjac_n (var_Te,var_rho) = + v * (                 - Te0 * UgradRho_rho__n                             )
 
+#ifdef ENABLE_DIA_DRIFT_TEMPERATURE
+                  Qjac_p(var_Te,var_rho) = Qjac_p(var_Te,var_rho)                                                            &
+                                          + tauIC_tem * (gamma-1.d0) * v                                                     &
+                                          * (Te0 * (VdiaR0_rho__p * rho0_R + VdiaZ0_rho__p * rho0_Z + VdiaP0_rho__p * rho0_p / R) &
+                                          + rho0 * (VdiaR0_rho__p * Te0_R + VdiaZ0_rho__p * Te0_Z + VdiaP0_rho__p * Te0_p / R))   &
+                                          + tauIC_tem * (gamma-1.d0) * v                                                     &
+                                          * (Te0 * (VdiaR0 * rho_R + VdiaZ0 * rho_Z)                                         &
+                                          + rho * (VdiaR0 * Te0_R + VdiaZ0 * Te0_Z + VdiaP0 * Te0_p / R))                    &
+                                          + tauIC_tem * gamma * rho0 * Te0 * VdiaGradVstar_rho__p                            &
+                                          + tauIC_tem * gamma * rho * Te0 * VdiaGradVstar__p
+                  Qjac_n(var_Te,var_rho) = Qjac_n(var_Te,var_rho)                                                            &
+                                          + tauIC_tem * (gamma-1.d0) * v                                                     &
+                                          * (Te0 * (VdiaR0_rho__n * rho0_R + VdiaZ0_rho__n * rho0_Z + VdiaP0_rho__n * rho0_p / R) &
+                                          + rho0 * (VdiaR0_rho__n * Te0_R + VdiaZ0_rho__n * Te0_Z + VdiaP0_rho__n * Te0_p / R))   &
+                                          + tauIC_tem * (gamma-1.d0) * v                                                     & 
+                                          * (Te0 * (VdiaP0 * rho_p__n / R))                                                  &                                          
+                                          + tauIC_tem * gamma * rho0 * Te0 * VdiaGradVstar_rho__n                          
+
+                  Qjac_k(var_Te,var_rho) = Qjac_k(var_Te,var_rho)                                                            &
+                                          + tauIC_tem * gamma * rho0 * Te0 * VdiaGradVstar_rho__k                            &
+                                          + tauIC_tem * gamma * rho * Te0 * VdiaGradVstar__k
+                  Qjac_kn(var_Te,var_rho) = Qjac_kn(var_Te,var_rho)                                                          &
+                                          + tauIC_tem * gamma * rho0 * Te0 * VdiaGradVstar_rho__kn
+#endif
+
                   Qjac_p (var_Te,var_Te)  = + v * ( - rho0 * UgradTe_Te__p - Te * UgradRho - gamma * (rho0*Te) * divU ) &
                                             + v * (gamma-1.d0) * Qvisc_T_T__p                                           &
                                             - ZKe_prof * gradTe_gradVstar_Te__p                                         &
@@ -4744,8 +4943,38 @@ do j=1,n_degrees
                                             - (dZKe_par_dT*Te    ) * BgradVstar__k * BgradTe       / BB2
                   Qjac_kn(var_Te,var_Te)  = - ZKe_prof * gradTe_gradVstar_Te__kn                                        &
                                            - (ZKe_par_T-ZKe_prof) * BgradVstar__k * BgradTe_Te__n / BB2
+#ifdef ENABLE_DIA_DRIFT_TEMPERATURE
+                  Qjac_p(var_Te,var_Te) = Qjac_p(var_Te,var_Te)                                                            &
+                                          + tauIC_tem * (gamma-1.d0) * v                                                   &
+                                          * (Te * (VdiaR0 * rho0_R + VdiaZ0 * rho0_Z + VdiaP0 * rho0_p / R)                &
+                                          + rho0 * (VdiaR0 * Te_R + VdiaZ0 * Te_Z))                                        &
+                                          + tauIC_tem * gamma * rho0 * Te * VdiaGradVstar__p
+                  Qjac_n(var_Te,var_Te) = Qjac_n(var_Te,var_Te)                                                            &
+                                          + tauIC_tem * (gamma-1.d0) * v                                                   &
+                                          * (rho0 * (VdiaP0 * Te_p__n / R))
+
+                  Qjac_k(var_Te,var_Te) = Qjac_k(var_Te,var_Te)                                                            &
+                                          + tauIC_tem * gamma * rho0 * Te * VdiaGradVstar__k
+#endif
 
                   Qjac_p (var_Te,var_Ti)  = + v * ddTe_i_dTi
+#ifdef ENABLE_DIA_DRIFT_TEMPERATURE
+                  Qjac_p(var_Te,var_Ti) = Qjac_p(var_Te,var_Ti)                                                              &
+                                          + tauIC_tem * (gamma-1.d0) * v                                                     &
+                                          * (Te0 * (VdiaR0_Ti__p * rho0_R + VdiaZ0_Ti__p * rho0_Z + VdiaP0_Ti__p * rho0_p / R) &
+                                          + rho0 * (VdiaR0_Ti__p * Te0_R + VdiaZ0_Ti__p * Te0_Z + VdiaP0_Ti__p * Te0_p / R))   &
+                                          + tauIC_tem * gamma * rho0 * Te0 * VdiaGradVstar_Ti__p
+                  Qjac_n(var_Te,var_Ti) = Qjac_n(var_Te,var_Ti)                                                              &
+                                          + tauIC_tem * (gamma-1.d0) * v                                                     &
+                                          * (Te0 * (VdiaR0_Ti__n * rho0_R + VdiaZ0_Ti__n * rho0_Z + VdiaP0_Ti__n * rho0_p / R) &
+                                          + rho0 * (VdiaR0_Ti__n * Te0_R + VdiaZ0_Ti__n * Te0_Z + VdiaP0_Ti__n * Te0_p / R))   &
+                                          + tauIC_tem * gamma * rho0 * Te0 * VdiaGradVstar_Ti__n
+
+                  Qjac_k(var_Te,var_Ti) = Qjac_k(var_Te,var_Ti)                                                              &
+                                          + tauIC_tem * gamma * rho0 * Te0 * VdiaGradVstar_Ti__k
+                  Qjac_kn(var_Te,var_Ti) = Qjac_kn(var_Te,var_Ti)                                                            &
+                                          + tauIC_tem * gamma * rho0 * Te0 * VdiaGradVstar_Ti__kn
+#endif
 
                   if (use_vms) call add_vms_to_elm()
 

@@ -124,6 +124,8 @@ module phys_module
   logical :: tauIC_initial        !< Full-MHD: add initial velocity to balance the ion-diamagnetic drift, which equals to -v_dia
   logical :: tauIC_ARAZ_on        !< Full-MHD: to switch on/off diamagnetic terms for AR and AZ equations
   logical :: tauIC_AP_on          !< Full-MHD: to switch on/off diamagnetic terms for A_phi equation
+  logical :: tauIC_rho_on         !< Full-MHD: to switch on/off diamagnetic terms for rho equation
+  logical :: tauIC_tem_on         !< Full-MHD: to switch on/off diamagnetic terms for temperature equation
   logical :: tauIC_tanh           !< Full-MHD: suppress the diamagnetic term near the boundary
   real*8  :: tauIC_shift          !< Full-MHD: tau_IC = tauIC * (0.5e0 - 0.5e0 * np.tanh(-(distance_bnd - tauIC_shift)/tauIC_steep) )
   real*8  :: tauIC_steep          !< Full-MHD: tau_IC = tauIC * (0.5e0 - 0.5e0 * np.tanh(-(distance_bnd - tauIC_shift)/tauIC_steep) )

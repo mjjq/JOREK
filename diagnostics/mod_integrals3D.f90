@@ -2041,7 +2041,12 @@ vpar_part_flux       =  n_period * vpar_part_flux * fact_part / t_norm2
 vperp_part_flux      =  n_period * vperp_part_flux* fact_part / t_norm2
 neut_part_flux       =  n_period * neut_part_flux * fact_part / t_norm2
 poynting_flux        =  n_period * poynting_flux  * fact_flux
-int_B_norm           =  sqrt(n_period * int_B_norm / (2 * PI * L ))
+if (L > 0) then
+  int_B_norm         =  sqrt(n_period * int_B_norm / (2 * PI * L ))
+else 
+  write(*,*) 'WARNING: The length of contour : L = 0'
+  int_B_norm         = 0.d0
+endif
 
 ! --- Derived quantities
 E_tot        = mag_tot + pressure     + kin_par_tot + kin_perp_tot 

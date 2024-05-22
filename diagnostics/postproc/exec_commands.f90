@@ -2196,9 +2196,9 @@ module exec_commands
    
     exclude_n0 = .false.
     exclude_n0 = get_log_setting('exclude_n0', ierr) 
-   call int3d_new(0, node_list, element_list, bnd_node_list, bnd_elm_list, expr_list, res, units, exclude_n0)        
+    call int3d_new(0, node_list, element_list, bnd_node_list, bnd_elm_list, expr_list, res, units, exclude_n0)        
 
-   call write_ascii_0d(ierr, ES, expr_list, res, FORM_TABLE, header=.false.,                   &
+    call write_ascii_0d(ierr, ES, expr_list, res, FORM_TABLE, header=.false.,                   &
      filename=filename, append=.true., blanks=.false.)
    
   end subroutine int3D

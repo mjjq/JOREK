@@ -300,6 +300,7 @@ subroutine preset_parameters
   ZK_e_perp_sc_num = 0.d0
   ZK_e_par_sc_num  = 0.d0
   visco_par_sc_num = 0.d0
+  visco_par_par_sc_num = 0.d0
   Dn_pol_sc_num    = 0.d0
   Dn_p_sc_num      = 0.d0
   D_perp_imp_sc_num= 0.d0

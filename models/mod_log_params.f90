@@ -881,6 +881,7 @@ write(*,'(1x,a)',advance='no') ' RTREE_H               : '
   write(*,REAL_FMT) 'ZK_e_perp_sc_num      ', ZK_e_perp_sc_num
   write(*,REAL_FMT) 'ZK_e_par_sc_num       ', ZK_e_par_sc_num
   write(*,REAL_FMT) 'visco_par_sc_num      ', visco_par_sc_num
+  write(*,REAL_FMT) 'visco_par_par_sc_num  ', visco_par_par_sc_num
   write(*,REAL_FMT) 'Dn_pol_sc_num         ', Dn_pol_sc_num
   write(*,REAL_FMT) 'Dn_p_sc_num           ', Dn_p_sc_num
   write(*,REAL_FMT) 'D_perp_imp_sc_num     ', D_perp_imp_sc_num

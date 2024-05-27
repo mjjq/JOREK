@@ -37,7 +37,7 @@ real*8,  intent(in)    :: R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint(2), Z_xpoi
 
 #define ENABLE_VISCO_PAR_AND_PARPAR
 #define ENABLE_DIA_DRIFT_TEMPERATURE
-! #define MOMENTUM_UPHI_IN_PARALLEL
+#define MOMENTUM_UPHI_IN_PARALLEL
 
 real*8, dimension (DIM0,DIM0)  :: ELM
 real*8, dimension (DIM0)       :: RHS

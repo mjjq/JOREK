@@ -6002,7 +6002,7 @@ do j=1,n_degrees
 
                   Qjac_n(var_Up, var_Up) = Qjac_n(var_Up, var_Up) + &
                     -visco_par_prof * (Qjac_Up_visco_par_Up_n) &
-                    -visco_pp_diff_prof * (Qjac_Up_visco_parpar_Up_n) &
+                    -visco_pp_diff_prof * (Qjac_Up_visco_parpar_Up_n) 
 
                   Qjac_k(var_Up, var_Up) = Qjac_k(var_Up, var_Up) + &
                     -visco_par_prof * (Qjac_Up_visco_par_Up_k) &

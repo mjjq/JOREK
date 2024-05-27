@@ -37,6 +37,7 @@ real*8,  intent(in)    :: R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint(2), Z_xpoi
 
 #define ENABLE_VISCO_PAR_AND_PARPAR
 #define ENABLE_DIA_DRIFT_TEMPERATURE
+! #define MOMENTUM_UPHI_IN_PARALLEL
 
 real*8, dimension (DIM0,DIM0)  :: ELM
 real*8, dimension (DIM0)       :: RHS
@@ -1657,6 +1658,7 @@ do j=1,n_degrees
             !###################################################################################################
             !#  equation 6 (Phi component momentum equation)                                                   #
             !###################################################################################################
+#ifdef MOMENTUM_UPHI_IN_PARALLEL
             Pvec_prev(var_Up) = + v * rho0_corr * BR0 * delta_g(mp,var_UR, ms,mt) &
                                 + v * rho0_corr * BZ0 * delta_g(mp,var_UZ, ms,mt) &
                                 + v * rho0_corr * BP0 * delta_g(mp,var_Up, ms,mt)
@@ -1685,6 +1687,28 @@ do j=1,n_degrees
             Qvec_k(var_Up)    = Qvec_k(var_Up) + &
                                 - visco_par_prof     * (BR0 * Qvec_UR_visco_par__k    + BZ0 * Qvec_UZ_visco_par__k    + Bp0 * Qvec_Up_visco_par__k  ) &
                                 - visco_pp_diff_prof * (BR0 * Qvec_UR_visco_parpar__k + BZ0 * Qvec_UZ_visco_parpar__k + Bp0 * Qvec_Up_visco_parpar__k)
+#endif
+
+#else
+            Pvec_prev(var_Up) = v * rho0_corr * delta_g(mp,var_Up, ms,mt)
+
+            Qvec_p(var_Up)    = + Qconv_Up                    &
+                                + JxB_Up__p                   &
+                                + visco_T * Qvisc_Up__p       &
+                                - v * particle_source(ms,mt) * Up0 &
+                                - visco_num * lap_Vstar * lap_Up
+            Qvec_k(var_Up)    = + v_p__k * p0 / R             &
+                                + JxB_Up__k                   &
+                                + visco_T * Qvisc_Up__k
+
+#ifdef ENABLE_VISCO_PAR_AND_PARPAR
+            Qvec_p(var_Up)    = Qvec_p(var_Up) + &
+                                - visco_par_prof     * (Qvec_Up_visco_par__p   ) &
+                                - visco_pp_diff_prof * (Qvec_Up_visco_parpar__p) 
+            Qvec_k(var_Up)    = Qvec_k(var_Up) + &
+                                - visco_par_prof     * (Qvec_Up_visco_par__k  ) &
+                                - visco_pp_diff_prof * (Qvec_Up_visco_parpar__k)
+#endif
 #endif
             
             !###################################################################################################
@@ -5416,6 +5440,7 @@ do j=1,n_degrees
                   !###################################################################################################
                   !#  equation 6   (Phi component momentum equation)                                                 #
                   !###################################################################################################
+#ifdef MOMENTUM_UPHI_IN_PARALLEL
                   Pjac(var_Up,var_UR)    = v * BR0 * rho0_corr * UR
                   Pjac(var_Up,var_UZ)    = v * BZ0 * rho0_corr * UZ
                   Pjac(var_Up,var_Up)    = v * Bp0 * rho0_corr * Up 
@@ -5807,6 +5832,207 @@ do j=1,n_degrees
                                             + BZ0 * dvisco_dT * Te * Qvisc_UZ__k &
                                             + Bp0 * dvisco_dT * Te * Qvisc_Up__k &
                                             + (rho0*Te) * BgradVstar__k
+#else
+
+                  Pjac(var_Up,var_Up)    = v * rho0_corr * Up 
+
+                  Qjac_p (var_Up,var_AR)  = Qconv_Up_AR__p + JxB_Up_AR__p
+                  Qjac_n (var_Up,var_AR)  = Qconv_Up_AR__n + JxB_Up_AR__n
+                  Qjac_k (var_Up,var_AR)  =                  JxB_Up_AR__k                                            
+                  Qjac_kn(var_Up,var_AR)  =                  JxB_Up_AR__kn
+
+#ifdef ENABLE_VISCO_PAR_AND_PARPAR
+                  Qjac_p(var_Up, var_AR) = Qjac_p(var_Up, var_AR) + &
+                    -visco_par_prof * (Qjac_Up_visco_par_AR_p) &
+                    -visco_pp_diff_prof * (Qjac_Up_visco_parpar_AR_p)
+
+                  Qjac_n(var_Up, var_AR) = Qjac_n(var_Up, var_AR) + &
+                    -visco_par_prof * (Qjac_Up_visco_par_AR_n) &
+                    -visco_pp_diff_prof * (Qjac_Up_visco_parpar_AR_n)
+
+                  Qjac_k(var_Up, var_AR) = Qjac_k(var_Up, var_AR) + &
+                    -visco_par_prof * (Qjac_Up_visco_par_AR_k) &
+                    -visco_pp_diff_prof * (Qjac_Up_visco_parpar_AR_k)                 
+
+                  Qjac_kn(var_Up, var_AR) = Qjac_kn(var_Up, var_AR) + &
+                    -visco_par_prof * (Qjac_Up_visco_par_AR_kn) &
+                    -visco_pp_diff_prof * (Qjac_Up_visco_parpar_AR_kn)
+
+                  Qjac_pnn(var_Up, var_AR) = Qjac_pnn(var_Up, var_AR) + &
+                    -visco_par_prof * (Qjac_Up_visco_par_AR_pnn) &
+                    -visco_pp_diff_prof * (Qjac_Up_visco_parpar_AR_pnn)
+
+                  Qjac_knn(var_Up, var_AR) = Qjac_knn(var_Up, var_AR) + &
+                    -visco_par_prof * (Qjac_Up_visco_par_AR_knn) &
+                    -visco_pp_diff_prof * (Qjac_Up_visco_parpar_AR_knn)
+#endif
+
+                  Qjac_p (var_Up,var_AZ)  = Qconv_Up_AZ__p + JxB_Up_AZ__p
+                  Qjac_n (var_Up,var_AZ)  = Qconv_Up_AZ__n + JxB_Up_AZ__n
+                  Qjac_k (var_Up,var_AZ)  =                  JxB_Up_AZ__k
+                  Qjac_kn(var_Up,var_AZ)  =                  JxB_Up_AZ__kn
+#ifdef ENABLE_VISCO_PAR_AND_PARPAR
+                  Qjac_p(var_Up, var_AZ) = Qjac_p(var_Up, var_AZ) + &
+                    -visco_par_prof * (Qjac_Up_visco_par_AZ_p) &
+                    -visco_pp_diff_prof * (Qjac_Up_visco_parpar_AZ_p)
+
+                  Qjac_n(var_Up, var_AZ) = Qjac_n(var_Up, var_AZ) + &
+                    -visco_par_prof * (Qjac_Up_visco_par_AZ_n) &
+                    -visco_pp_diff_prof * (Qjac_Up_visco_parpar_AZ_n) 
+
+                  Qjac_k(var_Up, var_AZ) = Qjac_k(var_Up, var_AZ) + &
+                    -visco_par_prof * (Qjac_Up_visco_par_AZ_k) &
+                    -visco_pp_diff_prof * (Qjac_Up_visco_parpar_AZ_k)
+
+                  Qjac_kn(var_Up, var_AZ) = Qjac_kn(var_Up, var_AZ) + &
+                    -visco_par_prof * (Qjac_Up_visco_par_AZ_kn) &
+                    -visco_pp_diff_prof * (Qjac_Up_visco_parpar_AZ_kn)
+
+                  Qjac_pnn(var_Up, var_AZ) = Qjac_pnn(var_Up, var_AZ) + &
+                    -visco_par_prof * (Qjac_Up_visco_par_AZ_pnn) &
+                    -visco_pp_diff_prof * (Qjac_Up_visco_parpar_AZ_pnn) 
+
+                  Qjac_knn(var_Up, var_AZ) = Qjac_knn(var_Up, var_AZ) + &
+                    -visco_par_prof * (Qjac_Up_visco_par_AZ_knn) &
+                    -visco_pp_diff_prof * (Qjac_Up_visco_parpar_AZ_knn)
+#endif
+
+                  Qjac_p (var_Up,var_A3)  = Qconv_Up_A3__p + JxB_Up_A3__p
+                  Qjac_n (var_Up,var_A3)  = Qconv_Up_A3__n + JxB_Up_A3__n
+                  Qjac_k (var_Up,var_A3)  =                  JxB_Up_A3__k
+                  Qjac_kn(var_Up,var_A3)  =                  JxB_Up_A3__kn
+
+#ifdef ENABLE_VISCO_PAR_AND_PARPAR
+                  Qjac_p(var_Up, var_A3) = Qjac_p(var_Up, var_A3) + &
+                    -visco_par_prof * (Qjac_Up_visco_par_A3_p) &
+                    -visco_pp_diff_prof * (Qjac_Up_visco_parpar_A3_p) 
+
+                  Qjac_n(var_Up, var_A3) = Qjac_n(var_Up, var_A3) + &
+                    -visco_par_prof * (Qjac_Up_visco_par_A3_n) &
+                    -visco_pp_diff_prof * (Qjac_Up_visco_parpar_A3_n)
+
+                  Qjac_k(var_Up, var_A3) = Qjac_k(var_Up, var_A3) + &
+                    -visco_par_prof * (Qjac_Up_visco_par_A3_k) &
+                    -visco_pp_diff_prof * (Qjac_Up_visco_parpar_A3_k)
+
+                  Qjac_kn(var_Up, var_A3) = Qjac_kn(var_Up, var_A3) + &
+                    -visco_par_prof * (Qjac_Up_visco_par_A3_kn) &
+                    -visco_pp_diff_prof * (Qjac_Up_visco_parpar_A3_kn)
+
+                  Qjac_pnn(var_Up, var_A3) = Qjac_pnn(var_Up, var_A3) + &
+                    -visco_par_prof * (Qjac_Up_visco_par_A3_pnn) &
+                    -visco_pp_diff_prof * (Qjac_Up_visco_parpar_A3_pnn)
+
+                  Qjac_knn(var_Up, var_A3) = Qjac_knn(var_Up, var_A3) + &
+                    -visco_par_prof * (Qjac_Up_visco_par_A3_knn) &
+                    -visco_pp_diff_prof * (Qjac_Up_visco_parpar_A3_knn)
+#endif    
+
+                  Qjac_p (var_Up,var_UR)  = Qconv_Up_UR__p + visco_T * Qvisc_Up_UR__p                                             
+                  Qjac_n (var_Up,var_UR)  = Qconv_Up_UR__n + visco_T * Qvisc_Up_UR__n
+                  Qjac_k (var_Up,var_UR)  =                  visco_T * Qvisc_Up_UR__k
+                  Qjac_kn(var_Up,var_UR)  =                  visco_T * Qvisc_Up_UR__kn
+
+#ifdef ENABLE_VISCO_PAR_AND_PARPAR
+                  Qjac_p(var_Up, var_UR) = Qjac_p(var_Up, var_UR) + &
+                    -visco_par_prof * (Qjac_Up_visco_par_UR_p) &
+                    -visco_pp_diff_prof * (Qjac_Up_visco_parpar_UR_p) 
+
+                  Qjac_n(var_Up, var_UR) = Qjac_n(var_Up, var_UR) + &
+                    -visco_par_prof * (Qjac_Up_visco_par_UR_n) &
+                    -visco_pp_diff_prof * (Qjac_Up_visco_parpar_UR_n) 
+
+                  Qjac_k(var_Up, var_UR) = Qjac_k(var_Up, var_UR) + &
+                    -visco_par_prof * (Qjac_Up_visco_par_UR_k) &
+                    -visco_pp_diff_prof * (Qjac_Up_visco_parpar_UR_k)
+
+                  Qjac_kn(var_Up, var_UR) = Qjac_kn(var_Up, var_UR) + &
+                    -visco_par_prof * (Qjac_Up_visco_par_UR_kn) &
+                    -visco_pp_diff_prof * (Qjac_Up_visco_parpar_UR_kn)
+
+                  Qjac_pnn(var_Up, var_UR) = Qjac_pnn(var_Up, var_UR) + &
+                    -visco_par_prof * (Qjac_Up_visco_par_UR_pnn) &
+                    -visco_pp_diff_prof * (Qjac_Up_visco_parpar_UR_pnn) 
+
+                  Qjac_knn(var_Up, var_UR) = Qjac_knn(var_Up, var_UR) + &
+                    -visco_par_prof * (Qjac_Up_visco_par_UR_knn) &
+                    -visco_pp_diff_prof * (Qjac_Up_visco_parpar_UR_knn)
+#endif
+
+                  Qjac_p (var_Up,var_UZ)  = Qconv_Up_UZ__p + visco_T * Qvisc_Up_UZ__p 
+                  Qjac_n (var_Up,var_UZ)  = Qconv_Up_UZ__n + visco_T * Qvisc_Up_UZ__n
+                  Qjac_k (var_Up,var_UZ)  =                  visco_T * Qvisc_Up_UZ__k
+                  Qjac_kn(var_Up,var_UZ)  =                  visco_T * Qvisc_Up_UZ__kn
+#ifdef ENABLE_VISCO_PAR_AND_PARPAR
+                  Qjac_p(var_Up, var_UZ) = Qjac_p(var_Up, var_UZ) + &
+                    -visco_par_prof * (Qjac_Up_visco_par_UZ_p) &
+                    -visco_pp_diff_prof * (Qjac_Up_visco_parpar_UZ_p) 
+
+                  Qjac_n(var_Up, var_UZ) = Qjac_n(var_Up, var_UZ) + &
+                    -visco_par_prof * (Qjac_Up_visco_par_UZ_n) &
+                    -visco_pp_diff_prof * (Qjac_Up_visco_parpar_UZ_n) 
+
+                  Qjac_k(var_Up, var_UZ) = Qjac_k(var_Up, var_UZ) + &
+                    -visco_par_prof * (Qjac_Up_visco_par_UZ_k) &
+                    -visco_pp_diff_prof * (Qjac_Up_visco_parpar_UZ_k)
+
+                  Qjac_kn(var_Up, var_UZ) = Qjac_kn(var_Up, var_UZ) + &
+                    -visco_par_prof * (Qjac_Up_visco_par_UZ_kn) &
+                    -visco_pp_diff_prof * (Qjac_Up_visco_parpar_UZ_kn)
+
+                  Qjac_pnn(var_Up, var_UZ) = Qjac_pnn(var_Up, var_UZ) + &
+                    -visco_par_prof * (Qjac_Up_visco_par_UZ_pnn) &
+                    -visco_pp_diff_prof * (Qjac_Up_visco_parpar_UZ_pnn) 
+
+                  Qjac_knn(var_Up, var_UZ) = Qjac_knn(var_Up, var_UZ) + &
+                    -visco_par_prof * (Qjac_Up_visco_par_UZ_knn) &
+                    -visco_pp_diff_prof * (Qjac_Up_visco_parpar_UZ_knn)
+#endif
+
+                  Qjac_p (var_Up,var_Up)  = Qconv_Up_Up__p + visco_T * Qvisc_Up_Up__p &
+                                            - v * particle_source(ms,mt) * Up &
+                                            - visco_num * lap_Vstar * lap_bf
+                  Qjac_n (var_Up,var_Up)  = Qconv_Up_Up__n + visco_T * Qvisc_Up_Up__n
+                  Qjac_k (var_Up,var_Up)  =                  visco_T * Qvisc_Up_Up__k
+                  Qjac_kn(var_Up,var_Up)  =                  visco_T * Qvisc_Up_Up__kn
+#ifdef ENABLE_VISCO_PAR_AND_PARPAR
+                  Qjac_p(var_Up, var_Up) = Qjac_p(var_Up, var_Up) + &
+                    -visco_par_prof * (Qjac_Up_visco_par_Up_p) &
+                    -visco_pp_diff_prof * (Qjac_Up_visco_parpar_Up_p) 
+
+                  Qjac_n(var_Up, var_Up) = Qjac_n(var_Up, var_Up) + &
+                    -visco_par_prof * (Qjac_Up_visco_par_Up_n) &
+                    -visco_pp_diff_prof * (Qjac_Up_visco_parpar_Up_n) &
+
+                  Qjac_k(var_Up, var_Up) = Qjac_k(var_Up, var_Up) + &
+                    -visco_par_prof * (Qjac_Up_visco_par_Up_k) &
+                    -visco_pp_diff_prof * (Qjac_Up_visco_parpar_Up_k)
+
+                  Qjac_kn(var_Up, var_Up) = Qjac_kn(var_Up, var_Up) + &
+                    -visco_par_prof * (Qjac_Up_visco_par_Up_kn) &
+                    -visco_pp_diff_prof * (Qjac_Up_visco_parpar_Up_kn)
+
+                  Qjac_pnn(var_Up, var_Up) = Qjac_pnn(var_Up, var_Up) + &
+                    -visco_par_prof * (Qjac_Up_visco_par_Up_pnn) &
+                    -visco_pp_diff_prof * (Qjac_Up_visco_parpar_Up_pnn) 
+
+                  Qjac_knn(var_Up, var_Up) = Qjac_knn(var_Up, var_Up) + &
+                    -visco_par_prof * (Qjac_Up_visco_par_Up_knn) &
+                    -visco_pp_diff_prof * (Qjac_Up_visco_parpar_Up_knn)
+#endif
+
+                  Qjac_p (var_Up,var_rho) = Qconv_Up_rho__p  
+                  Qjac_n (var_Up,var_rho) = Qconv_Up_rho__n
+                  Qjac_k (var_Up,var_rho) =                 + (rho*(Ti0+Te0)) * v_p__k / R
+
+                  Qjac_p (var_Up,var_Ti)  = Qconv_Up_Ti__p
+                  Qjac_n (var_Up,var_Ti)  = Qconv_Up_Ti__n
+                  Qjac_k (var_Up,var_Ti)  =                 + (rho0*Ti) * v_p__k / R
+
+                  Qjac_p (var_Up,var_Te)  = dvisco_dT * Te * Qvisc_Up__p
+                  Qjac_k (var_Up,var_Te)  = dvisco_dT * Te * Qvisc_Up__k + (rho0*Te) * v_p__k / R
+
+#endif
 
                   !###################################################################################################
                   !#  equation 7   (Density equation)                                                                #
@@ -6817,9 +7043,11 @@ subroutine add_vms_to_rhs()
   vms_Te__p(var_Te) =  rho0 * UgradVstar__p
   vms_Te__k(var_Te) =  rho0 * UgradVstar__k
   
+#ifdef MOMENTUM_UPHI_IN_PARALLEL
   ! for B-projection
   vms_Up__p = BR0*vms_UR__p + BZ0*vms_UZ__p + Bp0*vms_Up__p
   vms_Up__k = BR0*vms_UR__k + BZ0*vms_UZ__k + Bp0*vms_Up__k
+#endif
   
   Qvec_p(var_AR) = Qvec_p(var_AR) - vms_coeff_AR * tscale * dot_product(res, vms_AR__p)
   Qvec_k(var_AR) = Qvec_k(var_AR) - vms_coeff_AR * tscale * dot_product(res, vms_AR__k)

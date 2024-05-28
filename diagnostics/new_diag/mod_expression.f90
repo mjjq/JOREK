@@ -171,6 +171,10 @@ module mod_expression
     call add(exprs_all, 'A_R         ', 'Radial Component of Magnetic Vector Potential         ')
     call add(exprs_all, 'A_Z         ', 'Vertical Component of Magnetic Vector Potential       ')
     call add(exprs_all, 'A_3         ', 'Tor. Comp. of Magn. Vect. Pot. Multipled by R (==Psi) ')
+    call add(exprs_all, 'U_R         ', 'Radial Component of Velocity                          ')
+    call add(exprs_all, 'U_Z         ', 'Vertical Component of Velocity                        ')
+    call add(exprs_all, 'U_p         ', 'Tor. Component of Velocity                            ')
+    call add(exprs_all, 'Fprofile    ', 'Fprofile                                              ')
     call add(exprs_all, 'Er          ', 'Radial Electric Field                                 ')
     call add(exprs_all, 'Vtheta_i    ', 'Ion Poloidal Velocity                                 ')
     call add(exprs_all, 'Mach_par    ', 'Parallel Mach Number                                  ')
@@ -577,7 +581,8 @@ module mod_expression
       AZ0_st, AZ0_pp, A30, A30_p, A30_s, A30_t, A30_ss, A30_tt, A30_st, A30_sp, A30_tp, A30_pp,    &
       Fprofile, Fprofile_s, Fprofile_t, Fprofile_R, Fprofile_Z,                                    &
       AR0_1_p, AZ0_1_p, A30_1_s, A30_1_t, A30_1_R, A30_1_Z, BR_1, BZ_1, uR_1, uZ_1, uPhi_1,        &
-      AR0_all_p, AZ0_all_p, A30_all_s, A30_all_t, A30_all_R, A30_all_Z, BR_all, BZ_all, uR_all, uZ_all
+      AR0_all_p, AZ0_all_p, A30_all_s, A30_all_t, A30_all_R, A30_all_Z, BR_all, BZ_all, uR_all, uZ_all, &
+      UR0, UZ0, Up0
     real*8  :: ps0_R, ps0_Z, ps0_RR, ps0_ZZ, ps0_RZ, u0_R, u0_Z, u0_RR, u0_ZZ, u0_RZ, vv2, zj0_R,  &
       zj0_Z, zj0_RR, zj0_ZZ, zj0_RZ, w0_R, w0_Z, w0_RR, w0_ZZ, w0_RZ, r0_R, r0_Z, r0_RR, r0_ZZ,    &
       r0_RZ, r0_hat, r0_R_hat, r0_Z_hat, T0_R, T0_Z, T0_RR, T0_ZZ, T0_RZ, T0_ps0_R, T0_ps0_Z,      &
@@ -775,6 +780,7 @@ module mod_expression
           A30   = 0.d0; A30_s   = 0.d0; A30_t   = 0.d0; A30_ss   = 0.d0; A30_tt   = 0.d0; A30_st   = 0.d0; A30_p   = 0.d0; A30_pp   = 0.d0
           rn0   = 0.d0; rn0_s   = 0.d0; rn0_t   = 0.d0; rn0_ss   = 0.d0; rn0_tt   = 0.d0; rn0_st   = 0.d0; rn0_p   = 0.d0; rn0_pp   = 0.d0
           rimp0 = 0.d0; rimp0_s = 0.d0; rimp0_t = 0.d0; rimp0_ss = 0.d0; rimp0_tt = 0.d0; rimp0_st = 0.d0; rimp0_p = 0.d0; rimp0_pp = 0.d0
+          UR0   = 0.d0; UZ0     = 0.d0; Up0     = 0.d0
 
           ! Extra derivatives for current density calculation
           AR0_sp   = 0.d0; AR0_tp   = 0.d0
@@ -964,6 +970,11 @@ module mod_expression
                 A30_pp   = A30_pp   + vv(var_A3) * sz * hh    * hhz_pp
                 A30_sp   = A30_sp   + vv(var_A3) * sz * hh_s  * hhz_p
                 A30_tp   = A30_tp   + vv(var_A3) * sz * hh_t  * hhz_p
+
+                ! --- U0
+                UR0      = UR0      + vv(var_uR) * sz * hh    * hhz
+                UZ0      = UZ0      + vv(var_uZ) * sz * hh    * hhz
+                Up0      = Up0      + vv(var_up) * sz * hh    * hhz
 
                 if ( ( i_tor ==  2 ) .or. ( i_tor == 3 ) ) then
                   AR0_1_p    = AR0_1_p    + vv(var_AR) * sz * hh    * hhz_p
@@ -1799,6 +1810,18 @@ module mod_expression
               case ( 'A_3' )
                 res = A30
                 
+              case ( 'U_R' )
+                res = UR0 / fact_time
+
+              case ( 'U_Z' )
+                res = UZ0 / fact_time
+
+              case ( 'U_p' )
+                res = Up0 / fact_time
+
+              case ( 'Fprofile' )
+                res = Fprofile
+              
               case ( 'currdens' )
                 res = -zj0 / R / fact_mu_zero
 

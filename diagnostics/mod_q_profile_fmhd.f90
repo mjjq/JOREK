@@ -122,7 +122,7 @@ contains
         end if
         torturns = torturns + 1.d0
       end if
-      if ( (RR - ES%R_axis) > 0.d0 .and. (( ZZ - ES%Z_axis ) * ( Zold - ES%Z_axis )) .le. 0.d0 .and. j > 1 ) then
+      if (( (RR - ES%R_axis) > 0.d0 .and. (( ZZ - ES%Z_axis ) * ( Zold - ES%Z_axis )) .le. 0.d0 .and. j > 1 ) .or. torturns > 20) then
         polturns = polturns + 1.d0
         stop_tracing = .true.
       end if  
@@ -176,13 +176,13 @@ contains
   call find_RZ_nearby(node_list, element_list, Rold, Zold, sold, told, ielm_old, &
                       Rnew, Znew, snew, tnew, ielm_new, ifail)
   if ( ielm_new < 1 ) then
-    write(*,*) 'find_RZ_nearby failed, using find_RZ instead, (R,Z)-position:', Rnew, Znew
+    ! write(*,*) 'find_RZ_nearby failed, using find_RZ instead, (R,Z)-position:', Rnew, Znew
     Rnewtmp = Rnew
     Znewtmp = Znew 
     call find_RZ(node_list, element_list, Rnewtmp, Znewtmp, Rnew, Znew, ielm_new, snew, tnew, ifail)
   end if 
   if ( ielm_new < 1 ) then
-    write(*,*) 'ATTENTION: both find_RZ_nearby and find_RZ failed!', Rnew, Znew, ielm_new, ifail
+    ! write(*,*) 'ATTENTION: both find_RZ_nearby and find_RZ failed!', Rnew, Znew, ielm_new, ifail
     stop_tracing = .true.
     return
   end if
@@ -203,13 +203,13 @@ contains
   call find_RZ_nearby(node_list, element_list, Rold, Zold, sold, told, ielm_old, &
                       RR, ZZ, s, t, ielm, ifail)
   if ( ielm < 1 ) then
-    write(*,*) 'find_RZ_nearby failed, using find_RZ instead, (R,Z)-position:', RR, ZZ
+    ! write(*,*) 'find_RZ_nearby failed, using find_RZ instead, (R,Z)-position:', RR, ZZ
     RRtmp = RR
     ZZtmp = ZZ 
     call find_RZ(node_list, element_list, RRtmp, ZZtmp, RR, ZZ, ielm, s, t, ifail)
   end if
   if ( ielm < 1 ) then
-    write(*,*) 'ATTENTION: both find_RZ_nearby and find_RZ failed!', RR, ZZ, ielm, ifail
+    ! write(*,*) 'ATTENTION: both find_RZ_nearby and find_RZ failed!', RR, ZZ, ielm, ifail
     stop_tracing = .true.
     return
   end if

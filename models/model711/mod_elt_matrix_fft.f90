@@ -38,6 +38,7 @@ real*8,  intent(in)    :: R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint(2), Z_xpoi
 #define ENABLE_VISCO_PAR_AND_PARPAR
 #define ENABLE_DIA_DRIFT_TEMPERATURE
 #define MOMENTUM_UPHI_IN_PARALLEL
+#define TEMPERATURE_DEPENDENT_UPDATE
 #define VISCOSITY_TENSOR_FORM
 
 #ifndef VISCOSITY_TENSOR_FORM
@@ -90,6 +91,11 @@ real*8, dimension(n_gauss,n_gauss)    :: y_g, y_s, y_t, y_ss, y_st, y_tt
 real*8, dimension(n_gauss,n_gauss)    :: Fprofile
 real*8, dimension(n_var)              :: TG_NUM
 real*8, dimension(n_tor,n_plane) :: HHZ, HHZ_p, HHZ_pp
+
+#ifndef TEMPERATURE_DEPENDENT_UPDATE
+real*8     :: Te_GS_initial(n_gauss,n_gauss), dTe_GS_dR_initial(n_gauss,n_gauss), dTe_GS_dZ_initial(n_gauss,n_gauss)
+real*8     :: Ti_GS_initial(n_gauss,n_gauss), dTi_GS_dR_initial(n_gauss,n_gauss), dTi_GS_dZ_initial(n_gauss,n_gauss)
+#endif
 
 ! --- Variables inside the OMP loop
 integer    :: k, l, index_ij, index_kl, ij, kl, sgn_l
@@ -867,6 +873,18 @@ do mt=1, n_gauss
           heat_source_e(ms,mt)     = (1.0/heatsource_e_fix_profile_tsteps) * (Te_GS  -Te_axisym(ms,mt)  ) ! / tstep
       endif
     endif
+
+#ifndef TEMPERATURE_DEPENDENT_UPDATE
+    call temperature_i(xpoint2, xcase2, Z, Z_xpoint, psi_axisym(ms,mt),psi_axis,psi_bnd, Ti_GS  ,dd1,dd2,dd3,dd4,dd5,dd6,dd7,dd8)
+    Ti_GS_initial(ms,mt) = max(Ti_GS, 1.d-12)
+    dTi_GS_dR_initial(ms,mt) = dd1 * psi_axisym_R(ms,mt)
+    dTi_GS_dZ_initial(ms,mt) = dd1 * psi_axisym_Z(ms,mt)
+    call temperature_e(xpoint2, xcase2, Z, Z_xpoint, psi_axisym(ms,mt),psi_axis,psi_bnd, Te_GS  ,dd1,dd2,dd3,dd4,dd5,dd6,dd7,dd8)
+    Te_GS_initial(ms,mt) = max(Te_GS, 1.d-12)
+    dTe_GS_dR_initial(ms,mt) = dd1 * psi_axisym_R(ms,mt)
+    dTe_GS_dZ_initial(ms,mt) = dd1 * psi_axisym_Z(ms,mt)
+#endif
+
     ! --- Bootstrap current 
     if (bootstrap) then
       Ti0    = eq_g(1,var_Ti,ms,mt)
@@ -1238,7 +1256,7 @@ do j=1,n_degrees
           ZKe_prof = get_zk_eperp(psi_norm)
           visco_par_prof = visco_par
           visco_pp_diff_prof = visco_pp_diff
-
+#ifdef TEMPERATURE_DEPENDENT_UPDATE
           ! --- Resistivity
           if ( eta_T_dependent .and. Te0_corr <= T_max_eta) then
             eta_T     = eta   * (Te0_corr/Te_0)**(-1.5d0)
@@ -1322,7 +1340,93 @@ do j=1,n_degrees
             ZKe_par_T   = ZK_e_par                                            ! parallel conductivity
             dZKe_par_dT = 0.d0
           endif
+#else
+          Te_GS = Te_GS_initial(ms,mt)
+          Ti_GS = Ti_GS_initial(ms,mt)
+          ! --- Resistivity
+          if ( eta_T_dependent .and. Te_GS <= T_max_eta) then
+            eta_T     = eta   * (Te_GS/Te_0)**(-1.5d0)
+            deta_dT   = - eta   * (1.5d0)  * Te_GS**(-2.5d0) * Te_0**(1.5d0)
+            d2eta_d2T =   eta   * (3.75d0) * Te_GS**(-3.5d0) * Te_0**(1.5d0)
+          else if ( eta_T_dependent .and. Te_GS > T_max_eta) then
+            eta_T     = eta   * (T_max_eta/Te_0)**(-1.5d0)
+            deta_dT   = 0.
+            d2eta_d2T = 0.     
+          else
+            eta_T     = eta
+            deta_dT   = 0.d0
+            d2eta_d2T = 0.d0
+          end if
+          if ( eta_T_dependent .and.  xpoint2 .and. (Te_GS .lt. T_min) ) then
+              eta_T     = eta    * (T_min/Te_0)**(-1.5d0)
+              deta_dT   = 0.d0
+              d2eta_d2T = 0.d0
+          end if
+          eta_R = deta_dT * dTe_GS_dR_initial(ms,mt)
+          eta_Z = deta_dT * dTe_GS_dZ_initial(ms,mt)
+          eta_p = deta_dT * 0.d0
 
+          ! --- Eta for ohmic heating ! NOT YET IMPLEMENTED !!! NEED THE CURRENT !!!
+          if ( eta_T_dependent .and. Te_GS <= T_max_eta_ohm) then
+            eta_T_ohm     = eta_ohmic   * (Te_GS/Te_0)**(-1.5d0)
+            deta_dT_ohm   = - eta_ohmic   * (1.5d0)  * Te_GS**(-2.5d0) * Te_0**(1.5d0)
+          else if ( eta_T_dependent .and. Te_GS > T_max_eta_ohm) then
+            eta_T_ohm     = eta_ohmic   * (T_max_eta_ohm/Te_0)**(-1.5d0)
+            deta_dT_ohm   = 0.    
+          else
+            eta_T_ohm     = eta_ohmic
+            deta_dT_ohm   = 0.d0
+          end if
+
+          ! --- Viscosity
+          if ( visco_T_dependent ) then
+            visco_T     =   visco * (Te_GS/Te_0)**(-1.5d0)
+            dvisco_dT   = - visco * (1.5d0)  * Te_GS**(-2.5d0) * Te_0**(1.5d0)
+            d2visco_d2T =   visco * (3.75d0) * Te_GS**(-3.5d0) * Te_0**(1.5d0)
+            if ( xpoint2 .and. (Te_GS .lt. T_min) ) then
+              visco_T     = visco  * (T_min/Te_0)**(-1.5d0)
+              dvisco_dT   = 0.d0
+              d2visco_d2T = 0.d0
+            endif
+          else
+            visco_T     = visco
+            dvisco_dT   = 0.d0
+            d2visco_d2T = 0.d0
+          end if
+          visco_R = dvisco_dT * dTe_GS_dR_initial(ms,mt)
+          visco_Z = dvisco_dT * dTe_GS_dZ_initial(ms,mt)
+          visco_p = dvisco_dT * 0.d0
+
+          ! --- Temperature dependent parallel heat diffusivity
+          if ( ZKpar_T_dependent ) then
+            ZKi_par_T   = ZK_i_par * (Ti_GS/Ti_0)**(+2.5d0)              ! temperature dependent parallel conductivity
+            dZKi_par_dT = ZK_i_par * (2.5d0)  * Ti_GS**(+1.5d0) * Ti_0**(-2.5d0) * dTi0_corr_dT
+            if (ZKi_par_T .gt. ZK_par_max) then
+              ZKi_par_T   = Zk_par_max
+              dZKi_par_dT = 0.d0
+            endif
+            if ( xpoint2 .and. (Ti_GS .lt. T_min) ) then
+              ZKi_par_T   = ZK_i_par * (T_min/Ti_0)**(+2.5d0)
+              dZKi_par_dT = 0.d0
+            endif
+
+            ZKe_par_T   = ZK_e_par * (Te_GS/Te_0)**(+2.5d0)              ! temperature dependent parallel conductivity
+            dZKe_par_dT = ZK_e_par * (2.5d0)  * Te_GS**(+1.5d0) * Te_0**(-2.5d0) * dTe0_corr_dT
+            if (ZKe_par_T .gt. ZK_par_max) then
+              ZKe_par_T   = Zk_par_max
+              dZKe_par_dT = 0.d0
+            endif
+            if ( xpoint2 .and. (Te_GS .lt. T_min) ) then
+              ZKe_par_T   = ZK_e_par * (T_min/Te_0)**(+2.5d0)
+              dZKe_par_dT = 0.d0
+            endif
+          else
+            ZKi_par_T   = ZK_i_par                                            ! parallel conductivity
+            dZKi_par_dT = 0.d0
+            ZKe_par_T   = ZK_e_par                                            ! parallel conductivity
+            dZKe_par_dT = 0.d0
+          endif
+#endif
           ! --- Ion-electron energy transfer
           if (thermalization) then
             ! Te in eV:
@@ -2502,7 +2606,7 @@ do j=1,n_degrees
 
                   gradTe_gradVstar_Te__p  = Te_R * v_R  + Te_Z * v_Z
                   gradTe_gradVstar_Te__kn = (Te_p__n / R) * (v_p__k  / R)
-
+#ifdef TEMPERATURE_DEPENDENT_UPDATE
                   eta_T_T    = deta_dT * Te
                   eta_R_T    = d2eta_d2T * Te * Te0_R + deta_dT * Te_R
                   eta_Z_T    = d2eta_d2T * Te * Te0_Z + deta_dT * Te_Z
@@ -2514,7 +2618,24 @@ do j=1,n_degrees
                   visco_Z_T  = d2visco_d2T * Te * Te0_Z + dvisco_dT * Te_Z
                   visco_p_T__p = d2visco_d2T * Te * Te0_p
                   visco_p_T__n = dvisco_dT * Te_p__n
+#else
+                  eta_T_T    = 0.d0
+                  eta_R_T    = 0.d0
+                  eta_Z_T    = 0.d0
+                  eta_p_T__p = 0.d0
+                  eta_p_T__n = 0.d0
 
+                  deta_dT_ohm = 0.d0
+
+                  visco_T_T    = 0.d0
+                  visco_R_T    = 0.d0
+                  visco_Z_T    = 0.d0
+                  visco_p_T__p = 0.d0
+                  visco_p_T__n = 0.d0
+
+                  dZKi_par_dT = 0.d0
+                  dZKe_par_dT = 0.d0
+#endif
                   JR0_AR__p  = 0.d0  ; JR0_AR__n  = 0.d0  ; JR0_AR__nn = 0.d0
                   JR0_AZ__p  = 0.d0  ; JR0_AZ__n  = 0.d0  ; JR0_AZ__nn = 0.d0
                   JR0_A3__p  = 0.d0  ; JR0_A3__n  = 0.d0  ; JR0_A3__nn = 0.d0

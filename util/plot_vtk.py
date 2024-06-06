@@ -422,6 +422,38 @@ def read_data(file_path, reader, variable_list, itor):
     
     return data_list, numpy_coordinates, time
 
+def plot_poincare(filename):
+    data = []
+    current_group = []
+    with open(filename, 'r') as file:
+        for i, line in enumerate(file):
+            if i < 1:
+                continue  # Skip the specified number of lines
+            line = line.strip()
+            if line:  # If the line is not empty
+                parts = line.split()
+                if len(parts) == 2:
+                    # Assuming each line contains two columns of data
+                    x, y = map(float, parts)
+                    current_group.append((x, y))
+            elif current_group:
+                # If an empty line is encountered and we have data in the current group
+                data.append(current_group)
+                current_group = []
+
+    if current_group:
+        data.append(current_group)
+
+    # Plot each group with a different color
+    # colors = ['b', 'g', 'r', 'c', 'm', 'y', 'k']
+    for i, group in enumerate(data):
+        # group = group[1:]  # Skip the first line
+        x, y = zip(*group)
+        
+        color = 'k'
+        plt.scatter(x, y, marker='.', alpha=1, s=0.1, c=color)
+
+
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(
@@ -446,6 +478,8 @@ if __name__ == "__main__":
                         help="Multiple the time-data with the specified value.")
     parser.add_argument('-clim', nargs=2, type=float, metavar=('cmin', 'cmax'),
                         help='Specify cmin, cmax for the contourf.')
+    parser.add_argument("-pc", "--poincare_path", default="",
+                        help="Read and plot the poincare plot.")
 
     args = parser.parse_args()
 
@@ -458,6 +492,11 @@ if __name__ == "__main__":
         data_reference = read_reference(args, reader, variable)
 
         read_and_plot_data(args, reader, variable, data_reference)
+
+        if args.poincare_path:
+            plot_poincare(args.poincare_path)
+
+
 
     # show all figures together
     plt.show()

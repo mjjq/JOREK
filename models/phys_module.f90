@@ -730,9 +730,9 @@ module phys_module
   real*8  :: Ti_0           !< Central ion normalized temperature
   real*8  :: Ti_1           !< SOL ion normalized temperature
   real*8  :: Ti_coef(10)    !< Ion temperature profile coefficients
-  real*8  :: Te_0           !< Central ion normalized temperature
-  real*8  :: Te_1           !< SOL ion normalized temperature
-  real*8  :: Te_coef(10)    !< Ion temperature profile coefficients
+  real*8  :: Te_0           !< Central electron normalized temperature
+  real*8  :: Te_1           !< SOL electron normalized temperature
+  real*8  :: Te_coef(10)    !< electron temperature profile coefficients
   
   !> @name Numerical input profile for the temperature
   character(len=512)  :: T_file          !< ASCII file the temperature profile is read from.

@@ -1351,9 +1351,12 @@ module mod_expression
             FFprime_loc = zj0 !--- not fully correct, but better than to put 0...
           endif
 #endif
-          if (psi_norm>1.d0 .or. psi_norm < 0) then
-            write(*,*) "ERROR, psi_norm out of range [0, 1], please check !!!"
-            stop
+          if (psi_norm>1.d0 .or. psi_norm < 0.d0) then
+            write(*,*) "WARNING, psi_norm out of range [0, 1], please check !!!"
+            write(*,*) "psi_norm = ", psi_norm, ", A300 = ", A300, ", ps00 = ", ps00
+            psi_norm = min(psi_norm, 1.d0)
+            psi_norm = max(psi_norm, 0.d0)
+            !stop
           endif
 
           Kappa_R    = ( Btot*BR*BR_R - BR*BR*B_R   - BZ*BR*B_Z   + Btot*BZ*BR_Z - Btot*Btor**2/BigR ) / Btot**3.

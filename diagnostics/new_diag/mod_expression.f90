@@ -587,6 +587,7 @@ module mod_expression
       AR0_1_p, AZ0_1_p, A30_1_s, A30_1_t, A30_1_R, A30_1_Z, BR_1, BZ_1, uR_1, uZ_1, uPhi_1,        &
       AR0_all_p, AZ0_all_p, A30_all_s, A30_all_t, A30_all_R, A30_all_Z, BR_all, BZ_all, uR_all, uZ_all, &
       UR0, UZ0, Up0
+    real*8  :: ps00, A300
     real*8  :: uR_0, uZ_0, BR_0, BZ_0, A30_0_Z, AZ0_0_p, AR0_0_p, A30_0_R
     real*8  :: A30_0_s, A30_0_t
     real*8  :: ps0_R, ps0_Z, ps0_RR, ps0_ZZ, ps0_RZ, u0_R, u0_Z, u0_RR, u0_ZZ, u0_RZ, vv2, zj0_R,  &
@@ -788,6 +789,7 @@ module mod_expression
           rn0   = 0.d0; rn0_s   = 0.d0; rn0_t   = 0.d0; rn0_ss   = 0.d0; rn0_tt   = 0.d0; rn0_st   = 0.d0; rn0_p   = 0.d0; rn0_pp   = 0.d0
           rimp0 = 0.d0; rimp0_s = 0.d0; rimp0_t = 0.d0; rimp0_ss = 0.d0; rimp0_tt = 0.d0; rimp0_st = 0.d0; rimp0_p = 0.d0; rimp0_pp = 0.d0
           UR0   = 0.d0; UZ0     = 0.d0; Up0     = 0.d0
+          ps00  = 0.d0; A300    = 0.d0
 
           ! Extra derivatives for current density calculation
           AR0_sp   = 0.d0; AR0_tp   = 0.d0
@@ -997,6 +999,8 @@ module mod_expression
                 end if
 
                 if ( i_tor == 1 ) then
+                  ps00      = ps00      + vv(var_psi) * sz * hh    * hhz
+                  A300      = A300      + vv(var_A3) * sz * hh    * hhz
                   AR0_0_p    = AR0_0_p    + vv(var_AR) * sz * hh    * hhz_p
                   AZ0_0_p    = AZ0_0_p    + vv(var_AZ) * sz * hh    * hhz_p
                   A30_0_s    = A30_0_s    + vv(var_A3) * sz * hh_s  * hhz
@@ -1310,7 +1314,7 @@ module mod_expression
           JpolR    = (R*BP_Z - BZ_p) / R
           JpolZ    = (BR_p - R*BP_R - Btor) / R
 
-          psi_norm = get_psi_n(A30, Z)
+          psi_norm = get_psi_n(A300, Z)
           psi_abs  = sqrt(A30_R*A30_R + A30_Z * A30_Z)
           if (psi_abs > 1.d-6) then
             FFprime_loc = zj0 + (R**2.d0) * (A30_R*P0_R + A30_Z*P0_Z)/(psi_abs**2.d0)
@@ -1329,7 +1333,7 @@ module mod_expression
           Btheta   = sqrt(ps0_R*ps0_R + ps0_Z * ps0_Z) / BigR
           JpolR    = ( -zj0 * BR - R * P0_Z ) / F0
           JpolZ    = ( -zj0 * BZ + R * P0_R ) / F0
-          psi_norm = get_psi_n(ps0, Z)
+          psi_norm = get_psi_n(ps00, Z)
           psi_abs  = sqrt(ps0_R*ps0_R + ps0_Z * ps0_Z)
 
           BR_R     = + ps0_RZ / BigR - ps0_Z / BigR**2
@@ -1347,6 +1351,10 @@ module mod_expression
             FFprime_loc = zj0 !--- not fully correct, but better than to put 0...
           endif
 #endif
+          if (psi_norm>1.d0 .or. psi_norm < 0) then
+            write(*,*) "ERROR, psi_norm out of range [0, 1], please check !!!"
+            stop
+          endif
 
           Kappa_R    = ( Btot*BR*BR_R - BR*BR*B_R   - BZ*BR*B_Z   + Btot*BZ*BR_Z - Btot*Btor**2/BigR ) / Btot**3.
           Kappa_Z    = ( Btot*BR*BZ_R - BR*BZ*B_R   - BZ*BZ*B_Z   + Btot*BZ*BZ_Z                     ) / Btot**3.
@@ -1653,7 +1661,7 @@ module mod_expression
           call resistivity(eta, T_or_Te, T_or_Te_corr, T_max_eta, T_or_Te_0, Z_eff, eta_T)     
           
 #ifdef fullmhd
-          call current(eq%xpoint, eq%xcase, R,Z, eq%Z_xpoint, ps0,eq%psi_axis,eq%psi_bnd,current_source_Jp)
+          call current(eq%xpoint, eq%xcase, R,Z, eq%Z_xpoint, psi_norm,0.d0,1.d0,current_source_Jp)
           current_source_Jp = - current_source_Jp
           
           etaJtor = eta_T * Jtor

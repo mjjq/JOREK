@@ -43,7 +43,7 @@ nsub            = 5        		! Number of subdivisions of the cubic finite elemen
 without_n0_mode = .false.  		! If true, do not include the n=0 mode (i_tor=1)
 periodic        = .true.		! Are we doing the whole tor?
 density_only    = .false.		! Write density only (for smaller vtk file)
-n_toroidal      = 200 !n_plane 		! Number of toroidal snapshots
+n_toroidal      = 32 !n_plane 		! Number of toroidal snapshots
 RphiZ_coords    = .false.               ! use xyz transformation from JOREK wiki 
 
 ! --- Read parameters from namelist file 'vtk.nml' if it exists

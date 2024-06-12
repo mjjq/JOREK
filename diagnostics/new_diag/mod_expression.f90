@@ -141,6 +141,7 @@ module mod_expression
     call add(exprs_all, 'curvat_phi  ', 'curvature (= b . grad ( b )) in the phi direction     ')
     call add(exprs_all, 'omega       ', 'Toroidal Vorticity Component                          ')
     call add(exprs_all, 'rho         ', 'Mass Density                                          ')
+    call add(exprs_all, 'deltaRho    ', 'Mass Density without n = 0                            ')
     call add(exprs_all, 'ne          ', 'Electron Density                                      ')
 #ifdef WITH_Impurities
     call add(exprs_all, 'nimp        ', 'Impurity Density                                      ')
@@ -191,6 +192,8 @@ module mod_expression
     call add(exprs_all, 'mu_neo      ', 'Neoclassical Friction Coefficient                     ')
     call add(exprs_all, 'T_e         ', 'Electron temperature                                  ')
     call add(exprs_all, 'T_i         ', 'Ion temperature                                       ')
+    call add(exprs_all, 'delta_T_e   ', 'Electron temperature without n = 0                    ')
+    call add(exprs_all, 'delta_T_i   ', 'Ion temperature without n = 0                         ')
     call add(exprs_all, 'VXBt        ', 'Dynamo loop voltage term (n=1)                        ')
     call add(exprs_all, 'VXBt_all    ', 'Dynamo loop voltage term (n>=1)                       ')
     call add(exprs_all, 'VXBt00      ', 'Dynamo loop voltage term (n=0)                        ')
@@ -607,6 +610,7 @@ module mod_expression
       Te0_ss, Te0_tt, Te0_p, Te0_pp, Ti0_R, Ti0_Z, Te0_R, Te0_Z, Er, Vtheta, Mach_par, Mach_pol,   &
       Vsound, Vneo, Vperp_e, Vperp_i, V_ExB, Vstar_e, Vstar_i, mu_neo, ki_neo, J_boot, Te0_eV,     &
       ne0_20, ln_Lambda, ln_Lambda0, dpsi_dt 
+    real*8 :: deltaTe, deltaTi, deltaRho
     real*8 :: T0_corr, Ti0_corr, Te0_corr, r0_corr, rn0_corr
     real*8 :: T_or_Te, T_or_Te_corr, T_or_Te_0 
     real*8 :: FFprime_loc, Jpol, JpolR, JpolZ, Btot, Jpar, Jpar_ionsat, fact_jsat, Bnorm, Btan, Jtor
@@ -791,6 +795,8 @@ module mod_expression
           UR0   = 0.d0; UZ0     = 0.d0; Up0     = 0.d0
           ps00  = 0.d0; A300    = 0.d0
 
+          deltaTe = 0.d0; deltaTi = 0.d0; deltaRho = 0.d0
+
           ! Extra derivatives for current density calculation
           AR0_sp   = 0.d0; AR0_tp   = 0.d0
           AZ0_sp   = 0.d0; AZ0_tp   = 0.d0
@@ -885,6 +891,9 @@ module mod_expression
                 r0_st    = r0_st    + vv(var_rho) * sz * hh_st * hhz
                 r0_p     = r0_p     + vv(var_rho) * sz * hh    * hhz_p
                 r0_pp    = r0_pp    + vv(var_rho) * sz * hh    * hhz_pp
+                if(i_tor .ne. 1) then
+                  deltaRho       = deltaRho       + vv(var_rho) * sz * hh    * hhz
+                endif
                 
                 ! --- Ion temperature
                 Ti0       = Ti0       + ( vv(var_Ti) + vv(var_T)/2.d0 ) * sz * hh    * hhz
@@ -895,6 +904,9 @@ module mod_expression
                 Ti0_st    = Ti0_st    + ( vv(var_Ti) + vv(var_T)/2.d0 ) * sz * hh_st * hhz
                 Ti0_p     = Ti0_p     + ( vv(var_Ti) + vv(var_T)/2.d0 ) * sz * hh    * hhz_p
                 Ti0_pp    = Ti0_pp    + ( vv(var_Ti) + vv(var_T)/2.d0 ) * sz * hh    * hhz_pp
+                if(i_tor .ne. 1) then
+                  deltaTi       = deltaTi       + ( vv(var_Ti) + vv(var_T)/2.d0 ) * sz * hh    * hhz
+                endif
                 
                 ! --- Electron temperature
                 Te0       = Te0       + ( vv(var_Te) + vv(var_T)/2.d0 ) * sz * hh    * hhz
@@ -905,6 +917,9 @@ module mod_expression
                 Te0_st    = Te0_st    + ( vv(var_Te) + vv(var_T)/2.d0 ) * sz * hh_st * hhz
                 Te0_p     = Te0_p     + ( vv(var_Te) + vv(var_T)/2.d0 ) * sz * hh    * hhz_p
                 Te0_pp    = Te0_pp    + ( vv(var_Te) + vv(var_T)/2.d0 ) * sz * hh    * hhz_pp
+                if(i_tor .ne. 1) then
+                  deltaTe       = deltaTe       + ( vv(var_Te) + vv(var_T)/2.d0 ) * sz * hh    * hhz
+                endif
 
                 ! --- Temperature (ion + electron) in models .ne. 400 & 502
                 T0       = T0       + ( vv(var_T) + vv(var_Ti) + vv(var_Te) ) * sz * hh    * hhz
@@ -1768,6 +1783,9 @@ module mod_expression
                 
               case ( 'rho' )
                 res = r0 * fact_rho
+
+              case ( 'deltaRho' )
+                res = deltaRho * fact_rho
                 
               case ( 'ne' )
 #ifdef WITH_Impurities
@@ -1968,6 +1986,12 @@ module mod_expression
                 
               case ( 'T_i' )
                 res = Ti0 * fact_T
+
+              case ( 'delta_T_e' )
+                res = deltaTe * fact_T
+                
+              case ( 'delta_T_i' )
+                res = deltaTi * fact_T
                 
               case ( 'VXBt' )
                 res = VXB_tor * fact_VXB

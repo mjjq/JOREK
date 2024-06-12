@@ -71,7 +71,7 @@ def plot_3d_dataset(file_path, dataset_name, iphi_plot):
                 axes = axes.flatten()
                 for i in range(1,len(variable_names)):
                     ax = axes.flat[i-1]
-                    im = ax.contourf(X, Y, data[i,:,:,iphi_plot], 50, cmap='jet')
+                    im = ax.contourf(X, Y, data[i,:,:,iphi_plot], 50, cmap='jet') # viridis_r
                     ax.set_title(f'{variable_names[i]}')
                     ax.set_xlabel('R')
                     ax.set_ylabel('Z')
@@ -80,8 +80,16 @@ def plot_3d_dataset(file_path, dataset_name, iphi_plot):
                     ax.set_aspect('equal', adjustable='box')
                     fig.colorbar(im, ax=ax, orientation='vertical', shrink=0.5)
 
+                fluxdata = np.loadtxt('fluxsurfaces.dat')
+                ax = axes.flat[len(variable_names)-1]
+                ax.scatter(fluxdata[:, 0], fluxdata[:, 1], s=1)
+                ax.set_xlabel('R')
+                ax.set_ylabel('Z')
+                ax.set_title(f'Flux Surfaces')
+                ax.set_aspect('equal', adjustable='box')
+
                 # Turn off the axis for any remaining subplots
-                for ax in axes[len(variable_names)-1:]:
+                for ax in axes[len(variable_names):]:
                     ax.axis('off')
                 fig.suptitle(f'3D data @ phi = {Phi_grid[iphi_plot]}, time = '+ "{:.2f}".format(hdf["time"][0]*1e3) + " [ms]")
                 plt.tight_layout()

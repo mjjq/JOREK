@@ -8,8 +8,8 @@ use mod_import_restart
 use mod_interp
 implicit none
 
-type (type_node_list)    :: node_list
-type (type_element_list) :: element_list
+type (type_node_list)   , pointer :: node_list
+type (type_element_list), pointer :: element_list
 
 integer               :: nnoel, nnos, nel, nsub, inode, ielm, n_scalars, n_vectors
 real*4,allocatable    :: xyz (:,:), scalars(:,:), vectors(:,:,:)
@@ -34,6 +34,9 @@ namelist /vtk_params/ nsub, without_n0_mode, periodic, RphiZ_coords
 
 write(*,*) 'jorek2vtk_3d'
 
+allocate(node_list)
+allocate(element_list)
+
 ! --- Initialise input parameters and read the input namelist.
 my_id     = 0
 call initialise_parameters(my_id, "__NO_FILENAME__")
@@ -41,9 +44,9 @@ call initialise_parameters(my_id, "__NO_FILENAME__")
 ! --- Preset parameters
 nsub            = 5        		! Number of subdivisions of the cubic finite elements into linear pieces
 without_n0_mode = .false.  		! If true, do not include the n=0 mode (i_tor=1)
-periodic        = .true.		! Are we doing the whole tor?
-density_only    = .false.		! Write density only (for smaller vtk file)
-n_toroidal      = 32 !n_plane 		! Number of toroidal snapshots
+periodic        = .true.	  	! Are we doing the whole tor?
+density_only    = .false.		  ! Write density only (for smaller vtk file)
+n_toroidal      = 33          !n_plane 		! Number of toroidal snapshots
 RphiZ_coords    = .false.               ! use xyz transformation from JOREK wiki 
 
 ! --- Read parameters from namelist file 'vtk.nml' if it exists
@@ -294,6 +297,9 @@ if(.not. density_only) then
 endif
 
 close(ivtk)
+
+deallocate(node_list)
+deallocate(element_list)
 
 write(*,*) 'done.'
 

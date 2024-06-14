@@ -43,6 +43,7 @@ real*8,  intent(in)    :: R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint(2), Z_xpoi
 
 #ifndef VISCOSITY_TENSOR_FORM
 #define VISCOSITY_INSIDE_LAPLACIAN
+#define VISCOSITY_COMPLETE_TERMS
 #endif
 
 real*8, dimension (DIM0,DIM0)  :: ELM
@@ -361,7 +362,7 @@ real*8     :: Qvisc_grad_Bp_dot_grad_Up__A3__p
 
 real*8     :: Qvisc_gradmu_dot_grad_vecV_UR__UR__p
 real*8     :: Qvisc_gradmu_dot_grad_vecV_UR__UR__n
-real*8     :: Qvisc_gradmu_dot_grad_vecV_UR__UP__p
+real*8     :: Qvisc_gradmu_dot_grad_vecV_UR__Up__p
 real*8     :: Qvisc_gradmu_dot_grad_vecV_UR__Te__p
 real*8     :: Qvisc_gradmu_dot_grad_vecV_UR__Te__n
 
@@ -394,6 +395,97 @@ real*8     :: QdivU_BdotGradVisc, curl_U0_dot_gradmu_x_B0, curl_U0_dot_curl_B0
 real*8     :: Qvisc_gradmu_dot_grad_vecV_UR_p
 real*8     :: Qvisc_gradmu_dot_grad_vecV_UZ_p
 real*8     :: Qvisc_gradmu_dot_grad_vecV_Up_p
+
+real*8     :: Qgrad_visc_dot_gradU_T_UR__p
+real*8     :: Qgrad_visc_dot_gradU_T_UZ__p
+real*8     :: Qgrad_visc_dot_gradU_T_Up__p
+
+real*8     :: Q_minus_2_over_3_divU_grad_visc_UR__p
+real*8     :: Q_minus_2_over_3_divU_grad_visc_UZ__p
+real*8     :: Q_minus_2_over_3_divU_grad_visc_Up__p
+
+real*8     :: Q_1_over_3_visc_grad_divU_UR__p
+real*8     :: Q_1_over_3_visc_grad_divU_UZ__p
+real*8     :: Q_1_over_3_visc_grad_divU_Up__p
+real*8     :: Q_1_over_3_visc_grad_divU_Up__k
+
+real*8     :: Q_1_over_3_B_dot_visc_grad_divU__p
+real*8     :: Q_1_over_3_B_dot_visc_grad_divU__k
+
+real*8     :: Qgrad_visc_dot_gradU_T_UR__UR__p
+real*8     :: Qgrad_visc_dot_gradU_T_UR__UZ__p
+real*8     :: Qgrad_visc_dot_gradU_T_UR__Up__p
+real*8     :: Qgrad_visc_dot_gradU_T_UR__Te__p
+real*8     :: Qgrad_visc_dot_gradU_T_UR__Te__n
+
+real*8     :: Qgrad_visc_dot_gradU_T_UZ__UR__p
+real*8     :: Qgrad_visc_dot_gradU_T_UZ__UZ__p
+real*8     :: Qgrad_visc_dot_gradU_T_UZ__Up__p
+real*8     :: Qgrad_visc_dot_gradU_T_UZ__Te__p
+real*8     :: Qgrad_visc_dot_gradU_T_UZ__Te__n
+
+real*8     :: Qgrad_visc_dot_gradU_T_Up__UR__p
+real*8     :: Qgrad_visc_dot_gradU_T_Up__UR__n
+real*8     :: Qgrad_visc_dot_gradU_T_Up__UZ__n
+real*8     :: Qgrad_visc_dot_gradU_T_Up__Up__p
+real*8     :: Qgrad_visc_dot_gradU_T_Up__Up__n
+real*8     :: Qgrad_visc_dot_gradU_T_Up__Te__p
+real*8     :: Qgrad_visc_dot_gradU_T_Up__Te__n
+
+real*8     :: Q_minus_2_over_3_divU_grad_visc_UR__UR__p
+real*8     :: Q_minus_2_over_3_divU_grad_visc_UR__UZ__p
+real*8     :: Q_minus_2_over_3_divU_grad_visc_UR__Up__n
+real*8     :: Q_minus_2_over_3_divU_grad_visc_UR__Te__p
+
+real*8     :: Q_minus_2_over_3_divU_grad_visc_UZ__UR__p
+real*8     :: Q_minus_2_over_3_divU_grad_visc_UZ__UZ__p
+real*8     :: Q_minus_2_over_3_divU_grad_visc_UZ__Up__n
+real*8     :: Q_minus_2_over_3_divU_grad_visc_UZ__Te__p
+
+real*8     :: Q_minus_2_over_3_divU_grad_visc_Up__UR__p
+real*8     :: Q_minus_2_over_3_divU_grad_visc_Up__UZ__p
+real*8     :: Q_minus_2_over_3_divU_grad_visc_Up__Up__n
+real*8     :: Q_minus_2_over_3_divU_grad_visc_Up__Te__p
+real*8     :: Q_minus_2_over_3_divU_grad_visc_Up__Te__n
+
+real*8     :: Q_1_over_3_visc_grad_divU_UR__UR__p
+real*8     :: Q_1_over_3_visc_grad_divU_UR__UZ__p
+real*8     :: Q_1_over_3_visc_grad_divU_UR__Up__n
+real*8     :: Q_1_over_3_visc_grad_divU_UR__Te__p
+
+real*8     :: Q_1_over_3_visc_grad_divU_UZ__UR__p
+real*8     :: Q_1_over_3_visc_grad_divU_UZ__UZ__p
+real*8     :: Q_1_over_3_visc_grad_divU_UZ__Up__n
+real*8     :: Q_1_over_3_visc_grad_divU_UZ__Te__p
+
+real*8     :: Q_1_over_3_visc_grad_divU_Up__UR__p 
+real*8     :: Q_1_over_3_visc_grad_divU_Up__UZ__p 
+real*8     :: Q_1_over_3_visc_grad_divU_Up__Up__n 
+real*8     :: Q_1_over_3_visc_grad_divU_Up__Te__p 
+real*8     :: Q_1_over_3_visc_grad_divU_Up__Te__n 
+real*8     :: Q_1_over_3_visc_grad_divU_Up__UR__k 
+real*8     :: Q_1_over_3_visc_grad_divU_Up__UZ__k 
+real*8     :: Q_1_over_3_visc_grad_divU_Up__Up__kn
+real*8     :: Q_1_over_3_visc_grad_divU_Up__Te__k 
+
+real*8     :: Q_1_over_3_B_dot_visc_grad_divU__AR__p
+real*8     :: Q_1_over_3_B_dot_visc_grad_divU__AR__n
+real*8     :: Q_1_over_3_B_dot_visc_grad_divU__AZ__p
+real*8     :: Q_1_over_3_B_dot_visc_grad_divU__AZ__n
+real*8     :: Q_1_over_3_B_dot_visc_grad_divU__A3__p
+real*8     :: Q_1_over_3_B_dot_visc_grad_divU__UR__p
+real*8     :: Q_1_over_3_B_dot_visc_grad_divU__UZ__p
+real*8     :: Q_1_over_3_B_dot_visc_grad_divU__Up__n
+real*8     :: Q_1_over_3_B_dot_visc_grad_divU__Te__p
+real*8     :: Q_1_over_3_B_dot_visc_grad_divU__Te__n
+
+real*8     :: Q_1_over_3_B_dot_visc_grad_divU__AR__k 
+real*8     :: Q_1_over_3_B_dot_visc_grad_divU__AZ__k 
+real*8     :: Q_1_over_3_B_dot_visc_grad_divU__A3__k 
+real*8     :: Q_1_over_3_B_dot_visc_grad_divU__UR__k 
+real*8     :: Q_1_over_3_B_dot_visc_grad_divU__UZ__k 
+real*8     :: Q_1_over_3_B_dot_visc_grad_divU__Up__kn
+real*8     :: Q_1_over_3_B_dot_visc_grad_divU__Te__k 
 
 ! --- fourth order stabilization (numerical diffusion terms)
 real*8     :: lap_Vstar, lap_bf
@@ -1668,6 +1760,22 @@ do j=1,n_degrees
             Qvisc_gradmu_dot_grad_vecV_UZ_p = 0.d0
             Qvisc_gradmu_dot_grad_vecV_Up_p = 0.d0
 
+            Qgrad_visc_dot_gradU_T_UR__p = 0.d0
+            Qgrad_visc_dot_gradU_T_UZ__p = 0.d0
+            Qgrad_visc_dot_gradU_T_Up__p = 0.d0
+
+            Q_minus_2_over_3_divU_grad_visc_UR__p = 0.d0
+            Q_minus_2_over_3_divU_grad_visc_UZ__p = 0.d0
+            Q_minus_2_over_3_divU_grad_visc_Up__p = 0.d0
+
+            Q_1_over_3_visc_grad_divU_UR__p = 0.d0
+            Q_1_over_3_visc_grad_divU_UZ__p = 0.d0
+            Q_1_over_3_visc_grad_divU_Up__p = 0.d0
+            Q_1_over_3_visc_grad_divU_Up__k = 0.d0
+
+            Q_1_over_3_B_dot_visc_grad_divU__p = 0.d0
+            Q_1_over_3_B_dot_visc_grad_divU__k = 0.d0
+
 #ifdef VISCOSITY_TENSOR_FORM
             Qvisc_UR__p = - (v_R + v/R) * divU + v_Z * (UZ0_R - UR0_Z)
             Qvisc_UR__k = - v_p__k/R**2 * (UR0_p - Up0 - R*Up0_R)
@@ -1705,7 +1813,7 @@ do j=1,n_degrees
             Qvisc_UR__k = - (v_p__k * UR0_p / R**2)
             Qvisc_UZ__p = - (v_R * UZ0_R + v_Z * UZ0_Z)
             Qvisc_UZ__k = - (v_p__k * UZ0_p / R**2)
-            Qvisc_Up__p = - (v_R * UP0_R + v_Z * UP0_Z) - v * ( Up0 / R**2 - 2.d0 * UR0_p / R**2 )
+            Qvisc_Up__p = - (v_R * Up0_R + v_Z * Up0_Z) - v * ( Up0 / R**2 - 2.d0 * UR0_p / R**2 )
             Qvisc_Up__k = - (v_p__k * Up0_p / R**2)
 
             Qgrad_visc_dot_grad_UR_p = visco_R * UR0_R + visco_Z * UR0_Z + visco_p * UR0_p / R**2
@@ -1720,6 +1828,24 @@ do j=1,n_degrees
             Qvisc_gradmu_dot_grad_vecV_UR_p = visco_R * UR0_R + visco_Z * UR0_Z + visco_p * UR0_p / R**2 - visco_p * Up0 / R**2
             Qvisc_gradmu_dot_grad_vecV_UZ_p = visco_R * UZ0_R + visco_Z * UZ0_Z + visco_p * UZ0_p / R**2
             Qvisc_gradmu_dot_grad_vecV_Up_p = visco_R * Up0_R + visco_Z * Up0_Z + visco_p * Up0_p / R**2 + visco_p * UR0 / R**2
+#endif
+
+#ifdef VISCOSITY_COMPLETE_TERMS
+             Qgrad_visc_dot_gradU_T_UR__p = visco_R * UR0_R + visco_Z * UZ0_R + visco_p / R * Up0_R
+             Qgrad_visc_dot_gradU_T_UZ__p = visco_R * UR0_Z + visco_Z * UZ0_Z + visco_p / R * Up0_Z
+             Qgrad_visc_dot_gradU_T_Up__p = visco_R / R * (UR0_p - Up0) + visco_Z / R * UZ0_p + visco_p / R**2 * (Up0_p + UR0)
+
+             Q_minus_2_over_3_divU_grad_visc_UR__p = - 2.d0/3.d0 * visco_R * divU
+             Q_minus_2_over_3_divU_grad_visc_UZ__p = - 2.d0/3.d0 * visco_Z * divU
+             Q_minus_2_over_3_divU_grad_visc_Up__p = - 2.d0/3.d0 * visco_p * divU / R
+
+             Q_1_over_3_visc_grad_divU_UR__p = -1.d0/3.d0 * divU * (visco * (v_R + v/R) + v * (visco_R + visco/R))
+             Q_1_over_3_visc_grad_divU_UZ__p = -1.d0/3.d0 * divU * (visco * v_Z         + v * visco_Z)
+             Q_1_over_3_visc_grad_divU_Up__p = -1.d0/3.d0 * divU * (                    + v * visco_p) / R
+             Q_1_over_3_visc_grad_divU_Up__k = -1.d0/3.d0 * divU * (visco * v_p__k                   ) / R
+
+             Q_1_over_3_B_dot_visc_grad_divU__p = -1.d0/3.d0 * divU * (visco * (BR0 * v_R + BZ0 * v_Z) + v * (BR0 * visco_R + BZ0 * visco_Z + Bp0 * visco_p / R))
+             Q_1_over_3_B_dot_visc_grad_divU__k = -1.d0/3.d0 * divU * (visco * (Bp0 * v_p__k / R))
 #endif
 
             ! TODO: implement the toroidal momentum source (all related terms above and below need to be modified)
@@ -1872,6 +1998,11 @@ do j=1,n_degrees
 #ifdef VISCOSITY_INSIDE_LAPLACIAN
                                 + v * Qvisc_gradmu_dot_grad_vecV_UR_p &
 #endif
+#ifdef VISCOSITY_COMPLETE_TERMS
+                                + v * Qgrad_visc_dot_gradU_T_UR__p          &
+                                + v * Q_minus_2_over_3_divU_grad_visc_UR__p &
+                                +     Q_1_over_3_visc_grad_divU_UR__p       &
+#endif
 #endif
                                 - v * PneoR             &
                                 - v * particle_source(ms,mt) * UR0 &
@@ -1905,6 +2036,11 @@ do j=1,n_degrees
                               - v * Qgrad_visc_dot_grad_UZ_p &
 #ifdef VISCOSITY_INSIDE_LAPLACIAN
                               + v * Qvisc_gradmu_dot_grad_vecV_UZ_p &
+#endif
+#ifdef VISCOSITY_COMPLETE_TERMS
+                              + v * Qgrad_visc_dot_gradU_T_UZ__p          &
+                              + v * Q_minus_2_over_3_divU_grad_visc_UZ__p &
+                              +     Q_1_over_3_visc_grad_divU_UZ__p       &
 #endif
 #endif
                               - v * PneoZ             &
@@ -1954,6 +2090,15 @@ do j=1,n_degrees
                                 + BZ0 * v * Qvisc_gradmu_dot_grad_vecV_UZ_p &
                                 + Bp0 * v * Qvisc_gradmu_dot_grad_vecV_Up_p &
 #endif
+#ifdef VISCOSITY_COMPLETE_TERMS
+                                + BR0 * v * Qgrad_visc_dot_gradU_T_UR__p &
+                                + BZ0 * v * Qgrad_visc_dot_gradU_T_UZ__p &
+                                + Bp0 * v * Qgrad_visc_dot_gradU_T_Up__p &
+                                + BR0 * v * Q_minus_2_over_3_divU_grad_visc_UR__p &
+                                + BZ0 * v * Q_minus_2_over_3_divU_grad_visc_UZ__p &
+                                + Bp0 * v * Q_minus_2_over_3_divU_grad_visc_Up__p &
+                                + Q_1_over_3_B_dot_visc_grad_divU__p &
+#endif
 #endif
                                 + p0 * BgradVstar__p          &
                                 - v * (BR0*PneoR + BZ0*PneoZ) &
@@ -1962,6 +2107,11 @@ do j=1,n_degrees
             Qvec_k(var_Up)    = + BR0 * visco_T * Qvisc_UR__k &
                                 + BZ0 * visco_T * Qvisc_UZ__k &
                                 + Bp0 * visco_T * Qvisc_Up__k &
+#ifndef VISCOSITY_TENSOR_FORM
+#ifdef VISCOSITY_COMPLETE_TERMS
+                                + Q_1_over_3_B_dot_visc_grad_divU__k &
+#endif
+#endif
                                 + p0 * BgradVstar__k
 
 #ifdef ENABLE_VISCO_PAR_AND_PARPAR
@@ -1989,11 +2139,21 @@ do j=1,n_degrees
 #ifdef VISCOSITY_INSIDE_LAPLACIAN
                                 + v * Qvisc_gradmu_dot_grad_vecV_Up_p &
 #endif
+#ifdef VISCOSITY_COMPLETE_TERMS
+                                + v * Qgrad_visc_dot_gradU_T_Up__p          &
+                                + v * Q_minus_2_over_3_divU_grad_visc_Up__p &
+                                +     Q_1_over_3_visc_grad_divU_Up__p       &
+#endif
 #endif
                                 - v * particle_source(ms,mt) * Up0 &
                                 - visco_num * lap_Vstar * lap_Up
             Qvec_k(var_Up)    = + v_p__k * p0 / R             &
                                 + JxB_Up__k                   &
+#ifndef VISCOSITY_TENSOR_FORM
+#ifdef VISCOSITY_COMPLETE_TERMS
+                                +     Q_1_over_3_visc_grad_divU_Up__k       &
+#endif
+#endif
                                 + visco_T * Qvisc_Up__k
 
 #ifdef ENABLE_VISCO_PAR_AND_PARPAR
@@ -5196,7 +5356,7 @@ do j=1,n_degrees
 
                   Qvisc_gradmu_dot_grad_vecV_UR__UR__p = 0.d0
                   Qvisc_gradmu_dot_grad_vecV_UR__UR__n = 0.d0
-                  Qvisc_gradmu_dot_grad_vecV_UR__UP__p = 0.d0
+                  Qvisc_gradmu_dot_grad_vecV_UR__Up__p = 0.d0
                   Qvisc_gradmu_dot_grad_vecV_UR__Te__p = 0.d0
                   Qvisc_gradmu_dot_grad_vecV_UR__Te__n = 0.d0
 
@@ -5210,6 +5370,81 @@ do j=1,n_degrees
                   Qvisc_gradmu_dot_grad_vecV_Up__Up__n = 0.d0
                   Qvisc_gradmu_dot_grad_vecV_Up__Te__p = 0.d0
                   Qvisc_gradmu_dot_grad_vecV_Up__Te__n = 0.d0
+
+                  Qgrad_visc_dot_gradU_T_UR__UR__p = 0.d0
+                  Qgrad_visc_dot_gradU_T_UR__UZ__p = 0.d0
+                  Qgrad_visc_dot_gradU_T_UR__Up__p = 0.d0
+                  Qgrad_visc_dot_gradU_T_UR__Te__p = 0.d0
+                  Qgrad_visc_dot_gradU_T_UR__Te__n = 0.d0
+
+                  Qgrad_visc_dot_gradU_T_UZ__UR__p = 0.d0
+                  Qgrad_visc_dot_gradU_T_UZ__UZ__p = 0.d0
+                  Qgrad_visc_dot_gradU_T_UZ__Up__p = 0.d0
+                  Qgrad_visc_dot_gradU_T_UZ__Te__p = 0.d0
+                  Qgrad_visc_dot_gradU_T_UZ__Te__n = 0.d0
+
+                  Qgrad_visc_dot_gradU_T_Up__UR__p = 0.d0
+                  Qgrad_visc_dot_gradU_T_Up__UR__n = 0.d0
+                  Qgrad_visc_dot_gradU_T_Up__UZ__n = 0.d0
+                  Qgrad_visc_dot_gradU_T_Up__Up__p = 0.d0
+                  Qgrad_visc_dot_gradU_T_Up__Up__n = 0.d0
+                  Qgrad_visc_dot_gradU_T_Up__Te__p = 0.d0
+                  Qgrad_visc_dot_gradU_T_Up__Te__n = 0.d0
+
+                  Q_minus_2_over_3_divU_grad_visc_UR__UR__p = 0.d0
+                  Q_minus_2_over_3_divU_grad_visc_UR__UZ__p = 0.d0
+                  Q_minus_2_over_3_divU_grad_visc_UR__Up__n = 0.d0
+                  Q_minus_2_over_3_divU_grad_visc_UR__Te__p = 0.d0
+
+                  Q_minus_2_over_3_divU_grad_visc_UZ__UR__p = 0.d0
+                  Q_minus_2_over_3_divU_grad_visc_UZ__UZ__p = 0.d0
+                  Q_minus_2_over_3_divU_grad_visc_UZ__Up__n = 0.d0
+                  Q_minus_2_over_3_divU_grad_visc_UZ__Te__p = 0.d0
+
+                  Q_minus_2_over_3_divU_grad_visc_Up__UR__p = 0.d0
+                  Q_minus_2_over_3_divU_grad_visc_Up__UZ__p = 0.d0
+                  Q_minus_2_over_3_divU_grad_visc_Up__Up__n = 0.d0
+                  Q_minus_2_over_3_divU_grad_visc_Up__Te__p = 0.d0
+                  Q_minus_2_over_3_divU_grad_visc_Up__Te__n = 0.d0
+
+                  Q_1_over_3_visc_grad_divU_UR__UR__p = 0.d0
+                  Q_1_over_3_visc_grad_divU_UR__UZ__p = 0.d0
+                  Q_1_over_3_visc_grad_divU_UR__Up__n = 0.d0
+                  Q_1_over_3_visc_grad_divU_UR__Te__p = 0.d0
+
+                  Q_1_over_3_visc_grad_divU_UZ__UR__p = 0.d0
+                  Q_1_over_3_visc_grad_divU_UZ__UZ__p = 0.d0
+                  Q_1_over_3_visc_grad_divU_UZ__Up__n = 0.d0
+                  Q_1_over_3_visc_grad_divU_UZ__Te__p = 0.d0
+
+                  Q_1_over_3_visc_grad_divU_Up__UR__p = 0.d0
+                  Q_1_over_3_visc_grad_divU_Up__UZ__p = 0.d0
+                  Q_1_over_3_visc_grad_divU_Up__Up__n = 0.d0
+                  Q_1_over_3_visc_grad_divU_Up__Te__p = 0.d0
+                  Q_1_over_3_visc_grad_divU_Up__Te__n = 0.d0
+                  Q_1_over_3_visc_grad_divU_Up__UR__k = 0.d0
+                  Q_1_over_3_visc_grad_divU_Up__UZ__k = 0.d0
+                  Q_1_over_3_visc_grad_divU_Up__Up__kn = 0.d0
+                  Q_1_over_3_visc_grad_divU_Up__Te__k = 0.d0
+
+                  Q_1_over_3_B_dot_visc_grad_divU__AR__p = 0.d0
+                  Q_1_over_3_B_dot_visc_grad_divU__AR__n = 0.d0
+                  Q_1_over_3_B_dot_visc_grad_divU__AZ__p = 0.d0
+                  Q_1_over_3_B_dot_visc_grad_divU__AZ__n = 0.d0
+                  Q_1_over_3_B_dot_visc_grad_divU__A3__p = 0.d0
+                  Q_1_over_3_B_dot_visc_grad_divU__UR__p = 0.d0
+                  Q_1_over_3_B_dot_visc_grad_divU__UZ__p = 0.d0
+                  Q_1_over_3_B_dot_visc_grad_divU__Up__n = 0.d0
+                  Q_1_over_3_B_dot_visc_grad_divU__Te__p = 0.d0
+                  Q_1_over_3_B_dot_visc_grad_divU__Te__n = 0.d0
+
+                  Q_1_over_3_B_dot_visc_grad_divU__AR__k = 0.d0
+                  Q_1_over_3_B_dot_visc_grad_divU__AZ__k = 0.d0
+                  Q_1_over_3_B_dot_visc_grad_divU__A3__k = 0.d0
+                  Q_1_over_3_B_dot_visc_grad_divU__UR__k = 0.d0
+                  Q_1_over_3_B_dot_visc_grad_divU__UZ__k = 0.d0
+                  Q_1_over_3_B_dot_visc_grad_divU__Up__kn = 0.d0
+                  Q_1_over_3_B_dot_visc_grad_divU__Te__k = 0.d0
 
 #ifdef VISCOSITY_TENSOR_FORM                  
                   ! --- The correct viscosity (there is only one...)
@@ -5371,7 +5606,7 @@ do j=1,n_degrees
                   Qvisc_UZ_UZ__p  = - (v_R * UZ_R + v_Z * UZ_Z)
                   Qvisc_UZ_UZ__kn = - (v_p__k * UZ_p__n / R**2)
 
-                  Qvisc_Up_Up__p  = - (v_R * UP_R + v_Z * UP_Z) - v * ( Up / R**2 )
+                  Qvisc_Up_Up__p  = - (v_R * Up_R + v_Z * Up_Z) - v * ( Up / R**2 )
                   Qvisc_Up_UR__n  = - v * ( - 2.d0 * UR_p__n / R**2 )
                   Qvisc_Up_Up__kn = - (v_p__k * Up_p__n / R**2)
 
@@ -5422,7 +5657,7 @@ do j=1,n_degrees
                   Qvisc_gradmu_dot_grad_vecV_UR__UR__p = visco_R * UR_R + visco_Z * UR_Z
                   Qvisc_gradmu_dot_grad_vecV_UR__UR__n = visco_p * UR_p__n / R**2
 
-                  Qvisc_gradmu_dot_grad_vecV_UR__UP__p = - visco_p * Up / R**2
+                  Qvisc_gradmu_dot_grad_vecV_UR__Up__p = - visco_p * Up / R**2
 
                   Qvisc_gradmu_dot_grad_vecV_UR__Te__p = visco_R_T * UR0_R + visco_Z_T * UR0_Z + visco_p_T__p * UR0_p / R**2 - visco_p_T__p * Up0 / R**2
                   Qvisc_gradmu_dot_grad_vecV_UR__Te__n =                                         visco_p_T__n * UR0_p / R**2 - visco_p_T__n * Up0 / R**2
@@ -5442,6 +5677,83 @@ do j=1,n_degrees
                   Qvisc_gradmu_dot_grad_vecV_Up__Te__n =                                         visco_p_T__n * Up0_p / R**2 + visco_p_T__n * UR0 / R**2
 
 #endif
+#ifdef VISCOSITY_COMPLETE_TERMS
+                  Qgrad_visc_dot_gradU_T_UR__UR__p = visco_R * UR_R
+                  Qgrad_visc_dot_gradU_T_UR__UZ__p = visco_Z * UZ_R
+                  Qgrad_visc_dot_gradU_T_UR__Up__p = visco_p / R * Up_R
+                  Qgrad_visc_dot_gradU_T_UR__Te__p = visco_R_T * UR0_R + visco_Z_T * UZ0_R + visco_p_T__p / R * Up0_R
+                  Qgrad_visc_dot_gradU_T_UR__Te__n = visco_p_T__n / R * Up0_R
+
+                  Qgrad_visc_dot_gradU_T_UZ__UR__p = visco_R * UR_Z
+                  Qgrad_visc_dot_gradU_T_UZ__UZ__p = visco_Z * UZ_Z
+                  Qgrad_visc_dot_gradU_T_UZ__Up__p = visco_p / R * Up_Z
+                  Qgrad_visc_dot_gradU_T_UZ__Te__p = visco_R_T * UR0_Z + visco_Z_T * UZ0_Z + visco_p_T__p / R * Up0_Z
+                  Qgrad_visc_dot_gradU_T_UZ__Te__n = visco_p_T__n / R * Up0_Z
+
+                  Qgrad_visc_dot_gradU_T_Up__UR__p = visco_p / R**2 * UR
+                  Qgrad_visc_dot_gradU_T_Up__UR__n = visco_R / R * UR_p__n
+                  Qgrad_visc_dot_gradU_T_Up__UZ__n = visco_Z / R * UZ_p__n
+                  Qgrad_visc_dot_gradU_T_Up__Up__p = visco_R / R * (- Up)
+                  Qgrad_visc_dot_gradU_T_Up__Up__n = visco_p / R**2 * Up_p__n
+                  Qgrad_visc_dot_gradU_T_Up__Te__p = visco_R_T / R * (UR0_p - Up0) + visco_Z_T / R * UZ0_p + visco_p_T__p / R**2 * (Up0_p + UR0)
+                  Qgrad_visc_dot_gradU_T_Up__Te__n = visco_p_T__n / R**2 * (Up0_p + UR0)
+
+                  Q_minus_2_over_3_divU_grad_visc_UR__UR__p = - 2.d0/3.d0 * visco_R * divU_UR
+                  Q_minus_2_over_3_divU_grad_visc_UR__UZ__p = - 2.d0/3.d0 * visco_R * divU_UZ
+                  Q_minus_2_over_3_divU_grad_visc_UR__Up__n = - 2.d0/3.d0 * visco_R * divU_Up__n
+                  Q_minus_2_over_3_divU_grad_visc_UR__Te__p = - 2.d0/3.d0 * visco_R_T * divU
+
+                  Q_minus_2_over_3_divU_grad_visc_UZ__UR__p = - 2.d0/3.d0 * visco_Z * divU_UR
+                  Q_minus_2_over_3_divU_grad_visc_UZ__UZ__p = - 2.d0/3.d0 * visco_Z * divU_UZ
+                  Q_minus_2_over_3_divU_grad_visc_UZ__Up__n = - 2.d0/3.d0 * visco_Z * divU_Up__n
+                  Q_minus_2_over_3_divU_grad_visc_UZ__Te__p = - 2.d0/3.d0 * visco_Z_T * divU
+
+                  Q_minus_2_over_3_divU_grad_visc_Up__UR__p = - 2.d0/3.d0 * visco_p * divU_UR / R
+                  Q_minus_2_over_3_divU_grad_visc_Up__UZ__p = - 2.d0/3.d0 * visco_p * divU_UZ / R
+                  Q_minus_2_over_3_divU_grad_visc_Up__Up__n = - 2.d0/3.d0 * visco_p * divU_Up__n / R
+                  Q_minus_2_over_3_divU_grad_visc_Up__Te__p = - 2.d0/3.d0 * visco_p_T__p * divU / R
+                  Q_minus_2_over_3_divU_grad_visc_Up__Te__n = - 2.d0/3.d0 * visco_p_T__n * divU / R
+
+                  Q_1_over_3_visc_grad_divU_UR__UR__p = -1.d0/3.d0 * divU_UR * (visco * (v_R + v/R) + v * (visco_R + visco/R))
+                  Q_1_over_3_visc_grad_divU_UR__UZ__p = -1.d0/3.d0 * divU_UZ * (visco * (v_R + v/R) + v * (visco_R + visco/R))
+                  Q_1_over_3_visc_grad_divU_UR__Up__n = -1.d0/3.d0 * divU_Up__n * (visco * (v_R + v/R) + v * (visco_R + visco/R))
+                  Q_1_over_3_visc_grad_divU_UR__Te__p = -1.d0/3.d0 * divU * (visco_T * (v_R + v/R) + v * (visco_R_T + visco_T/R))
+
+                  Q_1_over_3_visc_grad_divU_UZ__UR__p = -1.d0/3.d0 * divU_UR * (visco * v_Z         + v * visco_Z)
+                  Q_1_over_3_visc_grad_divU_UZ__UZ__p = -1.d0/3.d0 * divU_UZ * (visco * v_Z         + v * visco_Z)
+                  Q_1_over_3_visc_grad_divU_UZ__Up__n = -1.d0/3.d0 * divU_Up__n * (visco * v_Z         + v * visco_Z)
+                  Q_1_over_3_visc_grad_divU_UZ__Te__p = -1.d0/3.d0 * divU * (visco_T * v_Z         + v * visco_Z_T)
+
+                  Q_1_over_3_visc_grad_divU_Up__UR__p = -1.d0/3.d0 * divU_UR * (                    + v * visco_p) / R
+                  Q_1_over_3_visc_grad_divU_Up__UZ__p = -1.d0/3.d0 * divU_UZ * (                    + v * visco_p) / R
+                  Q_1_over_3_visc_grad_divU_Up__Up__n = -1.d0/3.d0 * divU_Up__n * (                    + v * visco_p) / R
+                  Q_1_over_3_visc_grad_divU_Up__Te__p = -1.d0/3.d0 * divU * (                    + v * visco_p_T__p) / R
+                  Q_1_over_3_visc_grad_divU_Up__Te__n = -1.d0/3.d0 * divU * (                    + v * visco_p_T__n) / R
+                  Q_1_over_3_visc_grad_divU_Up__UR__k = -1.d0/3.d0 * divU_UR * (visco * v_p__k                   ) / R
+                  Q_1_over_3_visc_grad_divU_Up__UZ__k = -1.d0/3.d0 * divU_UZ * (visco * v_p__k                   ) / R
+                  Q_1_over_3_visc_grad_divU_Up__Up__kn = -1.d0/3.d0 * divU_Up__n * (visco * v_p__k                   ) / R
+                  Q_1_over_3_visc_grad_divU_Up__Te__k = -1.d0/3.d0 * divU * (visco_T * v_p__k                   ) / R
+
+                  Q_1_over_3_B_dot_visc_grad_divU__AR__p = -1.d0/3.d0 * divU * (visco * (BR0_AR * v_R) + v * (BR0_AR * visco_R + Bp0_AR * visco_p / R))
+                  Q_1_over_3_B_dot_visc_grad_divU__AR__n = -1.d0/3.d0 * divU * (visco * (BZ0_AR__n * v_Z) + v * (BZ0_AR__n * visco_Z))
+                  Q_1_over_3_B_dot_visc_grad_divU__AZ__p = -1.d0/3.d0 * divU * (visco * (BZ0_AZ * v_Z) + v * (BZ0_AZ * visco_Z + Bp0_AZ * visco_p / R))
+                  Q_1_over_3_B_dot_visc_grad_divU__AZ__n = -1.d0/3.d0 * divU * (visco * (BR0_AZ__n * v_R) + v * (BR0_AZ__n * visco_R))
+                  Q_1_over_3_B_dot_visc_grad_divU__A3__p = -1.d0/3.d0 * divU * (visco * (BR0_A3 * v_R + BZ0_A3 * v_Z) + v * (BR0_A3 * visco_R + BZ0_A3 * visco_Z + Bp0_A3 * visco_p / R))
+                  Q_1_over_3_B_dot_visc_grad_divU__UR__p = -1.d0/3.d0 * divU_UR * (visco * (BR0 * v_R + BZ0 * v_Z) + v * (BR0 * visco_R + BZ0 * visco_Z + Bp0 * visco_p / R))
+                  Q_1_over_3_B_dot_visc_grad_divU__UZ__p = -1.d0/3.d0 * divU_UZ * (visco * (BR0 * v_R + BZ0 * v_Z) + v * (BR0 * visco_R + BZ0 * visco_Z + Bp0 * visco_p / R))
+                  Q_1_over_3_B_dot_visc_grad_divU__Up__n = -1.d0/3.d0 * divU_Up__n * (visco * (BR0 * v_R + BZ0 * v_Z) + v * (BR0 * visco_R + BZ0 * visco_Z + Bp0 * visco_p / R))
+                  Q_1_over_3_B_dot_visc_grad_divU__Te__p = -1.d0/3.d0 * divU * (visco_T * (BR0 * v_R + BZ0 * v_Z) + v * (BR0 * visco_R_T + BZ0 * visco_Z_T + Bp0 * visco_p_T__p / R))
+                  Q_1_over_3_B_dot_visc_grad_divU__Te__n = -1.d0/3.d0 * divU * (v * (Bp0 * visco_p_T__n / R))
+
+                  Q_1_over_3_B_dot_visc_grad_divU__AR__k = -1.d0/3.d0 * divU * (visco * (Bp0_AR * v_p__k / R))
+                  Q_1_over_3_B_dot_visc_grad_divU__AZ__k = -1.d0/3.d0 * divU * (visco * (Bp0_AZ * v_p__k / R))
+                  Q_1_over_3_B_dot_visc_grad_divU__A3__k = -1.d0/3.d0 * divU * (visco * (Bp0_A3 * v_p__k / R))
+                  Q_1_over_3_B_dot_visc_grad_divU__UR__k = -1.d0/3.d0 * divU_UR * (visco * (Bp0 * v_p__k / R))
+                  Q_1_over_3_B_dot_visc_grad_divU__UZ__k = -1.d0/3.d0 * divU_UZ * (visco * (Bp0 * v_p__k / R))
+                  Q_1_over_3_B_dot_visc_grad_divU__Up__kn = -1.d0/3.d0 * divU_Up__n * (visco * (Bp0 * v_p__k / R))
+                  Q_1_over_3_B_dot_visc_grad_divU__Te__k = -1.d0/3.d0 * divU * (visco_T * (Bp0 * v_p__k / R))
+#endif
+
 #endif
 
                   lap_bf = bf_R / R + bf_RR + bf_ZZ
@@ -5726,6 +6038,11 @@ do j=1,n_degrees
                   Qjac_p (var_UR,var_UR ) = Qjac_p (var_UR,var_UR ) + v * Qvisc_gradmu_dot_grad_vecV_UR__UR__p
                   Qjac_n (var_UR,var_UR ) = Qjac_n (var_UR,var_UR ) + v * Qvisc_gradmu_dot_grad_vecV_UR__UR__n
 #endif
+#ifdef VISCOSITY_COMPLETE_TERMS
+                  Qjac_p (var_UR,var_UR ) = Qjac_p (var_UR,var_UR ) + v * Qgrad_visc_dot_gradU_T_UR__UR__p          &
+                                          + v * Q_minus_2_over_3_divU_grad_visc_UR__UR__p &
+                                          +     Q_1_over_3_visc_grad_divU_UR__UR__p
+#endif
 #endif
 
 #ifdef ENABLE_VISCO_PAR_AND_PARPAR
@@ -5760,6 +6077,12 @@ do j=1,n_degrees
                   Qjac_kn(var_UR,var_UZ ) =                 + visco_T * Qvisc_UR_UZ__kn
 #ifdef VISCOSITY_TENSOR_FORM
                   Qjac_p (var_UR,var_UZ ) = Qjac_p (var_UR,var_UZ ) + v * Qgrad_visc_dot_grad_UR__UZ__p
+#else
+#ifdef VISCOSITY_COMPLETE_TERMS
+                  Qjac_p (var_UR,var_UZ ) = Qjac_p (var_UR,var_UZ ) + v * Qgrad_visc_dot_gradU_T_UR__UZ__p          &
+                                          + v * Q_minus_2_over_3_divU_grad_visc_UR__UZ__p &
+                                          +     Q_1_over_3_visc_grad_divU_UR__UZ__p
+#endif
 #endif
 
 #ifdef ENABLE_VISCO_PAR_AND_PARPAR
@@ -5797,7 +6120,13 @@ do j=1,n_degrees
                   Qjac_n (var_UR,var_Up ) = Qjac_n (var_UR,var_Up ) + v * Qgrad_visc_dot_grad_UR__Up__n
 #else
 #ifdef VISCOSITY_INSIDE_LAPLACIAN
-                  Qjac_p (var_UR,var_Up ) = Qjac_p (var_UR,var_Up ) + v * Qvisc_gradmu_dot_grad_vecV_UR__UP__p
+                  Qjac_p (var_UR,var_Up ) = Qjac_p (var_UR,var_Up ) + v * Qvisc_gradmu_dot_grad_vecV_UR__Up__p
+#endif
+#ifdef VISCOSITY_COMPLETE_TERMS
+                  Qjac_p (var_UR,var_Up ) = Qjac_p (var_UR,var_Up ) + v * Qgrad_visc_dot_gradU_T_UR__Up__p
+                  Qjac_n (var_UR,var_Up ) = Qjac_n (var_UR,var_Up )                       &
+                                          + v * Q_minus_2_over_3_divU_grad_visc_UR__Up__n &
+                                          +     Q_1_over_3_visc_grad_divU_UR__Up__n
 #endif
 #endif
 #ifdef ENABLE_VISCO_PAR_AND_PARPAR
@@ -5845,6 +6174,12 @@ do j=1,n_degrees
 #ifdef VISCOSITY_INSIDE_LAPLACIAN
                   Qjac_p (var_UR,var_Te ) = Qjac_p (var_UR,var_Te ) + v * Qvisc_gradmu_dot_grad_vecV_UR__Te__p
                   Qjac_n (var_UR,var_Te ) = Qjac_n (var_UR,var_Te ) + v * Qvisc_gradmu_dot_grad_vecV_UR__Te__n
+#endif
+#ifdef VISCOSITY_COMPLETE_TERMS
+                  Qjac_p (var_UR,var_Te ) = Qjac_p (var_UR,var_Te ) + v * Qgrad_visc_dot_gradU_T_UR__Te__p          &
+                                + v * Q_minus_2_over_3_divU_grad_visc_UR__Te__p &
+                                +     Q_1_over_3_visc_grad_divU_UR__Te__p
+                  Qjac_n (var_UR,var_Te ) = Qjac_n (var_UR,var_Te ) + v * Qgrad_visc_dot_gradU_T_UR__Te__n
 #endif
 #endif
 
@@ -5949,6 +6284,12 @@ do j=1,n_degrees
                   Qjac_kn(var_UZ,var_UR )  =                 + visco_T * Qvisc_UZ_UR__kn
 #ifdef VISCOSITY_TENSOR_FORM
                   Qjac_p (var_UZ,var_UR ) = Qjac_p (var_UZ,var_UR ) + v * Qgrad_visc_dot_grad_UZ__UR__p
+#else
+#ifdef VISCOSITY_COMPLETE_TERMS
+                  Qjac_p (var_UZ,var_UR ) = Qjac_p (var_UZ,var_UR ) + v * Qgrad_visc_dot_gradU_T_UZ__UR__p          &
+                                + v * Q_minus_2_over_3_divU_grad_visc_UZ__UR__p &
+                                +     Q_1_over_3_visc_grad_divU_UZ__UR__p
+#endif
 #endif
 #ifdef ENABLE_VISCO_PAR_AND_PARPAR
                   Qjac_p(var_UZ, var_UR) = Qjac_p(var_UZ, var_UR) + &
@@ -5993,6 +6334,11 @@ do j=1,n_degrees
                   Qjac_p (var_UZ,var_UZ ) = Qjac_p (var_UZ,var_UZ ) + v * Qvisc_gradmu_dot_grad_vecV_UZ__UZ__p
                   Qjac_n (var_UZ,var_UZ ) = Qjac_n (var_UZ,var_UZ ) + v * Qvisc_gradmu_dot_grad_vecV_UZ__UZ__n
 #endif
+#ifdef VISCOSITY_COMPLETE_TERMS
+                  Qjac_p (var_UZ,var_UZ ) = Qjac_p (var_UZ,var_UZ ) + v * Qgrad_visc_dot_gradU_T_UZ__UZ__p          &
+                                + v * Q_minus_2_over_3_divU_grad_visc_UZ__UZ__p &
+                                +     Q_1_over_3_visc_grad_divU_UZ__UZ__p
+#endif
 #endif                  
 
 #ifdef ENABLE_VISCO_PAR_AND_PARPAR
@@ -6028,6 +6374,13 @@ do j=1,n_degrees
 #ifdef VISCOSITY_TENSOR_FORM
                   Qjac_p (var_UZ,var_Up ) = Qjac_p (var_UZ,var_Up ) + v * Qgrad_visc_dot_grad_UZ__Up__p
                   Qjac_n (var_UZ,var_Up ) = Qjac_n (var_UZ,var_Up ) + v * Qgrad_visc_dot_grad_UZ__Up__n
+#else
+#ifdef VISCOSITY_COMPLETE_TERMS
+                  Qjac_p (var_UZ,var_Up ) = Qjac_p (var_UZ,var_Up ) + v * Qgrad_visc_dot_gradU_T_UZ__Up__p
+                  Qjac_n (var_UZ,var_Up ) = Qjac_n (var_UZ,var_Up )             &
+                                + v * Q_minus_2_over_3_divU_grad_visc_UZ__Up__n &
+                                +     Q_1_over_3_visc_grad_divU_UZ__Up__n
+#endif
 #endif
 #ifdef ENABLE_VISCO_PAR_AND_PARPAR
                   Qjac_p(var_UZ, var_Up) = Qjac_p(var_UZ, var_Up) + &
@@ -6074,6 +6427,12 @@ do j=1,n_degrees
 #ifdef VISCOSITY_INSIDE_LAPLACIAN
                   Qjac_p (var_UZ,var_Te ) = Qjac_p (var_UZ,var_Te ) + v * Qvisc_gradmu_dot_grad_vecV_UZ__Te__p
                   Qjac_n (var_UZ,var_Te ) = Qjac_n (var_UZ,var_Te ) + v * Qvisc_gradmu_dot_grad_vecV_UZ__Te__n
+#endif
+#ifdef VISCOSITY_COMPLETE_TERMS
+                  Qjac_p (var_UZ,var_Te ) = Qjac_p (var_UZ,var_Te ) + v * Qgrad_visc_dot_gradU_T_UZ__Te__p          &
+                                + v * Q_minus_2_over_3_divU_grad_visc_UZ__Te__p &
+                                +     Q_1_over_3_visc_grad_divU_UZ__Te__p
+                  Qjac_n (var_UZ,var_Te ) = Qjac_n (var_UZ,var_Te ) + v * Qgrad_visc_dot_gradU_T_UZ__Te__n
 #endif
 #endif                  
 
@@ -6143,6 +6502,20 @@ do j=1,n_degrees
                                          + Bp0_AR * v * Qvisc_gradmu_dot_grad_vecV_Up_p
                   Qjac_n (var_Up,var_AR) = Qjac_n (var_Up,var_AR) + &
                                          + BZ0_AR__n * v * Qvisc_gradmu_dot_grad_vecV_UZ_p
+#endif
+#ifdef VISCOSITY_COMPLETE_TERMS
+                  Qjac_p (var_Up,var_AR) = Qjac_p (var_Up,var_AR) + &
+                                + BR0_AR * v * Qgrad_visc_dot_gradU_T_UR__p &
+                                + Bp0_AR * v * Qgrad_visc_dot_gradU_T_Up__p &
+                                + BR0_AR * v * Q_minus_2_over_3_divU_grad_visc_UR__p &
+                                + Bp0_AR * v * Q_minus_2_over_3_divU_grad_visc_Up__p &
+                                + Q_1_over_3_B_dot_visc_grad_divU__AR__p
+                  Qjac_n (var_Up,var_AR) = Qjac_n (var_Up,var_AR) + &
+                                + BZ0_AR__n * v * Qgrad_visc_dot_gradU_T_UZ__p &
+                                + BZ0_AR__n * v * Q_minus_2_over_3_divU_grad_visc_UZ__p &
+                                + Q_1_over_3_B_dot_visc_grad_divU__AR__n
+                  Qjac_k (var_Up,var_AR) = Qjac_k (var_Up,var_AR) + &
+                                + Q_1_over_3_B_dot_visc_grad_divU__AR__k
 #endif
 #endif
 
@@ -6250,6 +6623,20 @@ do j=1,n_degrees
                   Qjac_n (var_Up,var_AZ) = Qjac_n (var_Up,var_AZ) + &
                                          + BR0_AZ__n * v * Qvisc_gradmu_dot_grad_vecV_UR_p 
 #endif
+#ifdef VISCOSITY_COMPLETE_TERMS
+                  Qjac_p (var_Up,var_AZ) = Qjac_p (var_Up,var_AZ) + &
+                                + BZ0_AZ * v * Qgrad_visc_dot_gradU_T_UZ__p &
+                                + Bp0_AZ * v * Qgrad_visc_dot_gradU_T_Up__p &
+                                + BZ0_AZ * v * Q_minus_2_over_3_divU_grad_visc_UZ__p &
+                                + Bp0_AZ * v * Q_minus_2_over_3_divU_grad_visc_Up__p &
+                                + Q_1_over_3_B_dot_visc_grad_divU__AZ__p
+                  Qjac_n (var_Up,var_AZ) = Qjac_n (var_Up,var_AZ) + &
+                                + BR0_AZ__n * v * Qgrad_visc_dot_gradU_T_UR__p &
+                                + BR0_AZ__n * v * Q_minus_2_over_3_divU_grad_visc_UR__p &
+                                + Q_1_over_3_B_dot_visc_grad_divU__AZ__n
+                  Qjac_k (var_Up,var_AZ) = Qjac_k (var_Up,var_AZ) + &
+                                + Q_1_over_3_B_dot_visc_grad_divU__AZ__k
+#endif
 #endif
 
 #ifdef ENABLE_VISCO_PAR_AND_PARPAR
@@ -6345,6 +6732,18 @@ do j=1,n_degrees
                                          + BZ0_A3 * v * Qvisc_gradmu_dot_grad_vecV_UZ_p &
                                          + Bp0_A3 * v * Qvisc_gradmu_dot_grad_vecV_Up_p
 #endif
+#ifdef VISCOSITY_COMPLETE_TERMS
+                  Qjac_p (var_Up,var_A3) = Qjac_p (var_Up,var_A3) + &
+                                + BR0_A3 * v * Qgrad_visc_dot_gradU_T_UR__p &
+                                + BZ0_A3 * v * Qgrad_visc_dot_gradU_T_UZ__p &
+                                + Bp0_A3 * v * Qgrad_visc_dot_gradU_T_Up__p &
+                                + BR0_A3 * v * Q_minus_2_over_3_divU_grad_visc_UR__p &
+                                + BZ0_A3 * v * Q_minus_2_over_3_divU_grad_visc_UZ__p &
+                                + Bp0_A3 * v * Q_minus_2_over_3_divU_grad_visc_Up__p &
+                                + Q_1_over_3_B_dot_visc_grad_divU__A3__p
+                  Qjac_k (var_Up,var_A3) = Qjac_k (var_Up,var_A3) + &
+                                + Q_1_over_3_B_dot_visc_grad_divU__A3__k
+#endif
 #endif
 
 #ifdef ENABLE_VISCO_PAR_AND_PARPAR
@@ -6431,6 +6830,20 @@ do j=1,n_degrees
                   Qjac_n (var_Up,var_UR) = Qjac_n (var_Up,var_UR) + &
                                          + BR0 * v * Qvisc_gradmu_dot_grad_vecV_UR__UR__n
 #endif
+#ifdef VISCOSITY_COMPLETE_TERMS
+                  Qjac_p (var_Up,var_UR) = Qjac_p (var_Up,var_UR) + &
+                                + BR0 * v * Qgrad_visc_dot_gradU_T_UR__UR__p &
+                                + BZ0 * v * Qgrad_visc_dot_gradU_T_UZ__UR__p &
+                                + Bp0 * v * Qgrad_visc_dot_gradU_T_Up__UR__p &
+                                + BR0 * v * Q_minus_2_over_3_divU_grad_visc_UR__UR__p &
+                                + BZ0 * v * Q_minus_2_over_3_divU_grad_visc_UZ__UR__p &
+                                + Bp0 * v * Q_minus_2_over_3_divU_grad_visc_Up__UR__p &
+                                + Q_1_over_3_B_dot_visc_grad_divU__UR__p
+                  Qjac_n (var_Up,var_UR) = Qjac_n (var_Up,var_UR) + &
+                                + Bp0 * v * Qgrad_visc_dot_gradU_T_Up__UR__n
+                  Qjac_k (var_Up,var_UR) = Qjac_k (var_Up,var_UR) + &
+                                + Q_1_over_3_B_dot_visc_grad_divU__UR__k
+#endif
 #endif
 
 #ifdef ENABLE_VISCO_PAR_AND_PARPAR
@@ -6509,6 +6922,19 @@ do j=1,n_degrees
                   Qjac_n (var_Up,var_UZ) = Qjac_n (var_Up,var_UZ) + &
                                          + BZ0 * v * Qvisc_gradmu_dot_grad_vecV_UZ__UZ__n
 #endif
+#ifdef VISCOSITY_COMPLETE_TERMS
+                  Qjac_p (var_Up,var_UZ) = Qjac_p (var_Up,var_UZ) + &
+                                + BR0 * v * Qgrad_visc_dot_gradU_T_UR__UZ__p &
+                                + BZ0 * v * Qgrad_visc_dot_gradU_T_UZ__UZ__p &
+                                + BR0 * v * Q_minus_2_over_3_divU_grad_visc_UR__UZ__p &
+                                + BZ0 * v * Q_minus_2_over_3_divU_grad_visc_UZ__UZ__p &
+                                + Bp0 * v * Q_minus_2_over_3_divU_grad_visc_Up__UZ__p &
+                                + Q_1_over_3_B_dot_visc_grad_divU__UZ__p
+                  Qjac_n (var_Up,var_UZ) = Qjac_n (var_Up,var_UZ) + &
+                                + Bp0 * v * Qgrad_visc_dot_gradU_T_Up__UZ__n
+                  Qjac_k (var_Up,var_UZ) = Qjac_k (var_Up,var_UZ) + &
+                                + Q_1_over_3_B_dot_visc_grad_divU__UZ__k
+#endif
 #endif
 #ifdef ENABLE_VISCO_PAR_AND_PARPAR
                   Qjac_p(var_Up, var_UZ) = Qjac_p(var_Up, var_UZ) + &
@@ -6583,6 +7009,20 @@ do j=1,n_degrees
                                          + Bp0 * v * Qvisc_gradmu_dot_grad_vecV_Up__Up__p
                   Qjac_n (var_Up,var_Up) = Qjac_n (var_Up,var_Up) + &
                                          + Bp0 * v * Qvisc_gradmu_dot_grad_vecV_Up__Up__n
+#endif
+#ifdef VISCOSITY_COMPLETE_TERMS
+                  Qjac_p (var_Up,var_Up) = Qjac_p (var_Up,var_Up) + &
+                                + BR0 * v * Qgrad_visc_dot_gradU_T_UR__Up__p &
+                                + BZ0 * v * Qgrad_visc_dot_gradU_T_UZ__Up__p &
+                                + Bp0 * v * Qgrad_visc_dot_gradU_T_Up__Up__p
+                  Qjac_n (var_Up,var_Up) = Qjac_n (var_Up,var_Up) + &
+                                + Bp0 * v * Qgrad_visc_dot_gradU_T_Up__Up__n &
+                                + BR0 * v * Q_minus_2_over_3_divU_grad_visc_UR__Up__n &
+                                + BZ0 * v * Q_minus_2_over_3_divU_grad_visc_UZ__Up__n &
+                                + Bp0 * v * Q_minus_2_over_3_divU_grad_visc_Up__Up__n &
+                                + Q_1_over_3_B_dot_visc_grad_divU__Up__n
+                  Qjac_kn(var_Up,var_Up) = Qjac_kn(var_Up,var_Up) + &
+                                + Q_1_over_3_B_dot_visc_grad_divU__Up__kn
 #endif
 #endif
 #ifdef ENABLE_VISCO_PAR_AND_PARPAR
@@ -6679,6 +7119,24 @@ do j=1,n_degrees
                                          + BR0 * v * Qvisc_gradmu_dot_grad_vecV_UR__Te__n &
                                          + BZ0 * v * Qvisc_gradmu_dot_grad_vecV_UZ__Te__n &
                                          + Bp0 * v * Qvisc_gradmu_dot_grad_vecV_Up__Te__n
+#endif
+#ifdef VISCOSITY_COMPLETE_TERMS
+                  Qjac_p (var_Up,var_Te) = Qjac_p (var_Up,var_Te) + &
+                                + BR0 * v * Qgrad_visc_dot_gradU_T_UR__Te__p &
+                                + BZ0 * v * Qgrad_visc_dot_gradU_T_UZ__Te__p &
+                                + Bp0 * v * Qgrad_visc_dot_gradU_T_Up__Te__p &
+                                + BR0 * v * Q_minus_2_over_3_divU_grad_visc_UR__Te__p &
+                                + BZ0 * v * Q_minus_2_over_3_divU_grad_visc_UZ__Te__p &
+                                + Bp0 * v * Q_minus_2_over_3_divU_grad_visc_Up__Te__p &
+                                + Q_1_over_3_B_dot_visc_grad_divU__Te__p
+                  Qjac_n (var_Up,var_Te) = Qjac_n (var_Up,var_Te) + &
+                                + BR0 * v * Qgrad_visc_dot_gradU_T_UR__Te__n &
+                                + BZ0 * v * Qgrad_visc_dot_gradU_T_UZ__Te__n &
+                                + Bp0 * v * Qgrad_visc_dot_gradU_T_Up__Te__n &
+                                + Bp0 * v * Q_minus_2_over_3_divU_grad_visc_Up__Te__n &
+                                + Q_1_over_3_B_dot_visc_grad_divU__Te__n
+                  Qjac_k (var_Up,var_Te) = Qjac_k (var_Up,var_Te) + &
+                                + Q_1_over_3_B_dot_visc_grad_divU__Te__k
 #endif
 #endif
 #else
@@ -6788,6 +7246,14 @@ do j=1,n_degrees
 #ifdef VISCOSITY_INSIDE_LAPLACIAN
                   Qjac_p (var_Up,var_UR ) = Qjac_p (var_Up,var_UR ) + v * Qvisc_gradmu_dot_grad_vecV_Up__UR__p
 #endif
+#ifdef VISCOSITY_COMPLETE_TERMS
+                  Qjac_p (var_Up,var_UR ) = Qjac_p (var_Up,var_UR ) + v * Qgrad_visc_dot_gradU_T_Up__UR__p          &
+                                                                    + v * Q_minus_2_over_3_divU_grad_visc_Up__UR__p &
+                                                                    +     Q_1_over_3_visc_grad_divU_Up__UR__p
+                  Qjac_n (var_Up,var_UR ) = Qjac_n (var_Up,var_UR ) + v * Qgrad_visc_dot_gradU_T_Up__UR__n
+                  Qjac_k (var_Up,var_UR ) = Qjac_k (var_Up,var_UR )                                                 &
+                                                                    +     Q_1_over_3_visc_grad_divU_Up__UR__k
+#endif
 #endif
 
 #ifdef ENABLE_VISCO_PAR_AND_PARPAR
@@ -6823,6 +7289,15 @@ do j=1,n_degrees
 #ifdef VISCOSITY_TENSOR_FORM
                   Qjac_p (var_Up,var_UZ ) = Qjac_p (var_Up,var_UZ ) + v * Qgrad_visc_dot_grad_Up__UZ__p
                   Qjac_n (var_Up,var_UZ ) = Qjac_n (var_Up,var_UZ ) + v * Qgrad_visc_dot_grad_Up__UZ__n
+#else
+#ifdef VISCOSITY_COMPLETE_TERMS
+                  Qjac_p (var_Up,var_UZ ) = Qjac_p (var_Up,var_UZ )                                                 &
+                                                                    + v * Q_minus_2_over_3_divU_grad_visc_Up__UZ__p &
+                                                                    +     Q_1_over_3_visc_grad_divU_Up__UZ__p
+                  Qjac_n (var_Up,var_UZ ) = Qjac_n (var_Up,var_UZ ) + v * Qgrad_visc_dot_gradU_T_Up__UZ__n
+                  Qjac_k (var_Up,var_UZ ) = Qjac_k (var_Up,var_UZ )                                                 &
+                                                                    +     Q_1_over_3_visc_grad_divU_Up__UZ__k
+#endif
 #endif
 #ifdef ENABLE_VISCO_PAR_AND_PARPAR
                   Qjac_p(var_Up, var_UZ) = Qjac_p(var_Up, var_UZ) + &
@@ -6868,6 +7343,15 @@ do j=1,n_degrees
 #ifdef VISCOSITY_INSIDE_LAPLACIAN
                   Qjac_p (var_Up,var_Up ) = Qjac_p (var_Up,var_Up ) + v * Qvisc_gradmu_dot_grad_vecV_Up__Up__p
                   Qjac_n (var_Up,var_Up ) = Qjac_n (var_Up,var_Up ) + v * Qvisc_gradmu_dot_grad_vecV_Up__Up__n
+#endif
+#ifdef VISCOSITY_COMPLETE_TERMS
+                  Qjac_p (var_Up,var_Up ) = Qjac_p (var_Up,var_Up ) + v * Qgrad_visc_dot_gradU_T_Up__Up__p
+                  Qjac_n (var_Up,var_Up ) = Qjac_n (var_Up,var_Up ) + v * Qgrad_visc_dot_gradU_T_Up__Up__n          &
+                                                                    + v * Q_minus_2_over_3_divU_grad_visc_Up__Up__n &
+                                                                    +     Q_1_over_3_visc_grad_divU_Up__Up__n
+                  Qjac_kn(var_Up,var_Up ) = Qjac_kn(var_Up,var_Up )                                                 &
+                                                                    +     Q_1_over_3_visc_grad_divU_Up__Up__kn
+
 #endif
 #endif
 
@@ -6922,8 +7406,17 @@ do j=1,n_degrees
                   Qjac_p (var_Up,var_Te ) = Qjac_p (var_Up,var_Te ) + v * Qvisc_gradmu_dot_grad_vecV_Up__Te__p
                   Qjac_n (var_Up,var_Te ) = Qjac_n (var_Up,var_Te ) + v * Qvisc_gradmu_dot_grad_vecV_Up__Te__n
 #endif
+#ifdef VISCOSITY_COMPLETE_TERMS
+                  Qjac_p (var_Up,var_Te ) = Qjac_p (var_Up,var_Te ) + v * Qgrad_visc_dot_gradU_T_Up__Te__p          &
+                                                                    + v * Q_minus_2_over_3_divU_grad_visc_Up__Te__p &
+                                                                    +     Q_1_over_3_visc_grad_divU_Up__Te__p
+                  Qjac_n (var_Up,var_Te ) = Qjac_n (var_Up,var_Te ) + v * Qgrad_visc_dot_gradU_T_Up__Te__n          &
+                                                                    + v * Q_minus_2_over_3_divU_grad_visc_Up__Te__n &
+                                                                    +     Q_1_over_3_visc_grad_divU_Up__Te__n
+                  Qjac_k (var_Up,var_Te ) = Qjac_k (var_Up,var_Te )                                                 &
+                                                                    +     Q_1_over_3_visc_grad_divU_Up__Te__k
 #endif
-
+#endif
 #endif
 
                   !###################################################################################################
@@ -7807,7 +8300,7 @@ subroutine add_vms_to_rhs()
   vms_A3__p = 0.d0 ; vms_A3__k = 0.d0
   vms_UR__p = 0.d0 ; vms_UR__k = 0.d0
   vms_UZ__p = 0.d0 ; vms_UZ__k = 0.d0
-  vms_Up__p = 0.d0 ; vms_UP__k = 0.d0
+  vms_Up__p = 0.d0 ; vms_Up__k = 0.d0
   vms_rho__p= 0.d0 ; vms_rho__k= 0.d0
   vms_Ti__p  = 0.d0; vms_Ti__k  = 0.d0
   vms_Te__p  = 0.d0; vms_Te__k  = 0.d0

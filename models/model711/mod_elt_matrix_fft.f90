@@ -39,11 +39,14 @@ real*8,  intent(in)    :: R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint(2), Z_xpoi
 #define ENABLE_DIA_DRIFT_TEMPERATURE
 #define MOMENTUM_UPHI_IN_PARALLEL
 #define TEMPERATURE_DEPENDENT_UPDATE
-#define VISCOSITY_TENSOR_FORM
 
+! In model 710, viscType=0 and 22 corresponds to the form: \mu\nabla^2\vec{v}
+! #define VISCOSITY_TENSOR_FORM
 #ifndef VISCOSITY_TENSOR_FORM
+! In the form of \nabla\cdot[\mu\nabla\vec{v}], which is used now by default, since 17.06.2024
 #define VISCOSITY_INSIDE_LAPLACIAN
-#define VISCOSITY_COMPLETE_TERMS
+! In the form of \nabla\cdot[\mu\nabla\vec{v}+(\mu\nabla\vec{U})^T-2/3*div(U)I]
+! #define VISCOSITY_COMPLETE_TERMS
 #endif
 
 real*8, dimension (DIM0,DIM0)  :: ELM

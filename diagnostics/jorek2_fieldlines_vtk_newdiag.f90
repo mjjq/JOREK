@@ -2,7 +2,7 @@
 !* This diagnostics evaluates arbitrary physical expressions (using the new_diag framework)                               *
 !* along field lines and writes this information to both vtk and txt files.                                               *
 !* It uses the file jorek_restart.h5 to load the simulation state,                                                        *
-!* and a text file called stpts containing required information                                                           *
+!* and a text file called stpts_fieldlines containing required information                                                           *
 !* about the field lines along which physical expressions are to be to evaluated,                                         *
 !* and the physical expressions to be evaluated.                                                                          *
 !* Output is generated in the binary file field_lines.vtk (using a coordinate system consistent with jorek2vtk)           *
@@ -70,9 +70,9 @@ my_id=0
 
 call initialise_parameters(my_id, "__NO_FILENAME__")
 
-! --- Read start points and expressions from file 'stpts'.
+! --- Read start points and expressions from file 'stpts_fieldlines'.
 !
-! Example for a stpts file:
+! Example for a stpts_fieldlines file:
 !   +-------------------------------------------------------
 !   |# n_scalars
 !   |   3
@@ -107,14 +107,14 @@ call initialise_parameters(my_id, "__NO_FILENAME__")
 ! or specify groups of field lines where only the first and last lines are explicitly given,
 ! and their initial coordinates are assumed to be uniformily distributed between the first and the last.
 !
-open(21, file='stpts', status='old', action='read', iostat=ierr)
+open(21, file='stpts_fieldlines', status='old', action='read', iostat=ierr)
 
-if ( ierr == 0 ) then ! stpts file exists, use it.
+if ( ierr == 0 ) then ! stpts_fieldlines file exists, use it.
 
   read(21, '(a)') s ! read comment line (ignored)
   read(21,*) n_scalars
   if ( n_scalars < 1 ) then
-    write(*,*) 'ERROR in stpts file: n_scalars must be >= 1.'
+    write(*,*) 'ERROR in stpts_fieldlines file: n_scalars must be >= 1.'
     stop
   end if
 
@@ -133,7 +133,7 @@ if ( ierr == 0 ) then ! stpts file exists, use it.
   read(21, '(a)') s ! read comment line (ignored)
   read(21,*) n_lines
   if ( n_lines < 1 ) then
-    write(*,*) 'ERROR in stpts file: n_lines must be >= 1.'
+    write(*,*) 'ERROR in stpts_fieldlines file: n_lines must be >= 1.'
     stop
   end if
 
@@ -155,13 +155,13 @@ if ( ierr == 0 ) then ! stpts file exists, use it.
       P_start(1) = psi
       n_turn(1)  = ntour
     else if ( curr == 0 ) then
-      write(*,*) 'ERROR in stpts file: first start point must be nr=1.'
+      write(*,*) 'ERROR in stpts_fieldlines file: first start point must be nr=1.'
       stop
     else if ( ( nr < 1 ) .or. ( nr > n_lines ) ) then
-      write(*,*) 'ERROR in stpts file: nr must be > 0 and < n_lines.'
+      write(*,*) 'ERROR in stpts_fieldlines file: nr must be > 0 and < n_lines.'
       stop
     else if ( nr <= curr ) then
-      write(*,*) 'ERROR in stpts file: start points must be sorted in ascending nr-order.'
+      write(*,*) 'ERROR in stpts_fieldlines file: start points must be sorted in ascending nr-order.'
       stop
     else
       
@@ -180,7 +180,7 @@ if ( ierr == 0 ) then ! stpts file exists, use it.
   
   close(21)
 
-else ! if no stpts file exists, use the following hard-coded default startpoints
+else ! if no stpts_fieldlines file exists, use the following hard-coded default startpoints
 
   n_scalars=3
   scalar_exprs = (/'Te  ','ne  ','nimp'/)

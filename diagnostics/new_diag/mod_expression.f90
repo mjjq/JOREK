@@ -175,6 +175,7 @@ module mod_expression
     call add(exprs_all, 'U_R         ', 'Radial Component of Velocity                          ')
     call add(exprs_all, 'U_Z         ', 'Vertical Component of Velocity                        ')
     call add(exprs_all, 'U_p         ', 'Tor. Component of Velocity                            ')
+    call add(exprs_all, 'Upar_fmhd   ', 'Parallel Component of Velocity in full mhd            ')
     call add(exprs_all, 'Fprofile    ', 'Fprofile                                              ')
     call add(exprs_all, 'Er          ', 'Radial Electric Field                                 ')
     call add(exprs_all, 'Vtheta_i    ', 'Ion Poloidal Velocity                                 ')
@@ -1808,7 +1809,14 @@ module mod_expression
                 res = T0 * fact_T / 2.d0
               
               case ( 'vpar' )
+#ifdef fullmhd
+                res = (UR0 * BR + UZ0 * BZ + Up0 * Btor) / BB2 !* fact_vpar
+#else
                 res = Vpar0 * fact_vpar
+#endif
+
+              case ( 'Upar_fmhd' )
+                res = (UR0 * BR + UZ0 * BZ + Up0 * Btor) / dsqrt(BB2) / fact_time
                 
               case ( 'eta_T' )
                 res = eta_t * fact_resistiv

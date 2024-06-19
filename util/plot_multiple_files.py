@@ -38,7 +38,7 @@ def read_ascii_file(file_path, skiprows, droprows=-1):
 
 
 def plot_ascii_files(file_paths, xscaleType, yscaleType, title, xlabel, ylabel, skiprows, droprows, column_plot_for_X, columns_plot_for_Y, 
-                     shift_first_file, color_first_file, pow_for_X, pow_for_Y, multiplier_for_X, multiplier_for_Y, font_size, line_width, xlim, ylim, data_marker, mylegends=""):
+                     shift_first_file, color_first_file, pow_for_X, pow_for_Y, multiplier_for_X, multiplier_for_Y, font_size, line_width, xlim, ylim, data_marker, mylegends="", noline = False):
     """
     Plot lines from multiple ASCII files in the same plot.
 
@@ -77,6 +77,8 @@ def plot_ascii_files(file_paths, xscaleType, yscaleType, title, xlabel, ylabel, 
             x = x + float(shift_first_file)
 
         linestyle = linestyles[i % len(linestyles)]  # Cycle through linestyles
+        if noline:
+            linestyle = 'none'
 
         if columns_plot_for_Y == -1:
             columns_plot_for_Y_mdf = range(y.shape[1])  # Plot all columns
@@ -91,9 +93,9 @@ def plot_ascii_files(file_paths, xscaleType, yscaleType, title, xlabel, ylabel, 
                     mylegend = mylegends[ilegend]
                     ilegend += 1
                 if (i == 0) and (color_first_file != ""):
-                    plt.plot(x, y[:, j], data_marker, label=mylegend, linestyle=linestyle, color=color_first_file)
+                    plt.plot(x, y[:, j], data_marker, label=mylegend, linestyle=linestyle, color=color_first_file, markersize=0.1)
                 else:
-                    plt.plot(x, y[:, j], data_marker, label=mylegend, linestyle=linestyle)
+                    plt.plot(x, y[:, j], data_marker, label=mylegend, linestyle=linestyle, markersize=0.1)
             else:
                 print("Error: Value of -yc is out of range!!!")
                 print("file_path: ", file_path)
@@ -169,9 +171,11 @@ if __name__ == "__main__":
     parser.add_argument('-ylim', nargs=2, type=float, metavar=('ymin', 'ymax'),
                         help='Specify ymin, ymax for the plot.')
     parser.add_argument("-legends", type=str, default="", nargs="+", help="Legends for each line.")
+    parser.add_argument("-nln", "--noline", type=lambda x: (str(x).lower() in ['true', '1', 'yes']), default=False,
+                        help="Plot without lines.")
 
     args = parser.parse_args()
 
     plot_ascii_files(args.file_paths, args.xscale, args.yscale, args.title, args.xlabel, args.ylabel,
                      int(args.skiprows), int(args.droprows), args.column_plot_for_X, args.columns_plot_for_Y, args.shift_first_file, args.color_first_file, 
-                     args.pow_for_X, args.pow_for_Y, args.multiplier_for_X, args.multiplier_for_Y, args.fontsize, args.linewidth, args.xlim, args.ylim, args.data_marker, args.legends)
+                     args.pow_for_X, args.pow_for_Y, args.multiplier_for_X, args.multiplier_for_Y, args.fontsize, args.linewidth, args.xlim, args.ylim, args.data_marker, args.legends, args.noline)

@@ -93,9 +93,9 @@ def plot_ascii_files(file_paths, xscaleType, yscaleType, title, xlabel, ylabel, 
                     mylegend = mylegends[ilegend]
                     ilegend += 1
                 if (i == 0) and (color_first_file != ""):
-                    plt.plot(x, y[:, j], data_marker, label=mylegend, linestyle=linestyle, color=color_first_file, markersize=0.1)
+                    plt.plot(x, y[:, j], data_marker, label=mylegend, linestyle=linestyle, color=color_first_file, markersize=1)
                 else:
-                    plt.plot(x, y[:, j], data_marker, label=mylegend, linestyle=linestyle, markersize=0.1)
+                    plt.plot(x, y[:, j], data_marker, label=mylegend, linestyle=linestyle, markersize=1)
             else:
                 print("Error: Value of -yc is out of range!!!")
                 print("file_path: ", file_path)

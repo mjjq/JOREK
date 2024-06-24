@@ -32,7 +32,8 @@ real*8  :: psi_out
 integer :: ierr
 integer :: status
 real*8  :: loc_Pi
-integer :: loc_n_period
+integer :: loc_n_period, ielm_new
+real*8  :: BR, BZ, Bp, Rnew, Znew, phinew, s_line_new, t_line_new
 
 
 write(*,*) '***************************************'
@@ -221,7 +222,8 @@ ip_all = 0
 !$omp i_phi, delta_phi_local, i_steps, delta_phi_step, &
 !$omp delta_s, delta_t, s_mid, t_mid, p_mid, small_delta_s, &
 !$omp small_delta_t, small_delta, i_elm_prev, i_elm_tmp, R_in, &
-!$omp Z_in, R, Z, Rp, Zp, Tp, Pp, psi_out, iplot_type)  &
+!$omp Z_in, R, Z, Rp, Zp, Tp, Pp, psi_out, iplot_type, &
+!$omp ielm_new, BR, BZ, Bp, Rnew, Znew, phinew, s_line_new, t_line_new)  &
 !$omp schedule(static)
 L_IL: do i_lines=1,n_lines
   n_phi   = n_phis(i_lines) !1500
@@ -249,7 +251,28 @@ L_IL: do i_lines=1,n_lines
     end if
 
     do i_phi=1,n_phi
-    
+
+#if FALSE
+      ! a simplier logic, but the performance is the same as the next one
+      call step(i_elm,s_line,t_line,p_line,delta_phi_step,delta_s,delta_t, BR, BZ, Bp)
+      Rnew   = R_line  + 0.5d0 * delta_phi * R * BR / Bp
+      Znew   = Z_line  + 0.5d0 * delta_phi * R * BZ / Bp
+      phinew = p_line  + 0.5d0 * delta_phi
+      call find_RZ(node_list,element_list,Rnew,Znew,R_out,Z_out,i_elm,s_line,t_line,ifail)
+      if (ifail .ne. 0) then 
+        write(*,*) "Can not find RZ,", ifail, ' for line: ', i_lines, ' after step 1'
+      endif
+      call step(i_elm,s_line,t_line,phinew,delta_phi_step,delta_s,delta_t, BR, BZ, Bp)
+      Rnew   = R_line  + delta_phi * R * BR / Bp
+      Znew   = Z_line  + delta_phi * R * BZ / Bp
+      phinew = p_line  + delta_phi
+      p_line = phinew
+      call find_RZ(node_list,element_list,Rnew,Znew,R_line,Z_line,i_elm,s_line,t_line,ifail)
+      if (ifail .ne. 0) then 
+        write(*,*) "Can not find RZ,", ifail, ' for line: ', i_lines, ' after step 2'
+      endif
+      
+#else
       delta_phi_local = 0.d0
       
       i_steps = 0
@@ -260,15 +283,15 @@ L_IL: do i_lines=1,n_lines
       
         delta_phi_step = delta_phi - delta_phi_local
 	
-!	write(*,'(5i6,3e16.8)') i_lines,i_turn,i_phi,i_steps,i_elm,delta_phi_step, delta_phi, delta_phi_local
+        !	write(*,'(5i6,3e16.8)') i_lines,i_turn,i_phi,i_steps,i_elm,delta_phi_step, delta_phi, delta_phi_local
       
-        call step(i_elm,s_line,t_line,p_line,delta_phi_step,delta_s,delta_t)
+        call step(i_elm,s_line,t_line,p_line,delta_phi_step,delta_s,delta_t, BR, BZ, Bp)
 
         s_mid = s_line + 0.5d0 * delta_s
         t_mid = t_line + 0.5d0 * delta_t
         p_mid = p_line + 0.5d0 * delta_phi_step
             
-        call step(i_elm,s_mid,t_mid,p_mid,delta_phi_step,delta_s,delta_t)
+        call step(i_elm,s_mid,t_mid,p_mid,delta_phi_step,delta_s,delta_t, BR, BZ, Bp)
         
         small_delta_s = 1.d0
       
@@ -296,7 +319,7 @@ L_IL: do i_lines=1,n_lines
 
         small_delta = min(small_delta_s, small_delta_t)
 	
-!	write(*,'(A,5e16.8)') ' small delta : ',small_delta,delta_s,delta_t,s_line,t_line
+        !	write(*,'(A,5e16.8)') ' small delta : ',small_delta,delta_s,delta_t,s_line,t_line
 
         if (small_delta .lt. 1.d0)  then 
 
@@ -304,57 +327,57 @@ L_IL: do i_lines=1,n_lines
           t_mid = t_line + 0.5d0 * small_delta * delta_t
           p_mid = p_line + 0.5d0 * small_delta * delta_phi_step
             
-          call step(i_elm,s_mid,t_mid,p_mid,delta_phi_step,delta_s,delta_t)
+          call step(i_elm,s_mid,t_mid,p_mid,delta_phi_step,delta_s,delta_t, BR, BZ, Bp)
       
           if (small_delta_s .lt. small_delta_t) then
 
             if (s_line + delta_s .gt. 1.d0) then
 	    
-	      s_line = 1.d0
+              s_line = 1.d0
               t_line = t_line + small_delta * delta_t
               p_line = p_line + small_delta * delta_phi_step
 	      
               call interp_RZ(node_list,element_list,i_elm,s_line,t_line,R_in,Z_in)
 
-	      i_elm_prev = i_elm      
+              i_elm_prev = i_elm      
               i_elm      = element_neighbours(2,i_elm_prev)
               if ( i_elm == 0 ) exit L_IT
-	      i_elm_tmp  = element_neighbours(4,i_elm)
+              i_elm_tmp  = element_neighbours(4,i_elm)
 	      
-	      if (i_elm_prev .ne. i_elm_tmp) write(*,*) ' WARNING : CHANGE OF ORIENTATION (1)'
+              if (i_elm_prev .ne. i_elm_tmp) write(*,*) ' WARNING : CHANGE OF ORIENTATION (1)'
 	
               s_line = 0.d0
 
               call interp_RZ(node_list,element_list,i_elm,s_line,t_line,R_out,Z_out)
 	      
-	      if ( (abs(R_in - R_out) .gt. 1.d-8) .or. (abs(Z_in - Z_out) .gt. 1.d-8)) &
-	        write(*,'(A,2i6,4f8.4)') ' error in element change (1) ',i_elm_prev,i_elm,R_in,R_out,Z_in,Z_out
+              if ( (abs(R_in - R_out) .gt. 1.d-8) .or. (abs(Z_in - Z_out) .gt. 1.d-8)) &
+                write(*,'(A,2i6,4f8.4)') ' error in element change (1) ',i_elm_prev,i_elm,R_in,R_out,Z_in,Z_out
 	
             elseif (s_line + delta_s .lt. 0.d0) then
 	
               s_line = 0.d0
-	      t_line = t_line + small_delta * delta_t
-	      p_line = p_line + small_delta * delta_phi_step
+              t_line = t_line + small_delta * delta_t
+              p_line = p_line + small_delta * delta_phi_step
 
               call interp_RZ(node_list,element_list,i_elm,s_line,t_line,R_in,Z_in)
       
-	      i_elm_prev = i_elm      
+              i_elm_prev = i_elm      
               i_elm      = element_neighbours(4,i_elm_prev)
               if ( i_elm == 0 ) exit L_IT
-	      i_elm_tmp  = element_neighbours(2,i_elm)
+              i_elm_tmp  = element_neighbours(2,i_elm)
 	      
-	      if (i_elm_prev .ne. i_elm_tmp) write(*,*) ' WARNING : CHANGE OF ORIENTATION (2)'
+              if (i_elm_prev .ne. i_elm_tmp) write(*,*) ' WARNING : CHANGE OF ORIENTATION (2)'
 
               s_line = 1.d0
 
               call interp_RZ(node_list,element_list,i_elm,s_line,t_line,R_out,Z_out)
 	      
-	      if ( (abs(R_in - R_out) .gt. 1.d-8) .or. (abs(Z_in - Z_out) .gt. 1.d-8)) &
-	        write(*,'(A,2i6,4f8.4)') ' error in element change (2) ',i_elm_prev,i_elm,R_in,R_out,Z_in,Z_out
+              if ( (abs(R_in - R_out) .gt. 1.d-8) .or. (abs(Z_in - Z_out) .gt. 1.d-8)) &
+                write(*,'(A,2i6,4f8.4)') ' error in element change (2) ',i_elm_prev,i_elm,R_in,R_out,Z_in,Z_out
 	  
-	    endif
+            endif
 	
-	  else
+          else
 	
             if (t_line + delta_t .gt. 1.d0) then
       
@@ -364,45 +387,45 @@ L_IL: do i_lines=1,n_lines
 
               call interp_RZ(node_list,element_list,i_elm,s_line,t_line,R_in,Z_in)
 
-	      i_elm_prev = i_elm      
+              i_elm_prev = i_elm      
               i_elm      = element_neighbours(3,i_elm_prev)
               if ( i_elm == 0 ) exit L_IT
-	      i_elm_tmp  = element_neighbours(1,i_elm)
+              i_elm_tmp  = element_neighbours(1,i_elm)
 	      
-	      if (i_elm_prev .ne. i_elm_tmp) write(*,*) ' WARNING : CHANGE OF ORIENTATION (3)'
+              if (i_elm_prev .ne. i_elm_tmp) write(*,*) ' WARNING : CHANGE OF ORIENTATION (3)'
 	
               t_line = 0.d0
 
               call interp_RZ(node_list,element_list,i_elm,s_line,t_line,R_out,Z_out)
 	      
-	      if ( (abs(R_in - R_out) .gt. 1.d-8) .or. (abs(Z_in - Z_out) .gt. 1.d-8)) &
-	        write(*,'(A,2i6,4f8.4)') ' error in element change (3) ',i_elm_prev,i_elm,R_in,R_out,Z_in,Z_out
+              if ( (abs(R_in - R_out) .gt. 1.d-8) .or. (abs(Z_in - Z_out) .gt. 1.d-8)) &
+                write(*,'(A,2i6,4f8.4)') ' error in element change (3) ',i_elm_prev,i_elm,R_in,R_out,Z_in,Z_out
 	
             elseif (t_line + delta_t .lt. 0.d0) then
 
               s_line = s_line + small_delta * delta_s	
-	      t_line = 0.d0
-	      p_line = p_line + small_delta * delta_phi_step
+              t_line = 0.d0
+              p_line = p_line + small_delta * delta_phi_step
  
               call interp_RZ(node_list,element_list,i_elm,s_line,t_line,R_in,Z_in)
 
-	      i_elm_prev = i_elm      
+      	      i_elm_prev = i_elm      
               i_elm      = element_neighbours(1,i_elm_prev)
               if ( i_elm == 0 ) exit L_IT
-	      i_elm_tmp  = element_neighbours(3,i_elm)
+              i_elm_tmp  = element_neighbours(3,i_elm)
 	      
-	      if (i_elm_prev .ne. i_elm_tmp) write(*,*) ' WARNING : CHANGE OF ORIENTATION (4)',i_elm_prev,i_elm
+              if (i_elm_prev .ne. i_elm_tmp) write(*,*) ' WARNING : CHANGE OF ORIENTATION (4)',i_elm_prev,i_elm
  
               t_line = 1.d0
 
               call interp_RZ(node_list,element_list,i_elm,s_line,t_line,R_out,Z_out)
 	      
-	      if ( (abs(R_in - R_out) .gt. 1.d-8) .or. (abs(Z_in - Z_out) .gt. 1.d-8)) &
-	        write(*,'(A,2i6,4f8.4)') ' error in element change (4) ',i_elm_prev,i_elm,R_in,R_out,Z_in,Z_out
+              if ( (abs(R_in - R_out) .gt. 1.d-8) .or. (abs(Z_in - Z_out) .gt. 1.d-8)) &
+                write(*,'(A,2i6,4f8.4)') ' error in element change (4) ',i_elm_prev,i_elm,R_in,R_out,Z_in,Z_out
 	
             endif
         
-	  endif
+          endif
          
         else      
 
@@ -410,7 +433,7 @@ L_IL: do i_lines=1,n_lines
           t_line = t_line + delta_t
           p_line = p_line + delta_phi_step
 	
-	  small_delta = 1.d0
+          small_delta = 1.d0
       
         endif
       
@@ -418,13 +441,14 @@ L_IL: do i_lines=1,n_lines
      
         if (i_elm .eq. 0) exit
       
-!        write(*,'(A,5e16.8)') ' s,t : ',s_line,t_line
+        ! write(*,'(A,5e16.8)') ' s,t : ',s_line,t_line
       
       enddo
 
       if (i_elm .eq. 0) exit
       
-!      if (i_steps .gt. 8) write(*,'(A,5i6)') ' WARNING : isteps ',i_lines,i_turn,i_phi,i_steps,i_elm
+      ! if (i_steps .gt. 8) write(*,'(A,5i6)') ' WARNING : isteps ',i_lines,i_turn,i_phi,i_steps,i_elm
+#endif
             
     enddo ! end of a 2Pi turn
 
@@ -496,7 +520,7 @@ end program jorek2_poincare
 
 
 
-subroutine step(i_elm,s_in,t_in,p_in,delta_p,delta_s,delta_t)
+pure subroutine step(i_elm,s_in,t_in,p_in,delta_p,delta_s,delta_t, BR0, BZ0, Bp0)
 use mod_parameters
 use elements_nodes_neighbours
 use phys_module
@@ -504,13 +528,15 @@ use mod_interp
 
 implicit none
 
-integer :: i_var_psi, i_elm, i_tor, i_harm
+integer, intent(in) :: i_elm
+real*8, intent(in)  :: s_in, t_in, p_in, delta_p
+real*8, intent(out) :: delta_s, delta_t, BR0, BZ0, Bp0
 
-real*8 :: s_in, t_in, p_in, delta_p, delta_s, delta_t
+integer :: i_var_psi, i_tor, i_harm
 real*8 :: R,R_s,R_t,Z,Z_s,Z_t
 real*8 :: Pcos,Pcos_s,Pcos_t,Pcos_st,Pcos_ss,Pcos_tt, Psin,Psin_s,Psin_t,Psin_st,Psin_ss,Psin_tt
 real*8 :: P0,P0_s,P0_t,P0_st,P0_ss,P0_tt, psi_s, psi_t, Zjac
-real*8 :: AR0_Z, AR0_p, AR0_s, AR0_t, AZ0_R, AZ0_p, AZ0_s, AZ0_t, A30_R, A30_Z, BR0, BZ0, Bp0, Fprof
+real*8 :: AR0_Z, AR0_p, AR0_s, AR0_t, AZ0_R, AZ0_p, AZ0_s, AZ0_t, A30_R, A30_Z, Fprof
 
 i_var_psi = 1
 

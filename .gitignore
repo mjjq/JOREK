@@ -33,6 +33,9 @@ jorek2_povray
 jorek2_connection2*
 jorek2_connection_stan
 jorek2_strikes
+jorek2_fieldlines_vtk_newdiag
+q_fmhd_2D
+q_fmhd_3D
 enbiggen
 jordel
 jorpol

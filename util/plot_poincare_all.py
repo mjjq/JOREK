@@ -20,7 +20,8 @@ def get_time(num):
                 time = times_all_1d[i]
     else:
         print("times.dat required, please firstly execute $ plot_live_data.sh -q time ")
-        exit(-1)
+        # exit(-1)
+        time = 0
 
     return time
 

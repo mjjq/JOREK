@@ -12,13 +12,14 @@ implicit none
 
 !--- Input parameters --------------------!
 !-----------------------------------------!
-real*8, parameter  :: stepsizePhi = 5.d-4
+real*8, parameter  :: stepsizePhi = 2 * PI / 8192 !1.d-3
 integer :: npoints
 !-----------------------------------------!
 !-----------------------------------------!
 
 integer   :: i, j, k, ielm, ifail, ielm_new, ielm_old
-real*8    :: Rout, Zout, polturns, torturns
+real*8    :: Rout, Zout
+integer   :: polturns, torturns
 logical   :: stop_tracing
 
 real*8    :: s, t, phi, phinew, phiold, snew, tnew, sold, told
@@ -27,6 +28,7 @@ real*8    :: R, R_s, R_t, Z, Z_s, Z_t
 real*8    :: BR, BZ, Bp, BB, xjac, Fprof
 real*8    :: dum01, dum02, dum03, dum04, dum05
 real*8    :: AR, AR_p, AR_s, AR_t, AR_R, AR_Z, AZ, AZ_p, AZ_s, AZ_t, AZ_R, AZ_Z, A3, A3_p, A3_s, A3_t, A3_R, A3_Z, psieq
+real*8    :: A3old
 real*8    :: RR, ZZ, Rnew, Znew, Rold, Zold
 real*8    :: Rnewtmp, Znewtmp, RRtmp, ZZtmp
 real*8    :: Pcos,Pcos_s,Pcos_t,Pcos_st,Pcos_ss,Pcos_tt, Psin,Psin_s,Psin_t,Psin_st,Psin_ss,Psin_tt
@@ -46,10 +48,28 @@ real*8, allocatable   :: F_arr(:)
 real*8, allocatable   :: psin_arr_tot(:), phi_arr_tot(:), R_arr_tot(:)
 real*8, allocatable   :: B_p_intg_arr_tot(:), psi_arr_tot(:)
 real*8, allocatable   :: F_arr_tot(:)
+real*8, allocatable   :: Te_arr(:), Te_arr_tot(:)
+real*8, allocatable   :: Ti_arr(:), Ti_arr_tot(:)
+real*8, allocatable   :: ne_arr(:), ne_arr_tot(:)
 
 real*8, allocatable   :: Raxis3D(:), Zaxis3D(:)
 ! real*8, allocatable   :: Rtest3D(:), Ztest3D(:)
 integer :: stepPhiMax
+real*8  :: psi_start, psi_start_norm
+real*8, parameter  :: qmax = 11.d0
+integer, parameter :: polturns_stop = 100
+integer, parameter :: torturns_stop = 1000
+integer            :: num_poinc_max
+
+real*8, allocatable :: psi_arr_poinc(:,:), psi_arr_poinc_tot(:,:)
+real*8, allocatable :: R_arr_poinc(:,:), R_arr_poinc_tot(:,:)
+real*8, allocatable :: Z_arr_poinc(:,:), Z_arr_poinc_tot(:,:)
+real*8, allocatable :: q_arr_poinc(:,:), q_arr_poinc_tot(:,:)
+real*8, allocatable :: ne_arr_poinc(:,:), ne_arr_poinc_tot(:,:)
+real*8, allocatable :: Ti_arr_poinc(:,:), Ti_arr_poinc_tot(:,:)
+real*8, allocatable :: Te_arr_poinc(:,:), Te_arr_poinc_tot(:,:)
+
+real*8 :: ratio_phi
 
 contains
 
@@ -57,7 +77,9 @@ subroutine construct_all(num_points)
   integer, intent(in) :: num_points
 
   npoints = num_points
-  stepPhiMax = int(2*PI*21/stepsizePhi)
+  stepPhiMax = max(nint(2*PI*qmax/stepsizePhi) * polturns_stop, nint(2*PI*2/stepsizePhi) * torturns_stop)
+  num_poinc_max = max(nint(qmax * polturns_stop), torturns_stop) * 2
+
   allocate(psin_arr_tot(num_points))
   allocate(phi_arr_tot(num_points))
   allocate(R_arr_tot(num_points))
@@ -77,34 +99,47 @@ subroutine construct_all(num_points)
   allocate(B_p_intg_arr(num_points))
   allocate(psi_arr(num_points))
   allocate(F_arr(num_points))
+
+  allocate(Te_arr(num_points))
+  allocate(Ti_arr(num_points))
+  allocate(ne_arr(num_points))
+  allocate(Te_arr_tot(num_points))
+  allocate(Ti_arr_tot(num_points))
+  allocate(ne_arr_tot(num_points))
+
   allocate(Raxis3D(stepPhiMax))
   allocate(Zaxis3D(stepPhiMax))
   ! allocate(Rtest3D(stepPhiMax))
   ! allocate(Ztest3D(stepPhiMax))
+
+  allocate(psi_arr_poinc(num_poinc_max, num_points))
+  allocate(R_arr_poinc(num_poinc_max, num_points))
+  allocate(Z_arr_poinc(num_poinc_max, num_points))
+  allocate(q_arr_poinc(num_poinc_max, num_points))
+  allocate(ne_arr_poinc(num_poinc_max, num_points))
+  allocate(Ti_arr_poinc(num_poinc_max, num_points))
+  allocate(Te_arr_poinc(num_poinc_max, num_points))
+
+  allocate(psi_arr_poinc_tot(num_poinc_max, num_points))
+  allocate(R_arr_poinc_tot(num_poinc_max, num_points))
+  allocate(Z_arr_poinc_tot(num_poinc_max, num_points))
+  allocate(q_arr_poinc_tot(num_poinc_max, num_points))
+  allocate(ne_arr_poinc_tot(num_poinc_max, num_points))
+  allocate(Ti_arr_poinc_tot(num_poinc_max, num_points))
+  allocate(Te_arr_poinc_tot(num_poinc_max, num_points))
 
   Rstart = 0.d0
   Zstart = 0.d0
   Rstart_all = 0.d0
   Zstart_all = 0.d0
   responsible = .false.
-  psin_arr = 0.d0
-  polturns_arr = 0.d0
-  torturns_arr = 0.d0
-  phi_arr = 0.d0
-  R_arr = 0.d0
-  B_p_intg_arr = 0.d0
-  psi_arr = 0.d0
-  F_arr = 0.d0
-  psin_arr_tot = 0.d0
-  phi_arr_tot = 0.d0
-  R_arr_tot = 0.d0
-  B_p_intg_arr_tot = 0.d0
-  psi_arr_tot = 0.d0
-  F_arr_tot = 0.d0
   Raxis3D = 0.d0
   Zaxis3D = 0.d0
   ! Rtest3D = 0.d0
   ! Ztest3D = 0.d0
+
+  call initia_arrs()
+
 end subroutine construct_all
 
 subroutine deconstruct_all()
@@ -127,11 +162,76 @@ subroutine deconstruct_all()
   deallocate(B_p_intg_arr)
   deallocate(psi_arr)
   deallocate(F_arr)
+
+  deallocate(Te_arr)
+  deallocate(Ti_arr)
+  deallocate(ne_arr)
+  deallocate(Te_arr_tot)
+  deallocate(Ti_arr_tot)
+  deallocate(ne_arr_tot)
+
   deallocate(Raxis3D)
   deallocate(Zaxis3D)
   ! deallocate(Rtest3D)
   ! deallocate(Ztest3D)
+
+  deallocate(psi_arr_poinc)
+  deallocate(R_arr_poinc)
+  deallocate(Z_arr_poinc)
+  deallocate(q_arr_poinc)
+  deallocate(ne_arr_poinc)
+  deallocate(Ti_arr_poinc)
+  deallocate(Te_arr_poinc)
+
+  deallocate(psi_arr_poinc_tot)
+  deallocate(R_arr_poinc_tot)
+  deallocate(Z_arr_poinc_tot)
+  deallocate(q_arr_poinc_tot)
+  deallocate(ne_arr_poinc_tot)
+  deallocate(Ti_arr_poinc_tot)
+  deallocate(Te_arr_poinc_tot)
+
 end subroutine deconstruct_all
+
+subroutine initia_arrs()
+  psin_arr = 0.d0
+  polturns_arr = 0.d0
+  torturns_arr = 0.d0
+  phi_arr = 0.d0
+  R_arr = 0.d0
+  B_p_intg_arr = 0.d0
+  psi_arr = 0.d0
+  F_arr = 0.d0
+  psin_arr_tot = 0.d0
+  phi_arr_tot = 0.d0
+  R_arr_tot = 0.d0
+  B_p_intg_arr_tot = 0.d0
+  psi_arr_tot = 0.d0
+  F_arr_tot = 0.d0
+
+  Te_arr = 0.d0
+  Ti_arr = 0.d0
+  ne_arr = 0.d0
+  Te_arr_tot = 0.d0
+  Ti_arr_tot = 0.d0
+  ne_arr_tot = 0.d0
+
+  psi_arr_poinc = 0.d0
+  R_arr_poinc = 0.d0
+  Z_arr_poinc = 0.d0
+  q_arr_poinc = 0.d0
+  ne_arr_poinc = 0.d0
+  Ti_arr_poinc = 0.d0
+  Te_arr_poinc = 0.d0
+
+  psi_arr_poinc_tot = 0.d0
+  R_arr_poinc_tot = 0.d0
+  Z_arr_poinc_tot = 0.d0
+  q_arr_poinc_tot = 0.d0
+  ne_arr_poinc_tot = 0.d0
+  Ti_arr_poinc_tot = 0.d0
+  Te_arr_poinc_tot = 0.d0
+end subroutine initia_arrs
 
 pure function cross_product3D(a, b)
   real*8 :: cross_product3D
@@ -140,9 +240,10 @@ pure function cross_product3D(a, b)
   cross_product3D = a(1) * b(2) - a(2) * b(1)
 end function cross_product3D
 
-subroutine trance_field_lines_fmhd_3D (node_list, element_list)
+subroutine trance_field_lines_fmhd_3D (node_list, element_list, phi_start)
   type (type_node_list),    intent(in)    :: node_list
   type (type_element_list), intent(in)    :: element_list
+  real*8, intent(in) :: phi_start
   real*8 :: RZstart_plus(2), RZstart_minus(2)
   real*8 :: RZ_now(2), RZ_old(2)
   real*8 :: vec_center(2), vec_left(2), vec_right(2)
@@ -153,7 +254,7 @@ subroutine trance_field_lines_fmhd_3D (node_list, element_list)
   real*8 :: cross_product_pa, cross_product_pb
   real*8 :: stepPoloidal, deltaPoloidal
   integer:: minJsteps
-  logical:: is_intersected, is_overlapped, is_thesame, start_judge
+  logical:: is_intersected, is_overlapped, is_thesame
   real*8 :: distanceToStartNow, distanceToStartOld
 
   real*8 :: distToAxis
@@ -161,27 +262,24 @@ subroutine trance_field_lines_fmhd_3D (node_list, element_list)
   real*8 :: RaxisNow, ZaxisNow, cosThetaNow, sinThetaNow
   real*8 :: RaxisOld, ZaxisOld, cosThetaOld, sinThetaOld
 
-  RaxisStart = Raxis3D(1)
-  ZaxisStart = Zaxis3D(1)
+  integer :: jstep_repeat, jphi_start
+
+  call initia_arrs()
 
   ! --- Trace field lines
   do i = 1, npoints
     if ( .not. responsible(i) ) then
-      psin_arr(i) = 0.d0
-      phi_arr(i)  = 0.d0
-      R_arr(i)    = 0.d0
-      B_p_intg_arr(i) = 0.d0
-      psi_arr(i)  = 0.d0
-      F_arr(i)    = 0.d0
       cycle
     end if
     
+    
     call find_RZ(node_list,element_list,Rstart(i),Zstart(i),RR,ZZ,ielm,s,t,ifail)
-    phi = 0.d0
 
-    distToAxis = dsqrt((Rstart(i)-RaxisStart)**2+(Zstart(i)-ZaxisStart)**2)
-    cosThetaStart = (Rstart(i)-RaxisStart) / distToAxis
-    sinThetaStart = (Zstart(i)-ZaxisStart) / distToAxis
+    call interp(node_list, element_list, ielm, 1, 1, s, t, psi_start, dum01, dum02, dum03, dum04, dum05)
+    psi_start_norm = get_psi_n(psi_start, ZZ)
+
+    phi = phi_start
+    jphi_start = nint(phi_start / stepsizePhi) + 1
     
     if ( ielm < 1 ) then
       write(*,*) 'Illegal starting point for field line ', i, ', Rstart = ', Rstart(i), ', Zstart = ', Zstart(i), '. Skipping.'
@@ -189,9 +287,10 @@ subroutine trance_field_lines_fmhd_3D (node_list, element_list)
     end if
     
     stop_tracing = .false.
-    polturns     = 0.d0
-    torturns     = 0.d0
+    polturns     = 0
+    torturns     = 0
     j            = 1
+    jstep_repeat = 1
     B_p_intg     = 0.d0
     dl           = 0.d0
     F_val        = 0.d0
@@ -199,44 +298,80 @@ subroutine trance_field_lines_fmhd_3D (node_list, element_list)
 
     distanceToStartNow = 1.d5
     distanceToStartOld = 1.d9
-    start_judge = .false.
 
-    ! Here just assume q0 will not below 0.25, it can be adjusted
-    minJsteps = int(2.d0*PI/stepsizePhi/4.d0)
+    ! Here just assume q0 will not below 0.5, it can be adjusted
+    minJsteps = nint(2.d0*PI/stepsizePhi/2.d0)
     
-    ! if(i == 1) then
+    ! if(i == 364) then
     !   Rtest3D(j) = RR
     !   Ztest3D(j) = ZZ
     ! endif
 
     do while( .not. stop_tracing )
-      
+
       call do_step_3D(node_list, element_list)
       j = j + 1
-      ! if(i == 1) then
+      jstep_repeat = jstep_repeat + 1
+      ! if(i == 364) then
       !   Rtest3D(j) = RR
       !   Ztest3D(j) = ZZ
       ! endif
+
+      if ( DABS(phi) >= 2.d0*PI ) then
+        phi   = phi - 2.d0*PI * sign (1.d0, phi)
+      endif
     
-      if ( ABS(phi) > 2.d0*PI ) then
-        if ( phi > 0.d0 ) then
-          phi   = phi - 2.d0*PI
+      if ( (phi - phi_start) * (phi - stepsizePhi - phi_start) <= 0 ) then
+        torturns = torturns + 1
+
+        if(torturns <= num_poinc_max) then
+          ! record for poincare plots
+          ratio_phi = 1.d0 - abs(phi - phi_start) / stepsizePhi
+
+          call determine_field_3D(node_list,element_list) ! update A3
+          psi_arr_poinc(torturns, i) = ratio_phi * get_psi_n(A3, ZZ) + (1.d0 - ratio_phi) * get_psi_n(A3old, Zold)
+          R_arr_poinc(torturns, i) = ratio_phi * RR + (1.d0 - ratio_phi) * Rold
+          Z_arr_poinc(torturns, i) = ratio_phi * ZZ + (1.d0 - ratio_phi) * Zold
+
+          call interp_values(node_list, element_list, R_arr_poinc(torturns, i), Z_arr_poinc(torturns, i), phi_start, var_rho, ne_arr_poinc(torturns, i))
+          call interp_values(node_list, element_list, R_arr_poinc(torturns, i), Z_arr_poinc(torturns, i), phi_start, var_Te, Te_arr_poinc(torturns, i))
+          call interp_values(node_list, element_list, R_arr_poinc(torturns, i), Z_arr_poinc(torturns, i), phi_start, var_Ti, Ti_arr_poinc(torturns, i))
         else
-          phi   = phi + 2.d0*PI
-        end if
-        torturns = torturns + 1.d0
+          write(*,*) "Warning: torturns is larger than num_poinc_max"
+          write(*,*) "torturns = ", torturns
+          write(*,*) "num_poinc_max = ", num_poinc_max
+        endif
+
       end if
 
-      if(j > minJsteps) then
+      if(jstep_repeat > minJsteps) then
 
-        RaxisNow = Raxis3D(j)
-        ZaxisNow = Zaxis3D(j)
+        ! For grids far from axis, just use the axis of n = 0 field.
+        ! Otherwise near the x-point, the Bp is too weak and error in q tracing will be large
+        if(psi_start_norm .ge. 0.8) then
+          RaxisStart = ES%R_axis
+          ZaxisStart = ES%Z_axis
+          RaxisNow = ES%R_axis
+          ZaxisNow = ES%Z_axis
+          RaxisOld = ES%R_axis
+          ZaxisOld = ES%Z_axis
+        else
+          RaxisStart = Raxis3D(jphi_start)
+          ZaxisStart = Zaxis3D(jphi_start)
+          RaxisNow = Raxis3D(j + jphi_start - 1)
+          ZaxisNow = Zaxis3D(j + jphi_start - 1)
+          RaxisOld = Raxis3D(j - 1 + jphi_start - 1)
+          ZaxisOld = Zaxis3D(j - 1 + jphi_start - 1)
+        endif
+
+        distToAxis = dsqrt((Rstart(i)-RaxisStart)**2+(Zstart(i)-ZaxisStart)**2)
+        cosThetaStart = (Rstart(i)-RaxisStart) / distToAxis
+        sinThetaStart = (Zstart(i)-ZaxisStart) / distToAxis
+
         distToAxis = dsqrt((RR-RaxisNow)**2+(ZZ-ZaxisNow)**2)
         cosThetaNow = (RR-RaxisNow) / distToAxis
         sinThetaNow = (ZZ-ZaxisNow) / distToAxis
 
-        RaxisOld = Raxis3D(j-1)
-        ZaxisOld = Zaxis3D(j-1)
         distToAxis = dsqrt((Rold-RaxisOld)**2+(Zold-ZaxisOld)**2)
         cosThetaOld = (Rold-RaxisOld) / distToAxis
         sinThetaOld = (Zold-ZaxisOld) / distToAxis
@@ -286,14 +421,20 @@ subroutine trance_field_lines_fmhd_3D (node_list, element_list)
         if (is_intersected .or. is_thesame) then
         ! if (.not. stop_tracing .and. (( abs(phi) .ge. (2.d0*pi/4.d0) .and. is_intersected) .or. torturns > 20)) then
         ! if (( is_intersected .and. j > 2 ) .or. torturns > 20) then
-          polturns = polturns + 1.d0
-          stop_tracing = .true.
-          ! if(i == 1) then
+          polturns = polturns + 1
+          jstep_repeat = 1
+          if((polturns.ge.polturns_stop).and.(torturns.ge.torturns_stop)) stop_tracing = .true.
+          ! if(i == 364) then
           !   call save_vector_as_ascii(Raxis3D, j, "Raxis3DRec.txt")
           !   call save_vector_as_ascii(Zaxis3D, j, "Zaxis3DRec.txt")
           !   call save_vector_as_ascii(Rtest3D, j, "Rtest3DRec.txt")
           !   call save_vector_as_ascii(Ztest3D, j, "Ztest3DRec.txt")
           ! endif
+          if(mod(i, npoints/10) .eq. 0) then
+            write(*,*) 'tracing line ', i, ' of ', npoints
+            write(*,*) 'polturns, polturns_stop = ', polturns, polturns_stop
+            write(*,*) 'torturns, torturns_stop = ', torturns, torturns_stop
+          endif
         elseif(is_overlapped) then
           write(*,*) 'two parallel segments are overlaped when tracing line ', i, ' of ', npoints
           write(*,*) '!!! toroidal & poloidal turns:', torturns, polturns
@@ -302,13 +443,16 @@ subroutine trance_field_lines_fmhd_3D (node_list, element_list)
           write(*,*) '!!! Rold:', Rold, ', Rnow:', RR
           write(*,*) '!!! Zold:', Zold, ', Znow:', ZZ
           write(*,*) '!!! Phiold:', phiold, ', Phinow:', phi
-          polturns = polturns + 1.d0
-          stop_tracing = .true.
+          polturns = polturns + 1
+          jstep_repeat = 1
+          if((polturns.ge.polturns_stop).and.(torturns.ge.torturns_stop)) stop_tracing = .true.
 
-        elseif(torturns > 20) then
-          write(*,*) 'more than 20 circles when tracing line ', i, ' of ', npoints
-          polturns = polturns + 1.d0
-          stop_tracing = .true.
+        ! elseif(torturns > 10 * max(torturns_stop, polturns_stop)) then
+        elseif(j > stepPhiMax) then
+          write(*,*) 'more than 10 * max(torturns_stop, polturns) circles when tracing line ', i, ' of ', npoints
+          polturns = polturns + 1
+          jstep_repeat = 1
+          if(polturns.ge.polturns_stop) stop_tracing = .true.
         endif  
 
       endif
@@ -333,6 +477,7 @@ subroutine trance_field_lines_fmhd_3D (node_list, element_list)
         phi_arr(i)      = phiold + (phi - phiold) * (deltaPoloidal/stepPoloidal) - torturns * 2.d0 * PI
       end if
     end if
+    phi_arr(i) = phi_arr(i) / polturns
     torturns_arr(i) = torturns
     polturns_arr(i) = polturns
     R_arr(i)        = RR
@@ -347,6 +492,12 @@ subroutine trance_field_lines_fmhd_3D (node_list, element_list)
       write(*,*) '...Phiold:', phiold, ', Phinow:', phi
     endif
 
+    call interp_values(node_list, element_list, Rstart(i), Zstart(i), phi_start, var_rho, ne_arr(i))
+    call interp_values(node_list, element_list, Rstart(i), Zstart(i), phi_start, var_Te, Te_arr(i))
+    call interp_values(node_list, element_list, Rstart(i), Zstart(i), phi_start, var_Ti, Ti_arr(i))
+
+    q_arr_poinc(:,i) = phi_arr(i) / (2.d0 * PI)
+
   end do
   end subroutine trance_field_lines_fmhd_3D
 
@@ -358,6 +509,7 @@ subroutine trance_field_lines_fmhd_3D (node_list, element_list)
   
     call determine_field_3D(node_list,element_list)
     
+    A3old    = A3
     Rold     = RR
     Zold     = ZZ
     phiold   = phi
@@ -416,6 +568,29 @@ subroutine trance_field_lines_fmhd_3D (node_list, element_list)
     F_count  = F_count + 1.d0
   
   end subroutine do_step_3D
+
+
+  subroutine interp_values(node_list,element_list,R0,Z0,phi0,ivar,result_ivar)
+
+    type (type_node_list),    intent(in)    :: node_list
+    type (type_element_list), intent(in)    :: element_list
+    real*8, intent(in)  :: R0, Z0, phi0
+    integer, intent(in) :: ivar
+    real*8, intent(out) :: result_ivar
+    real*8              :: Rtmp, Ztmp
+
+    call find_RZ(node_list,element_list,R0,Z0,Rtmp,Ztmp,ielm,s,t,ifail)
+
+    call interp(node_list, element_list, ielm, ivar, 1, s, t, result_ivar, dum01, dum02, dum03, dum04, dum05)
+
+    do i_tor = 1, (n_tor-1)/2
+      i_harm = 2*i_tor
+      call interp(node_list, element_list, ielm, ivar, i_harm, s, t, Pcos, dum01, dum02, dum03, dum04, dum05)
+      call interp(node_list, element_list, ielm, ivar, i_harm + 1, s, t, Psin, dum01, dum02, dum03, dum04, dum05)
+      result_ivar = result_ivar + Pcos * cos(mode(i_harm)*phi0) + Psin * sin(mode(i_harm + 1)*phi0)
+    enddo
+    
+  end subroutine interp_values
  
  !> Determine magnetic field at given position (n=0 only)
   subroutine determine_field_3D(node_list,element_list)
@@ -527,8 +702,11 @@ subroutine trance_field_lines_fmhd_3D (node_list, element_list)
     call find_RZ(node_list,element_list,Raxis3Dstart,Zaxis3Dstart,RR,ZZ,ielm,s,t,ifail)
     phi = 0.d0
 
+    Raxis3DRec(1) = RR
+    Zaxis3DRec(1) = ZZ
+
     !--- Start field line tracing from phi = 0 plane to finish a toroidal circle
-    do istep = 1, numStepMax
+    do istep = 2, numStepMax
       call do_step_3D(node_list, element_list)
       Raxis3DRec(istep) = RR
       Zaxis3DRec(istep) = ZZ

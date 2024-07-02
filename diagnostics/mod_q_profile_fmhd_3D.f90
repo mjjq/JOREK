@@ -36,21 +36,21 @@ integer   :: i_tor, i_harm
 
 real*8, allocatable   :: Rstart(:)
 real*8, allocatable   :: Zstart(:)
-real*8, allocatable   :: Rstart_all(:)
-real*8, allocatable   :: Zstart_all(:)
+! real*8, allocatable   :: Rstart_all(:)
+! real*8, allocatable   :: Zstart_all(:)
 logical, allocatable  :: responsible(:)
-real*8,allocatable    :: psin_arr(:), polturns_arr(:), torturns_arr(:), phi_arr(:), R_arr(:)
+real*8,allocatable    :: phi_arr(:)!, R_arr(:) psin_arr(:), polturns_arr(:), torturns_arr(:)
 
 ! --- Used to integrate 1/(2*pi)*int(dl/(R^2 B_poloidal))
 real*8    :: B_p_intg, dl, F_val, F_count
-real*8, allocatable   :: B_p_intg_arr(:), psi_arr(:)
-real*8, allocatable   :: F_arr(:)
-real*8, allocatable   :: psin_arr_tot(:), phi_arr_tot(:), R_arr_tot(:)
-real*8, allocatable   :: B_p_intg_arr_tot(:), psi_arr_tot(:)
-real*8, allocatable   :: F_arr_tot(:)
-real*8, allocatable   :: Te_arr(:), Te_arr_tot(:)
-real*8, allocatable   :: Ti_arr(:), Ti_arr_tot(:)
-real*8, allocatable   :: ne_arr(:), ne_arr_tot(:)
+! real*8, allocatable   :: psi_arr(:) !, B_p_intg_arr(:)
+! real*8, allocatable   :: F_arr(:)
+! real*8, allocatable   :: psin_arr_tot(:), phi_arr_tot(:), R_arr_tot(:)
+! real*8, allocatable   :: B_p_intg_arr_tot(:), psi_arr_tot(:)
+! real*8, allocatable   :: F_arr_tot(:)
+! real*8, allocatable   :: Te_arr(:), Te_arr_tot(:)
+! real*8, allocatable   :: Ti_arr(:), Ti_arr_tot(:)
+! real*8, allocatable   :: ne_arr(:), ne_arr_tot(:)
 
 real*8, allocatable   :: Raxis3D(:), Zaxis3D(:)
 ! real*8, allocatable   :: Rtest3D(:), Ztest3D(:)
@@ -60,115 +60,120 @@ real*8, parameter  :: qmax = 11.d0
 integer, parameter :: polturns_stop = 100
 integer, parameter :: torturns_stop = 1000
 integer            :: num_poinc_max
+integer, allocatable :: num_poinc_min(:)
 
-real*8, allocatable :: psi_arr_poinc(:,:), psi_arr_poinc_tot(:,:)
-real*8, allocatable :: R_arr_poinc(:,:), R_arr_poinc_tot(:,:)
-real*8, allocatable :: Z_arr_poinc(:,:), Z_arr_poinc_tot(:,:)
-real*8, allocatable :: q_arr_poinc(:,:), q_arr_poinc_tot(:,:)
-real*8, allocatable :: ne_arr_poinc(:,:), ne_arr_poinc_tot(:,:)
-real*8, allocatable :: Ti_arr_poinc(:,:), Ti_arr_poinc_tot(:,:)
-real*8, allocatable :: Te_arr_poinc(:,:), Te_arr_poinc_tot(:,:)
+real*8, allocatable :: psi_arr_poinc(:,:,:)!, psi_arr_poinc_tot(:,:,:)
+real*8, allocatable :: R_arr_poinc(:,:,:)  !, R_arr_poinc_tot(:,:,:)
+real*8, allocatable :: Z_arr_poinc(:,:,:)  !, Z_arr_poinc_tot(:,:,:)
+real*8, allocatable :: q_arr_poinc(:,:,:)  !, q_arr_poinc_tot(:,:,:)
+real*8, allocatable :: ne_arr_poinc(:,:,:) !, ne_arr_poinc_tot(:,:,:)
+real*8, allocatable :: Ti_arr_poinc(:,:,:) !, Ti_arr_poinc_tot(:,:,:)
+real*8, allocatable :: Te_arr_poinc(:,:,:) !, Te_arr_poinc_tot(:,:,:)
 
 real*8 :: ratio_phi
 
 contains
 
-subroutine construct_all(num_points)
-  integer, intent(in) :: num_points
+subroutine construct_all(num_points, nphi_out)
+  integer, intent(in) :: num_points, nphi_out
 
   npoints = num_points
   stepPhiMax = max(nint(2*PI*qmax/stepsizePhi) * polturns_stop, nint(2*PI*2/stepsizePhi) * torturns_stop)
   num_poinc_max = max(nint(qmax * polturns_stop), torturns_stop) * 2
+  allocate(num_poinc_min(num_points))
 
-  allocate(psin_arr_tot(num_points))
-  allocate(phi_arr_tot(num_points))
-  allocate(R_arr_tot(num_points))
-  allocate(B_p_intg_arr_tot(num_points))
-  allocate(psi_arr_tot(num_points))
-  allocate(F_arr_tot(num_points))
+  ! allocate(psin_arr_tot(num_points))
+  ! allocate(phi_arr_tot(num_points))
+  ! allocate(R_arr_tot(num_points))
+  ! allocate(B_p_intg_arr_tot(num_points))
+  ! allocate(psi_arr_tot(num_points))
+  ! allocate(F_arr_tot(num_points))
   allocate(Rstart(num_points))
   allocate(Zstart(num_points))
-  allocate(Rstart_all(num_points))
-  allocate(Zstart_all(num_points))
+  ! allocate(Rstart_all(num_points))
+  ! allocate(Zstart_all(num_points))
   allocate(responsible(num_points))
-  allocate(psin_arr(num_points))
-  allocate(polturns_arr(num_points))
-  allocate(torturns_arr(num_points))
+  ! allocate(psin_arr(num_points))
+  ! allocate(polturns_arr(num_points))
+  ! allocate(torturns_arr(num_points))
   allocate(phi_arr(num_points))
-  allocate(R_arr(num_points))
-  allocate(B_p_intg_arr(num_points))
-  allocate(psi_arr(num_points))
-  allocate(F_arr(num_points))
+  ! allocate(R_arr(num_points))
+  ! allocate(B_p_intg_arr(num_points))
+  ! allocate(psi_arr(num_points))
+  ! allocate(F_arr(num_points))
 
-  allocate(Te_arr(num_points))
-  allocate(Ti_arr(num_points))
-  allocate(ne_arr(num_points))
-  allocate(Te_arr_tot(num_points))
-  allocate(Ti_arr_tot(num_points))
-  allocate(ne_arr_tot(num_points))
+  ! allocate(Te_arr(num_points))
+  ! allocate(Ti_arr(num_points))
+  ! allocate(ne_arr(num_points))
+  ! allocate(Te_arr_tot(num_points))
+  ! allocate(Ti_arr_tot(num_points))
+  ! allocate(ne_arr_tot(num_points))
 
   allocate(Raxis3D(stepPhiMax))
   allocate(Zaxis3D(stepPhiMax))
   ! allocate(Rtest3D(stepPhiMax))
   ! allocate(Ztest3D(stepPhiMax))
 
-  allocate(psi_arr_poinc(num_poinc_max, num_points))
-  allocate(R_arr_poinc(num_poinc_max, num_points))
-  allocate(Z_arr_poinc(num_poinc_max, num_points))
-  allocate(q_arr_poinc(num_poinc_max, num_points))
-  allocate(ne_arr_poinc(num_poinc_max, num_points))
-  allocate(Ti_arr_poinc(num_poinc_max, num_points))
-  allocate(Te_arr_poinc(num_poinc_max, num_points))
+  allocate(psi_arr_poinc(num_poinc_max, num_points, nphi_out))
+  allocate(R_arr_poinc(num_poinc_max, num_points, nphi_out))
+  allocate(Z_arr_poinc(num_poinc_max, num_points, nphi_out))
+  allocate(q_arr_poinc(num_poinc_max, num_points, nphi_out))
+  allocate(ne_arr_poinc(num_poinc_max, num_points, nphi_out))
+  allocate(Ti_arr_poinc(num_poinc_max, num_points, nphi_out))
+  allocate(Te_arr_poinc(num_poinc_max, num_points, nphi_out))
 
-  allocate(psi_arr_poinc_tot(num_poinc_max, num_points))
-  allocate(R_arr_poinc_tot(num_poinc_max, num_points))
-  allocate(Z_arr_poinc_tot(num_poinc_max, num_points))
-  allocate(q_arr_poinc_tot(num_poinc_max, num_points))
-  allocate(ne_arr_poinc_tot(num_poinc_max, num_points))
-  allocate(Ti_arr_poinc_tot(num_poinc_max, num_points))
-  allocate(Te_arr_poinc_tot(num_poinc_max, num_points))
+  ! allocate(psi_arr_poinc_tot(num_poinc_max, num_points, nphi_out))
+  ! allocate(R_arr_poinc_tot(num_poinc_max, num_points, nphi_out))
+  ! allocate(Z_arr_poinc_tot(num_poinc_max, num_points, nphi_out))
+  ! allocate(q_arr_poinc_tot(num_poinc_max, num_points, nphi_out))
+  ! allocate(ne_arr_poinc_tot(num_poinc_max, num_points, nphi_out))
+  ! allocate(Ti_arr_poinc_tot(num_poinc_max, num_points, nphi_out))
+  ! allocate(Te_arr_poinc_tot(num_poinc_max, num_points, nphi_out))
 
   Rstart = 0.d0
   Zstart = 0.d0
-  Rstart_all = 0.d0
-  Zstart_all = 0.d0
+  ! Rstart_all = 0.d0
+  ! Zstart_all = 0.d0
   responsible = .false.
   Raxis3D = 0.d0
   Zaxis3D = 0.d0
   ! Rtest3D = 0.d0
   ! Ztest3D = 0.d0
 
+  num_poinc_min = num_poinc_max
+
   call initia_arrs()
 
 end subroutine construct_all
 
 subroutine deconstruct_all()
-  deallocate(psin_arr_tot)
-  deallocate(phi_arr_tot)
-  deallocate(R_arr_tot)
-  deallocate(B_p_intg_arr_tot)
-  deallocate(psi_arr_tot)
-  deallocate(F_arr_tot)
+  ! deallocate(psin_arr_tot)
+  ! deallocate(phi_arr_tot)
+  ! deallocate(R_arr_tot)
+  ! deallocate(B_p_intg_arr_tot)
+  ! deallocate(psi_arr_tot)
+  ! deallocate(F_arr_tot)
+  deallocate(num_poinc_min)
   deallocate(Rstart)
   deallocate(Zstart)
-  deallocate(Rstart_all)
-  deallocate(Zstart_all)
+  ! deallocate(Rstart_all)
+  ! deallocate(Zstart_all)
   deallocate(responsible)
-  deallocate(psin_arr)
-  deallocate(polturns_arr)
-  deallocate(torturns_arr)
+  ! deallocate(psin_arr)
+  ! deallocate(polturns_arr)
+  ! deallocate(torturns_arr)
   deallocate(phi_arr)
-  deallocate(R_arr)
-  deallocate(B_p_intg_arr)
-  deallocate(psi_arr)
-  deallocate(F_arr)
+  ! deallocate(R_arr)
+  ! deallocate(B_p_intg_arr)
+  ! deallocate(psi_arr)
+  ! deallocate(F_arr)
 
-  deallocate(Te_arr)
-  deallocate(Ti_arr)
-  deallocate(ne_arr)
-  deallocate(Te_arr_tot)
-  deallocate(Ti_arr_tot)
-  deallocate(ne_arr_tot)
+  ! deallocate(Te_arr)
+  ! deallocate(Ti_arr)
+  ! deallocate(ne_arr)
+  ! deallocate(Te_arr_tot)
+  ! deallocate(Ti_arr_tot)
+  ! deallocate(ne_arr_tot)
 
   deallocate(Raxis3D)
   deallocate(Zaxis3D)
@@ -183,38 +188,38 @@ subroutine deconstruct_all()
   deallocate(Ti_arr_poinc)
   deallocate(Te_arr_poinc)
 
-  deallocate(psi_arr_poinc_tot)
-  deallocate(R_arr_poinc_tot)
-  deallocate(Z_arr_poinc_tot)
-  deallocate(q_arr_poinc_tot)
-  deallocate(ne_arr_poinc_tot)
-  deallocate(Ti_arr_poinc_tot)
-  deallocate(Te_arr_poinc_tot)
+  ! deallocate(psi_arr_poinc_tot)
+  ! deallocate(R_arr_poinc_tot)
+  ! deallocate(Z_arr_poinc_tot)
+  ! deallocate(q_arr_poinc_tot)
+  ! deallocate(ne_arr_poinc_tot)
+  ! deallocate(Ti_arr_poinc_tot)
+  ! deallocate(Te_arr_poinc_tot)
 
 end subroutine deconstruct_all
 
 subroutine initia_arrs()
-  psin_arr = 0.d0
-  polturns_arr = 0.d0
-  torturns_arr = 0.d0
+  ! psin_arr = 0.d0
+  ! polturns_arr = 0.d0
+  ! torturns_arr = 0.d0
   phi_arr = 0.d0
-  R_arr = 0.d0
-  B_p_intg_arr = 0.d0
-  psi_arr = 0.d0
-  F_arr = 0.d0
-  psin_arr_tot = 0.d0
-  phi_arr_tot = 0.d0
-  R_arr_tot = 0.d0
-  B_p_intg_arr_tot = 0.d0
-  psi_arr_tot = 0.d0
-  F_arr_tot = 0.d0
+  ! R_arr = 0.d0
+  ! B_p_intg_arr = 0.d0
+  ! psi_arr = 0.d0
+  ! F_arr = 0.d0
+  ! psin_arr_tot = 0.d0
+  ! phi_arr_tot = 0.d0
+  ! R_arr_tot = 0.d0
+  ! B_p_intg_arr_tot = 0.d0
+  ! psi_arr_tot = 0.d0
+  ! F_arr_tot = 0.d0
 
-  Te_arr = 0.d0
-  Ti_arr = 0.d0
-  ne_arr = 0.d0
-  Te_arr_tot = 0.d0
-  Ti_arr_tot = 0.d0
-  ne_arr_tot = 0.d0
+  ! Te_arr = 0.d0
+  ! Ti_arr = 0.d0
+  ! ne_arr = 0.d0
+  ! Te_arr_tot = 0.d0
+  ! Ti_arr_tot = 0.d0
+  ! ne_arr_tot = 0.d0
 
   psi_arr_poinc = 0.d0
   R_arr_poinc = 0.d0
@@ -224,13 +229,13 @@ subroutine initia_arrs()
   Ti_arr_poinc = 0.d0
   Te_arr_poinc = 0.d0
 
-  psi_arr_poinc_tot = 0.d0
-  R_arr_poinc_tot = 0.d0
-  Z_arr_poinc_tot = 0.d0
-  q_arr_poinc_tot = 0.d0
-  ne_arr_poinc_tot = 0.d0
-  Ti_arr_poinc_tot = 0.d0
-  Te_arr_poinc_tot = 0.d0
+  ! psi_arr_poinc_tot = 0.d0
+  ! R_arr_poinc_tot = 0.d0
+  ! Z_arr_poinc_tot = 0.d0
+  ! q_arr_poinc_tot = 0.d0
+  ! ne_arr_poinc_tot = 0.d0
+  ! Ti_arr_poinc_tot = 0.d0
+  ! Te_arr_poinc_tot = 0.d0
 end subroutine initia_arrs
 
 pure function cross_product3D(a, b)
@@ -240,10 +245,11 @@ pure function cross_product3D(a, b)
   cross_product3D = a(1) * b(2) - a(2) * b(1)
 end function cross_product3D
 
-subroutine trance_field_lines_fmhd_3D (node_list, element_list, phi_start)
+subroutine trance_field_lines_fmhd_3D (node_list, element_list, phi_start, phi_poinc_record, nphi_out)
   type (type_node_list),    intent(in)    :: node_list
   type (type_element_list), intent(in)    :: element_list
-  real*8, intent(in) :: phi_start
+  real*8, intent(in) :: phi_start, phi_poinc_record(:)
+  integer, intent(in):: nphi_out
   real*8 :: RZstart_plus(2), RZstart_minus(2)
   real*8 :: RZ_now(2), RZ_old(2)
   real*8 :: vec_center(2), vec_left(2), vec_right(2)
@@ -262,7 +268,7 @@ subroutine trance_field_lines_fmhd_3D (node_list, element_list, phi_start)
   real*8 :: RaxisNow, ZaxisNow, cosThetaNow, sinThetaNow
   real*8 :: RaxisOld, ZaxisOld, cosThetaOld, sinThetaOld
 
-  integer :: jstep_repeat, jphi_start
+  integer :: jstep_repeat, jphi_start, iphi_out
 
   call initia_arrs()
 
@@ -319,30 +325,36 @@ subroutine trance_field_lines_fmhd_3D (node_list, element_list, phi_start)
 
       if ( DABS(phi) >= 2.d0*PI ) then
         phi   = phi - 2.d0*PI * sign (1.d0, phi)
+        torturns = torturns + 1
       endif
     
-      if ( (phi - phi_start) * (phi - stepsizePhi - phi_start) <= 0 ) then
-        torturns = torturns + 1
+      ! if (torturns > 0) then
+        do iphi_out = 1, nphi_out
+          if ( (phi - phi_poinc_record(iphi_out)) * (phi - stepsizePhi - phi_poinc_record(iphi_out)) <= 0 ) then
 
-        if(torturns <= num_poinc_max) then
-          ! record for poincare plots
-          ratio_phi = 1.d0 - abs(phi - phi_start) / stepsizePhi
+            if(torturns < num_poinc_max) then
+              ! record for poincare plots
+              ratio_phi = 1.d0 - abs(phi - phi_poinc_record(iphi_out)) / stepsizePhi
 
-          call determine_field_3D(node_list,element_list) ! update A3
-          psi_arr_poinc(torturns, i) = ratio_phi * get_psi_n(A3, ZZ) + (1.d0 - ratio_phi) * get_psi_n(A3old, Zold)
-          R_arr_poinc(torturns, i) = ratio_phi * RR + (1.d0 - ratio_phi) * Rold
-          Z_arr_poinc(torturns, i) = ratio_phi * ZZ + (1.d0 - ratio_phi) * Zold
+              call determine_field_3D(node_list,element_list) ! update A3
+              psi_arr_poinc(torturns + 1, i, iphi_out) = ratio_phi * get_psi_n(A3, ZZ) + (1.d0 - ratio_phi) * get_psi_n(A3old, Zold)
+              R_arr_poinc(torturns + 1, i, iphi_out) = ratio_phi * RR + (1.d0 - ratio_phi) * Rold
+              Z_arr_poinc(torturns + 1, i, iphi_out) = ratio_phi * ZZ + (1.d0 - ratio_phi) * Zold
 
-          call interp_values(node_list, element_list, R_arr_poinc(torturns, i), Z_arr_poinc(torturns, i), phi_start, var_rho, ne_arr_poinc(torturns, i))
-          call interp_values(node_list, element_list, R_arr_poinc(torturns, i), Z_arr_poinc(torturns, i), phi_start, var_Te, Te_arr_poinc(torturns, i))
-          call interp_values(node_list, element_list, R_arr_poinc(torturns, i), Z_arr_poinc(torturns, i), phi_start, var_Ti, Ti_arr_poinc(torturns, i))
-        else
-          write(*,*) "Warning: torturns is larger than num_poinc_max"
-          write(*,*) "torturns = ", torturns
-          write(*,*) "num_poinc_max = ", num_poinc_max
-        endif
+              call interp_values(node_list, element_list, R_arr_poinc(torturns + 1, i, iphi_out), Z_arr_poinc(torturns + 1, i, iphi_out), phi_poinc_record(iphi_out), var_rho, ne_arr_poinc(torturns + 1, i, iphi_out))
+              call interp_values(node_list, element_list, R_arr_poinc(torturns + 1, i, iphi_out), Z_arr_poinc(torturns + 1, i, iphi_out), phi_poinc_record(iphi_out), var_Te, Te_arr_poinc(torturns + 1, i, iphi_out))
+              call interp_values(node_list, element_list, R_arr_poinc(torturns + 1, i, iphi_out), Z_arr_poinc(torturns + 1, i, iphi_out), phi_poinc_record(iphi_out), var_Ti, Ti_arr_poinc(torturns + 1, i, iphi_out))
+            else
+              write(*,*) "Warning: torturns is larger than num_poinc_max"
+              write(*,*) "torturns = ", torturns
+              write(*,*) "num_poinc_max = ", num_poinc_max
+            endif
 
-      end if
+            exit
+
+          end if
+        enddo
+      ! endif
 
       if(jstep_repeat > minJsteps) then
 
@@ -458,10 +470,10 @@ subroutine trance_field_lines_fmhd_3D (node_list, element_list, phi_start)
       endif
       
     end do
-    B_p_intg_arr(i) = B_p_intg / (2.d0 * PI) / polturns
-    psin_arr(i)     = get_psi_n(A3, ZZ)
-    psi_arr(i)      = A3
-    F_arr(i)        = F_val / F_count
+    ! B_p_intg_arr(i) = B_p_intg / (2.d0 * PI) / polturns
+    ! psin_arr(i)     = get_psi_n(A3, ZZ)
+    ! psi_arr(i)      = A3
+    ! F_arr(i)        = F_val / F_count
 
     stepPoloidal = dsqrt((cosThetaNow-cosThetaOld)**2+(sinThetaNow-sinThetaOld)**2)
     deltaPoloidal = dsqrt((cosThetaStart-cosThetaOld)**2+(sinThetaStart-sinThetaOld)**2)
@@ -478,9 +490,9 @@ subroutine trance_field_lines_fmhd_3D (node_list, element_list, phi_start)
       end if
     end if
     phi_arr(i) = phi_arr(i) / polturns
-    torturns_arr(i) = torturns
-    polturns_arr(i) = polturns
-    R_arr(i)        = RR
+    ! torturns_arr(i) = torturns
+    ! polturns_arr(i) = polturns
+    ! R_arr(i)        = RR
     if(mod(i, npoints/10) .eq. 0) then
       write(*,*) 'Finished tracing line ', i, ' of ', npoints
       write(*,*) '...toroidal & poloidal turns:', torturns, polturns
@@ -492,11 +504,11 @@ subroutine trance_field_lines_fmhd_3D (node_list, element_list, phi_start)
       write(*,*) '...Phiold:', phiold, ', Phinow:', phi
     endif
 
-    call interp_values(node_list, element_list, Rstart(i), Zstart(i), phi_start, var_rho, ne_arr(i))
-    call interp_values(node_list, element_list, Rstart(i), Zstart(i), phi_start, var_Te, Te_arr(i))
-    call interp_values(node_list, element_list, Rstart(i), Zstart(i), phi_start, var_Ti, Ti_arr(i))
+    ! call interp_values(node_list, element_list, Rstart(i), Zstart(i), phi_start, var_rho, ne_arr(i))
+    ! call interp_values(node_list, element_list, Rstart(i), Zstart(i), phi_start, var_Te, Te_arr(i))
+    ! call interp_values(node_list, element_list, Rstart(i), Zstart(i), phi_start, var_Ti, Ti_arr(i))
 
-    q_arr_poinc(:,i) = phi_arr(i) / (2.d0 * PI)
+    q_arr_poinc(:,i, :) = phi_arr(i) / (2.d0 * PI)
 
   end do
   end subroutine trance_field_lines_fmhd_3D

@@ -5,7 +5,7 @@ import scipy.interpolate as sci_intp
 
 ivar_plot = 0 # 0 => q
 varNameList = ['q', 'density (m-3)', 'Ti (eV)', 'Te (eV)']
-file_path = 'q_profile_3D_ip9.dat'
+file_path = 'q_profile_3D_ip_1.dat'
 
 def display_values(event, x, y, z):
     if event.inaxes:
@@ -18,7 +18,7 @@ def display_values(event, x, y, z):
 
 if __name__ == "__main__":
 
-    data = np.loadtxt(file_path, skiprows=1)
+    data = np.loadtxt(file_path, skiprows=2)
     # Extract columns: second column for x, third column for y, and fourth+ column for amplitude
     x = data[:, 2]
     y = data[:, 3]

@@ -25,12 +25,7 @@ if __name__ == "__main__":
     amplitude = np.abs(data[:, 4 + ivar_plot])
 
     # Filter out invalid (NaN or infinite) values
-    mask = np.isfinite(amplitude)
-    x = x[mask]
-    y = y[mask]
-    amplitude = amplitude[mask]
-
-    mask = x > 0
+    mask = np.isfinite(amplitude) & (x > 0)
     x = x[mask]
     y = y[mask]
     amplitude = amplitude[mask]

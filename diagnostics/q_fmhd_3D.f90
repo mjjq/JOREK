@@ -35,14 +35,13 @@ real*8  :: fact_ne, fact_T
 real(8), allocatable :: R_poinc(:), Z_poinc(:)
 integer :: count_poinc, count_poinc_stpts
 
-character(len=512) :: strtmp
-integer :: ios
+character(len=512) :: strtmp, iphi_string, nphi_string
 integer :: nr_stpts, ntour_stpts, nphi_stpts, curr_stpts, i_stpts
 real*8  :: rr_stpts, zz_stpts, phi_stpts
 integer :: iphi_out, jphi_start, i_local
 integer, parameter :: nphi_out = 32
-real*8  :: phi_start, phi_poinc_record(nphi_out + 1) ! the last surface is the same as the first one
-character(len=100) :: iphi_string, nphi_string
+real*8, parameter  :: phi_start = 0.d0
+real*8  :: phi_poinc_record(nphi_out + 1) ! the last surface is the same as the first one
 
 required = MPI_THREAD_FUNNELED
 call MPI_Init_thread(required, provided, StatInfo)
@@ -169,7 +168,6 @@ call MPI_BCAST(Z_poinc,count_poinc,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
 ! --- Define starting points for field lines along outer midplane
 responsible = .false.
 do i = 1, npoints
-  
   if ( ( real(my_id)/real(n_cpu)*npoints < i ) .and. ( real(my_id+1)/real(n_cpu)*npoints >= i ) ) then
     responsible(i) = .true.
     Rstart(i) = R_poinc(i)
@@ -177,84 +175,34 @@ do i = 1, npoints
   end if
 end do
 
-call MPI_Barrier(MPI_COMM_WORLD,ierr)
-
 deallocate(R_poinc)
 deallocate(Z_poinc)
 
 #else
 
-! !---> Read poincare points
-! count_poinc = 0
-! if(my_id == 0) then
-!   ! Call the subroutine to read the data
-!   call read_poinc_RZ('poinc_R-Z.dat', R_poinc, Z_poinc, count_poinc)
-! endif
-
-! call MPI_BCAST(count_poinc,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
-! !---> Distribute the points
-! if(count_poinc > 0) then
-!   call construct_all(count_poinc, nphi_out)
-
-!   if(my_id > 0) then
-!     allocate(R_poinc(count_poinc))
-!     allocate(Z_poinc(count_poinc))
-!   endif
-
-!   call MPI_Barrier(MPI_COMM_WORLD,ierr)
-
-!   call MPI_BCAST(R_poinc,count_poinc,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
-!   call MPI_BCAST(Z_poinc,count_poinc,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
-
-!   ! --- Define starting points for field lines along outer midplane
-!   responsible = .false.
-!   do i = 1, npoints
-    
-!     if ( ( real(my_id)/real(n_cpu)*npoints < i ) .and. ( real(my_id+1)/real(n_cpu)*npoints >= i ) ) then
-!       responsible(i) = .true.
-!       Rstart(i) = R_poinc(i)
-!       Zstart(i) = Z_poinc(i)
-!     end if
-!   end do
-
-!   call MPI_Barrier(MPI_COMM_WORLD,ierr)
-
-!   deallocate(R_poinc)
-!   deallocate(Z_poinc)
-
-! else
-
-!   call construct_all(node_list%n_nodes - 200, nphi_out)
-!   ! call construct_all(40, nphi_out)
-
-!   ! --- Define starting points for field lines along outer midplane
-!   responsible = .false.
-!   do i = 1, npoints
-    
-!     if ( ( real(my_id)/real(n_cpu)*npoints < i ) .and. ( real(my_id+1)/real(n_cpu)*npoints >= i ) ) then
-!       responsible(i) = .true.
-!       Rstart(i) = node_list%node(i+100)%x(1,1,1)
-!       Zstart(i) = node_list%node(i+100)%x(1,1,2)
-!       ! Rstart(i) = 1.7686100
-!       ! Zstart(i) = 0.0470903
-!     end if
-!   end do
-
-!   call MPI_Barrier(MPI_COMM_WORLD,ierr)
-
-! endif
+call construct_all(node_list%n_nodes - 200, nphi_out)
+responsible = .false.
+do i = 1, npoints
+  if ( ( real(my_id)/real(n_cpu)*npoints < i ) .and. ( real(my_id+1)/real(n_cpu)*npoints >= i ) ) then
+    responsible(i) = .true.
+    Rstart(i) = node_list%node(i+100)%x(1,1,1)
+    Zstart(i) = node_list%node(i+100)%x(1,1,2)
+  end if
+end do
 #endif
 
-! ! --- Write out distribution of field lines among tasks
-! do i = 0, n_cpu-1
-!   if ( my_id == i ) then
-!     write(*,*) 'Task ', my_id, 'responsible for (field line number & radius):'
-!     do j = 1, npoints
-!       if (responsible(j)) write(*,*) j, Rstart(j), Zstart(j)
-!     end do
-!   end if
-!   call MPI_Barrier(MPI_COMM_WORLD,ierr)
-! end do
+call MPI_Barrier(MPI_COMM_WORLD,ierr)
+
+! --- Write out distribution of field lines among tasks
+do i = 0, n_cpu-1
+  if ( my_id == i ) then
+    write(*,*) 'Task ', my_id, 'responsible for (field line number & radius):'
+    do j = 1, npoints
+      if (responsible(j)) write(*,*) j, Rstart(j), Zstart(j)
+    end do
+  end if
+  call MPI_Barrier(MPI_COMM_WORLD,ierr)
+end do
 
 ! --- specify the range for searching magnetic axis
 ! --- Example of 'axis_range.txt'
@@ -262,7 +210,6 @@ deallocate(Z_poinc)
 !  | ! RaxisMin  RaxisMax  ZaxisMin  ZaxisMax  Niterations
 !  | 1.69      1.89      -0.07     0.2       1
 !  +-------------------------------------------------------
-
 
 ! --- Find magnetic axis in 3D 1/1 mode
 if ( my_id == 0 ) then
@@ -292,7 +239,7 @@ do iit = 1,Niterations
   do iZ_myid = 1, NaxisZ_myid
     iZ = my_id * NaxisZ_myid + iZ_myid
     if(iZ > NaxisZ) cycle
-    if(my_id == 0) write(*,*) "iZ: ", iZ_myid, ', of ', NaxisZ_myid, ", iit: ", iit, ", of ", Niterations
+    if(my_id == 0) write(*,*) "... iZ: ", iZ_myid, ', of ', NaxisZ_myid, ", iit: ", iit, ", of ", Niterations
     do iR = 1, NaxisR
       call find_axis_3D(node_list, element_list, Rguess3D(iR, iZ), Zguess3D(iR, iZ), distMissMatch3D_myid(iR, iZ))
     enddo
@@ -305,9 +252,8 @@ do iit = 1,Niterations
       call save_matrix_as_ascii(Zguess3D, NaxisR, NaxisZ, "Zguess3D.txt")
       call save_matrix_as_ascii(distMissMatch3D, NaxisR, NaxisZ, "distMissMatch3D.txt")
     endif
-    write(*,*) "find_axis_3D done! The axis at phi = 0 plane is "
-    write(*,*) "(R, Z) = (", Rguess3D(min_i, min_j), ", ", Zguess3D(min_i, min_j), ")"
-    write(*,*) "With Error = ", distMissMatch3D(min_i, min_j)
+    write(*,*) "find axis at phi = 0 plane @ (", Rguess3D(min_i, min_j), ", ", Zguess3D(min_i, min_j), ")"
+    write(*,*) "Error = ", distMissMatch3D(min_i, min_j)
   endif
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
   RaxisMin = Rguess3D(min_i, min_j) - (RaxisMax - RaxisMin) / 4.d0
@@ -316,20 +262,11 @@ do iit = 1,Niterations
   ZaxisMax = Zguess3D(min_i, min_j) + (ZaxisMax - ZaxisMin) / 4.d0
 enddo
 
-call record_axis_3D(node_list, element_list, Rguess3D(min_i, min_j), Zguess3D(min_i, min_j), stepPhiMax, Raxis3D, Zaxis3D, my_id)
+if(my_id == 0) call record_axis_3D(node_list, element_list, Rguess3D(min_i, min_j), Zguess3D(min_i, min_j), stepPhiMax, Raxis3D, Zaxis3D)
+
+call MPI_BCAST(Raxis3D,stepPhiMax,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+call MPI_BCAST(Zaxis3D,stepPhiMax,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
 call MPI_Barrier(MPI_COMM_WORLD,ierr)
-
-fact_ne      = central_density * 1.d20 !* central_mass*MASS_PROTON    ! factor for rho
-fact_T       = 1.d0 / ( MU_zero * central_density * 1.d20 * EL_CHG ) ! factor for T
-
-if ( my_id == 0 ) write(*,*) '*** ...start tracing... ***'
-
-phi_start = 0.d0
-  
-
-! phi_poinc_record = 2 * PI / nphi_out * (iphi_out - 1)
-call linspace(0.d0, 2.d0*PI, nphi_out + 1, phi_poinc_record)
-
 
 #ifdef READ_STPTS
 jphi_start = nint(phi_start / stepsizePhi) + 1
@@ -342,19 +279,21 @@ do i_local = count_poinc_stpts + 1, npoints
 enddo
 #endif
 
-! phi_poinc_record = 0.d0
 ! --- Trace field lines
+if ( my_id == 0 ) write(*,*) '*** ...start tracing... ***'  
+call linspace(0.d0, 2.d0*PI, nphi_out + 1, phi_poinc_record)
 call trance_field_lines_fmhd_3D(node_list, element_list, phi_start, phi_poinc_record(1:nphi_out), nphi_out)
 
+fact_ne      = central_density * 1.d20 !* central_mass*MASS_PROTON    ! factor for rho
+fact_T       = 1.d0 / ( MU_zero * central_density * 1.d20 * EL_CHG ) ! factor for T
 ne_arr_poinc = ne_arr_poinc * fact_ne
 Ti_arr_poinc = Ti_arr_poinc * fact_T
 Te_arr_poinc = Te_arr_poinc * fact_T
 
 call MPI_Barrier(MPI_COMM_WORLD,ierr)
 
-if(my_id == 0) then
-  write(*,*) "Finished all tracing, start MPI_Reduce..."
-endif
+if(my_id == 0) write(*,*) "Finished all tracing, start MPI_AllReduce..."
+
 call MPI_AllReduce(MPI_IN_PLACE, psi_arr_poinc, num_poinc_max*npoints*nphi_out,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 call MPI_AllReduce(MPI_IN_PLACE, R_arr_poinc,   num_poinc_max*npoints*nphi_out,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 call MPI_AllReduce(MPI_IN_PLACE, Z_arr_poinc,   num_poinc_max*npoints*nphi_out,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
@@ -363,14 +302,13 @@ call MPI_AllReduce(MPI_IN_PLACE, ne_arr_poinc,  num_poinc_max*npoints*nphi_out,M
 call MPI_AllReduce(MPI_IN_PLACE, Te_arr_poinc,  num_poinc_max*npoints*nphi_out,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 call MPI_AllReduce(MPI_IN_PLACE, Ti_arr_poinc,  num_poinc_max*npoints*nphi_out,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 
-! call MPI_Barrier(MPI_COMM_WORLD,ierr)
 
 if(my_id == 0) then
 
   do i = 1, npoints
     do iphi_out = 1, nphi_out
       do j = 1, num_poinc_max
-        if(R_arr_poinc(j,1,iphi_out) .le. 1.d-5 ) exit
+        if(R_arr_poinc(j,i,iphi_out) .le. 1.d-5 ) exit
       enddo
       num_poinc_min(i) = min(num_poinc_min(i), j - 1)
     enddo
@@ -384,16 +322,10 @@ if(my_id == 0) then
     write(iphi_string, '(I0)') iphi_out
     ! --- Write out result
     open(991, file='q_profile_3D_ip_'//trim(iphi_string)//'.dat', action='write', status='replace')
-    write(991, *) '  Results @ phi = 2 * PI * ('//trim(iphi_string)//' - 1)/'//trim(nphi_string)
+    write(991, *) '  Results @ phi = 2 * PI * ('//trim(iphi_string)//' - 1)/'//trim(nphi_string), ' = ', phi_poinc_record(iphi_out)
     write(991,'(A5, 7A23)') 'id', 'Psi_N', 'R', 'Z', 'q', 'density (m-3)', 'Ti (eV)', 'Te(eV)'
     do i = 1, npoints
-      do j = 1, num_poinc_min(i) !num_poinc_max
-        ! ! if (R_arr_poinc_tot(j,i,iphi_out).le.1.d-5) then 
-        ! if (R_arr_poinc(j,i,iphi_out).le.1.d-5) then 
-        !   write(991,*) '    ' ! new line
-        !   exit
-        ! endif
-        ! write(991,'(I5, 7es23.8)') i, psi_arr_poinc_tot(j,i,iphi_out), R_arr_poinc_tot(j,i,iphi_out), Z_arr_poinc_tot(j,i,iphi_out), q_arr_poinc_tot(j,i,iphi_out), ne_arr_poinc_tot(j,i,iphi_out), Ti_arr_poinc_tot(j,i,iphi_out), Te_arr_poinc_tot(j,i,iphi_out)
+      do j = 1, num_poinc_min(i)
         write(991,'(I5, 7es23.8)') i, psi_arr_poinc(j,i,iphi_out), R_arr_poinc(j,i,iphi_out), Z_arr_poinc(j,i,iphi_out), q_arr_poinc(j,i,iphi_out), ne_arr_poinc(j,i,iphi_out), Ti_arr_poinc(j,i,iphi_out), Te_arr_poinc(j,i,iphi_out)
       end do
     end do

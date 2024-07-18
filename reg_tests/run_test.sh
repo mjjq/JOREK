@@ -32,7 +32,7 @@ function printusage() {
     echo "   -h            Print this help information"
     echo "   -k            Keep temporary run directory"
     echo "   -j nthreads   Set the number of threads (default 1)"
-    echo "   -d            Compilation with debugging options (DEBUG=1)"
+    echo "   -d            Compilation with debugging options (DEBUG_MAKE=1)"
     echo "   -l            List available test cases using long format."
     echo "   -L            List available test cases without any description (short format)"
     echo "   -e            Check whether a test case exists"
@@ -100,7 +100,7 @@ while [ $# -gt 0 ]; do
 	compilethreads="$2"
 	shift 2
     elif [ "$option" == "-d" ]; then
-	debugoptions="DEBUG=1"
+	debugoptions="DEBUG_MAKE=1"
 	shift
     elif [ "$option" == "-k" ]; then
 	keep="yes"

@@ -116,9 +116,18 @@ if (my_id == 0) then
   endif
 
   call tr_debug_write("Deb_poisson",nz_AA)
+
+#ifdef USE_PASTIX
+#if defined USE_STRUMPACK || defined USE_MUMPS
+  write(*,*) 'Please disable USE_STRUMPACK and USE_MUMPS if USE_PASTIX is enabled'
+  call exit(-1)
+#endif
+#endif
   
   n_border = 0
+#ifdef USE_PASTIX
   if (itype .ne. 0) then
+#endif
     do i=1,node_list%n_nodes
       if(treat_axis)then
         ! --- Only one fixed for fixed-axis (only valid for G1-cases at the moment!!!)
@@ -142,7 +151,9 @@ if (my_id == 0) then
       if (node_list%node(i)%boundary .eq.20) n_border = n_border + 2 * (n_order+1)/2 - 1
       if (node_list%node(i)%boundary .eq.21) n_border = n_border + 2 * (n_order+1)/2 - 1
     enddo
+#ifdef USE_PASTIX
   endif
+#endif
   
   if ((.not. freeboundary_equil) .or. (itype .ne. -1)) then
     nz_AA = nz_AA + n_border
@@ -156,6 +167,7 @@ if (my_id == 0) then
         n_AA = max(n_AA,node_list%node(inode)%index(k))
       enddo
   enddo
+  ! n_AA = n_nodes * n_degrees - n_tht + 1
   
   if (iter .le. 1) then
     write(*,*) ' number of unknowns      : ',n_AA, node_list%n_nodes * n_degrees
@@ -361,7 +373,7 @@ if (my_id == 0) then
   a_mat%nnz = nz_AA
   
   zbig = 1.d10
-  
+
 end if ! my_id == 0
 
 !----------------------- boundary conditions
@@ -370,7 +382,19 @@ if (freeboundary_equil .and. (itype .eq. -1)) then
   
   call vacuum_equil(my_id,node_list,bnd_node_list,bnd_elm_list,psi_axis,psi_bnd, a_mat, rhs_vec)
   
+#ifdef USE_PASTIX
 elseif (itype .ne. 0) then        ! apply fixed boundary conditions (not for variable projection)
+#else
+else                              ! apply fixed axis (boundary) conditions (also for variable projection)
+  ! small zbig at axis diagonal matrix elements => pastix results
+  if(itype .eq. 0) then
+    if(ivar_out .eq. 710) then
+      zbig = 1.d-10
+    else
+      zbig = 0.d0
+    endif
+  endif
+#endif
 
   if (my_id == 0 ) then
 
@@ -484,9 +508,28 @@ if (my_id == 0) then
   elseif (use_pastix_eq) then
     solver%library = pastix
   endif
+
+#ifdef DEBUG_MAKE
+  if (ivar_out .eq. 710) then
+    call print_SP_MATRIX(a_mat, 'a_mat_710.txt')
+    call print_RHS(rhs_vec, 'rhs_710.txt')
+  else
+    call print_SP_MATRIX(a_mat, 'a_mat_eq.txt')
+    call print_RHS(rhs_vec, 'rhs_eq.txt')
+  endif
+#endif
+
   call solve_sparse_system(a_mat, rhs_vec, rhs_vec, solver)
   call solver%finalize()
-  
+
+#ifdef DEBUG_MAKE
+  if (ivar_out .eq. 710) then
+    call print_RHS(rhs_vec, 'res_710.txt')
+  else
+    call print_RHS(rhs_vec, 'res_eq.txt')
+  endif
+#endif
+
   call tr_debug_write("a_mat%ng",int(a_mat%ng))
   call tr_debug_write("a_mat%nnz",int(a_mat%nnz))
   
@@ -639,5 +682,153 @@ end if ! my_id == 0
   
 return
 end subroutine poisson
+
+subroutine print_SP_MATRIX(matrix, filename)
+  use data_structure
+  type(type_SP_MATRIX), intent(in) :: matrix
+  character(len=*), intent(in)     :: filename
+  integer                          :: i, j
+  integer                          :: unit
+
+  ! Open file for writing
+  open(newunit=unit, file=filename, status='replace', action='write', iostat=i)
+  if (i /= 0) then
+    print *, 'Error opening file: ', filename
+    return
+  end if
+
+  ! Print integer variables
+  write(unit, '(A,I0)') 'indexing: ', matrix%indexing
+  write(unit, '(A,I0)') 'ng: ', matrix%ng
+  write(unit, '(A,I0)') 'nr: ', matrix%nr
+  write(unit, '(A,I0)') 'nc: ', matrix%nc
+  write(unit, '(A,I0)') 'nnz: ', matrix%nnz
+  write(unit, '(A,I0)') 'my_ind_min: ', matrix%my_ind_min
+  write(unit, '(A,I0)') 'my_ind_max: ', matrix%my_ind_max
+  write(unit, '(A,I0)') 'my_ind_size: ', matrix%my_ind_size
+  write(unit, '(A,I0)') 'maxsize: ', matrix%maxsize
+  write(unit, '(A,I0)') 'i_tor_min: ', matrix%i_tor_min
+  write(unit, '(A,I0)') 'i_tor_max: ', matrix%i_tor_max
+  write(unit, '(A,I0)') 'block_size: ', matrix%block_size
+  write(unit, '(A,I0)') 'comm: ', matrix%comm
+  write(unit, '(A,I0)') 'ncpu: ', matrix%ncpu
+
+  ! Print logical variables
+  write(unit, '(A,L1)') 'scaled: ', matrix%scaled
+  write(unit, '(A,L1)') 'row_distributed: ', matrix%row_distributed
+  write(unit, '(A,L1)') 'col_distributed: ', matrix%col_distributed
+  write(unit, '(A,L1)') 'reduced: ', matrix%reduced
+
+  ! Print arrays
+  if (associated(matrix%irn)) then
+    write(unit, '(A)') 'irn: '
+    do i = 1, size(matrix%irn)
+      write(unit, '(I0,1X)', advance='no') matrix%irn(i)
+    end do
+    write(unit, *)
+  end if
+
+  if (associated(matrix%jcn)) then
+    write(unit, '(A)') 'jcn: '
+    do i = 1, size(matrix%jcn)
+      write(unit, '(I0,1X)', advance='no') matrix%jcn(i)
+    end do
+    write(unit, *)
+  end if
+
+  if (associated(matrix%val)) then
+    write(unit, '(A)') 'val: '
+    do i = 1, size(matrix%val)
+      write(unit, '(E16.10,1X)', advance='no') matrix%val(i)
+    end do
+    write(unit, *)
+  end if
+
+  if (associated(matrix%ijA_size)) then
+    write(unit, '(A)') 'ijA_size: '
+    do i = 1, size(matrix%ijA_size)
+      write(unit, '(I0,1X)', advance='no') matrix%ijA_size(i)
+    end do
+    write(unit, *)
+  end if
+
+  if (associated(matrix%ijA_index)) then
+    write(unit, '(A)') 'ijA_index: '
+    do i = 1, size(matrix%ijA_index, 1)
+      do j = 1, size(matrix%ijA_index, 2)
+        write(unit, '(I0,1X)', advance='no') matrix%ijA_index(i, j)
+      end do
+      write(unit, *)
+    end do
+  end if
+
+  if (associated(matrix%irn_jcn)) then
+    write(unit, '(A)') 'irn_jcn: '
+    do i = 1, size(matrix%irn_jcn, 1)
+      do j = 1, size(matrix%irn_jcn, 2)
+        write(unit, '(I0,1X)', advance='no') matrix%irn_jcn(i, j)
+      end do
+      write(unit, *)
+    end do
+  end if
+
+  if (associated(matrix%column_scaling)) then
+    write(unit, '(A)') 'column_scaling: '
+    do i = 1, size(matrix%column_scaling)
+      write(unit, '(E16.10,1X)', advance='no') matrix%column_scaling(i)
+    end do
+    write(unit, *)
+  end if
+
+  if (associated(matrix%index_min)) then
+    write(unit, '(A)') 'index_min: '
+    do i = 1, size(matrix%index_min)
+      write(unit, '(I0,1X)', advance='no') matrix%index_min(i)
+    end do
+    write(unit, *)
+  end if
+
+  if (associated(matrix%index_max)) then
+    write(unit, '(A)') 'index_max: '
+    do i = 1, size(matrix%index_max)
+      write(unit, '(I0,1X)', advance='no') matrix%index_max(i)
+    end do
+    write(unit, *)
+  end if
+
+  ! Close file
+  close(unit)
+end subroutine print_SP_MATRIX
+
+subroutine print_RHS(rhs, filename)
+  use data_structure
+  type(type_RHS), intent(in) :: rhs
+  character(len=*), intent(in) :: filename
+  integer :: i
+  integer :: unit
+  integer :: ios
+
+  ! Open file for writing
+  open(newunit=unit, file=filename, status='replace', action='write', iostat=ios)
+  if (ios /= 0) then
+    print *, 'Error opening file: ', filename
+    return
+  end if
+
+  ! Print integer variable
+  write(unit, '(A,I0)') 'n: ', rhs%n
+
+  ! Print array
+  if (associated(rhs%val)) then
+    write(unit, '(A)') 'val: '
+    do i = 1, size(rhs%val)
+      write(unit, '(E16.10,1X)', advance='no') rhs%val(i)
+    end do
+    write(unit, *)
+  end if
+
+  ! Close file
+  close(unit)
+end subroutine print_RHS
 
 end module mod_poiss

@@ -101,7 +101,7 @@ pure subroutine do_interp_PRZ_1(this, time, i_elm, i_v, n_v, s, t, phi, P, P_s, 
   end do
   i1 = this%ind(j-1)
   i2 = this%ind(j)
-#ifdef DEBUG
+#ifdef DEBUG_MAKE
   if (j .eq. this%len) i2 = 99999 ! intentional segfault for debugging
 #endif
 
@@ -174,7 +174,7 @@ pure subroutine do_interp_PRZ_2(this,time,i_elm,i_v,n_v,s,t,phi,       &
   enddo
   i1 = this%ind(j-1) !< earlier restart
   i2 = this%ind(j)   !< later restart
-#ifdef DEBUG
+#ifdef DEBUG_MAKE
     if(j.eq.this%len) i2=9999999 !< intentional segfault for debugging
 #endif
 

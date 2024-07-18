@@ -7,7 +7,7 @@ FC     = mpifort
 CC     = mpicc 
 CXX    = mpicxx 
 
-DEBUG = 1
+DEBUG_MAKE = 1
 
 FFLAGS          := $(FFLAGS) -DMURGE_INTERFACE_MAJOR_VERSION=1 -DMURGE_INTERFACE_MINOR_VERSION=0 -DFUNNELED -DWORLDWAR2 -fdefault-real-8 -fdefault-double-8
 FLAGS += -O3 -msse2 -march=native

@@ -404,7 +404,7 @@ program jorek2_connection_flux_aligned
                 p_line = p_line + delta_phi_step
           
                 dl2 = (Rmid_s**2 + Zmid_s**2)*delta_s**2 + (Rmid_t**2 + Zmid_t**2)*delta_t**2 + Rmid**2 * delta_phi_step**2
-#ifdef DEBUG
+#ifdef DEBUG_MAKE
                 if (dl2 .ne. dl2) then
                   write(*, *) 'NaN detected in dl2!', Rmid_s, Zmid_s, delta_s, Rmid_t, Zmid_t, delta_t, Rmid, delta_phi_step
                   stop
@@ -991,7 +991,7 @@ subroutine step(i_elm,s_in,t_in,p_in,delta_p,delta_s,delta_t,R,Z,R_s,R_t,Z_s,Z_t
   call interp_RZ(node_list,element_list,i_elm,s_in,t_in,R,R_s,R_t,Z,Z_s,Z_t)
   
   Zjac = (R_s * Z_t - R_t * Z_s)
-#ifdef DEBUG
+#ifdef DEBUG_MAKE
   if (Zjac .eq. 0.0) then
     write(*, *) 'Jacobian is zero!', i_elm, s_in, t_in, R, R_s, R_t, Z, Z_s, Z_t
     stop

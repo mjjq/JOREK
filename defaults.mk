@@ -1,4 +1,4 @@
-DEBUG ?= 0 # Build in release mode by default
+DEBUG_MAKE ?= 0 # Build in release mode by default
 
 # To use the default compiler flags, set $(COMPILER_FAMILY)
 # If you do not want to do this, be sure to set OUTPUT_MODULE_COMMAND to the correct
@@ -47,7 +47,7 @@ ifeq ($(COMPILER_FAMILY), gnu)
   FFLAGS += -Wsurprising -Wno-tabs
   FFLAGS += -ffree-line-length-none
   F77FLAGS += -fdefault-real-8 -fdefault-double-8
-  ifeq ($(DEBUG), 1)
+  ifeq ($(DEBUG_MAKE), 1)
     FLAGS  += -g -Og -ggdb -fno-lto
     FLAGS  += -Wunused-variable
     FFLAGS += -fcheck=all
@@ -57,7 +57,7 @@ ifeq ($(COMPILER_FAMILY), gnu)
     FFLAGS += -Wconversion
     F90FLAGS += -fimplicit-none
   endif
-  ifeq ($(DEBUG), 2)
+  ifeq ($(DEBUG_MAKE), 2)
     FFLAGS += -Wimplicit-interface -Wimplicit-procedure
   endif
 
@@ -88,13 +88,13 @@ ifeq ($(COMPILER_FAMILY), intel)
   FFLAGS += -fpp
   FFLAGS += -r8
   F77FLAGS += -warn nodeclarations
-  ifeq ($(DEBUG), 1)
+  ifeq ($(DEBUG_MAKE), 1)
     # Debug flags for ifort, see http://www.nas.nasa.gov/hecc/support/kb/recommended-intel-compiler-debugging-options_92.html
     FLAGS += -O0 -g -traceback
-    FLAGS += -ftrapuv
+    # FLAGS += -ftrapuv
     FLAGS += -debug all -debug-parameters
     FLAGS += -fstack-security-check
-    FLAGS += -fpe0
+    # FLAGS += -fpe0
     FFLAGS += -check all,noarg_temp_created
     FFLAGS += -check bounds
     FFLAGS += -check uninit
@@ -250,6 +250,10 @@ ifeq (1, $(USE_MUMPS))
   LIBS := $(LIBS) $(LIB_MUMPS) $(ORDLIB) $(SCALAP) $(BLACS) $(LIBLAPACK) $(LIBBLAS) $(PPPLIB) $(OPENMP_LIB) $(LIBFFTW)
   INCLUDES := $(INCLUDES) -I$(INC_MUMPS) $(INC_MUMPS_EXTRA)
   DEFINES := $(DEFINES) -DUSE_MUMPS
+endif
+
+ifeq (1, $(DEBUG_MAKE))
+  DEFINES := $(DEFINES) -DDEBUG_MAKE
 endif
 
 ifeq (1, $(USE_HDF5))

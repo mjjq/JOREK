@@ -112,7 +112,7 @@ duplicates:
 printsettings:
 	@echo "FC        = $(FC)"
 	@echo "CC        = $(CC)"
-	@echo "DEBUG     = $(DEBUG)"
+	@echo "DEBUG_MAKE= $(DEBUG_MAKE)"
 	@echo "FLAGS     = $(FLAGS)"
 	@echo "FFLAGS    = $(FFLAGS)"
 	@echo "F90FLAGS  = $(F90FLAGS)"

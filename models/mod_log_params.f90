@@ -286,7 +286,7 @@ write(*,'(1x,a)',advance='no') ' WITH_Vpar             : '
 #endif
 
 write(*,'(1x,a)',advance='no') ' DEBUG                 : '
-#ifdef DEBUG
+#ifdef DEBUG_MAKE
   write(*,*) 'on'
 #else
   write(*,*) 'off'

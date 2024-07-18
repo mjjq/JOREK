@@ -99,7 +99,7 @@ do newton_iter_number = 1, newton_iter_max
 
   if (fact .ge. 1.d0-1d-12) then
     st_new = st_new + st_step/fact
-#ifdef DEBUG
+#ifdef DEBUG_MAKE
     call try_interp(node_list,element_list,i_elm_new,st_new,x_tmp,R_s,R_t,Z_s,Z_t,inv_st_jac_det)
 #endif
     i_elm_tmp = i_elm_new
@@ -120,7 +120,7 @@ do newton_iter_number = 1, newton_iter_max
     end if
 
     call try_interp(node_list,element_list,i_elm_new,st_new,x_step,R_s,R_t,Z_s,Z_t,inv_st_jac_det)
-#ifdef DEBUG 
+#ifdef DEBUG_MAKE 
     if (norm2(x_step-x_tmp) .gt. 1d-8) then
       !write(*,*) "ERROR on element edge crossing", x_step, x_tmp, norm2(x_step-x_tmp), &
       !i_elm_new, i_elm_old, i_elm_tmp, "deleting particle"

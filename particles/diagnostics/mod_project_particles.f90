@@ -877,7 +877,7 @@ subroutine project_only(this, sim)
 
   call broadcast_nodes(this%my_id, this%node_list)
 
-#ifdef DEBUG
+#ifdef DEBUG_MAKE
     call cpu_time(t1)
     !$ oend = omp_get_wtime()
     !$ mmm = mpi_minmeanmax(t1-t0)
@@ -1047,7 +1047,7 @@ subroutine save_to_vtk(this, sim)
   end if
   call cpu_time(t1)
   !$ oend = omp_get_wtime()
-#ifdef DEBUG
+#ifdef DEBUG_MAKE
   if (sim%my_id .eq. 0 ) then
     write(*,"(A,2g12.5)") "writing cpu time", t1-t0
     !$ write(*,"(A,2g12.5)") "writing wall time", oend-ostart
@@ -1097,7 +1097,7 @@ subroutine save_to_h5(this, sim)
   end if
   call cpu_time(t1)
   !$ oend = omp_get_wtime()
-#ifdef DEBUG
+#ifdef DEBUG_MAKE
   if (my_id .eq. 0 ) then
     write(*,"(A,2g12.5)") "writing cpu time", t1-t0
     !$ write(*,"(A,2g12.5)") "writing wall time", oend-ostart

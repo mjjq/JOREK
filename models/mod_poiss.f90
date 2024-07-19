@@ -125,9 +125,7 @@ if (my_id == 0) then
 #endif
   
   n_border = 0
-#ifdef USE_PASTIX
   if (itype .ne. 0) then
-#endif
     do i=1,node_list%n_nodes
       if(treat_axis)then
         ! --- Only one fixed for fixed-axis (only valid for G1-cases at the moment!!!)
@@ -151,10 +149,22 @@ if (my_id == 0) then
       if (node_list%node(i)%boundary .eq.20) n_border = n_border + 2 * (n_order+1)/2 - 1
       if (node_list%node(i)%boundary .eq.21) n_border = n_border + 2 * (n_order+1)/2 - 1
     enddo
-#ifdef USE_PASTIX
+  endif
+
+#ifndef USE_PASTIX
+  if (itype .eq. 0 .and. ivar_out .eq. 710) then
+    do i=1,node_list%n_nodes
+      if(treat_axis)then
+        ! --- Only one fixed for fixed-axis (only valid for G1-cases at the moment!!!)
+        if (node_list%node(i)%axis_node    ) n_border = n_border+1
+      else
+        ! --- t-derivatives and cross derivatives are switched off on axis, so (n_order+1)/2 are not fixed
+        if (node_list%node(i)%axis_node    ) n_border = n_border + n_degrees - (n_order+1)/2
+      endif
+    enddo
   endif
 #endif
-  
+
   if ((.not. freeboundary_equil) .or. (itype .ne. -1)) then
     nz_AA = nz_AA + n_border
   elseif  (freeboundary_equil .and. (itype .eq. -1)) then
@@ -381,21 +391,50 @@ end if ! my_id == 0
 if (freeboundary_equil .and. (itype .eq. -1)) then
   
   call vacuum_equil(my_id,node_list,bnd_node_list,bnd_elm_list,psi_axis,psi_bnd, a_mat, rhs_vec)
+
+#ifndef USE_PASTIX
+elseif (itype .eq. 0 .and. ivar_out .eq. 710) then
+  if (my_id == 0 ) then
+
+    ! --- calculate node_indices
+    call calculate_node_indices(node_indices)
+
+    do i=1,node_list%n_nodes
   
-#ifdef USE_PASTIX
-elseif (itype .ne. 0) then        ! apply fixed boundary conditions (not for variable projection)
-#else
-else                              ! apply fixed axis (boundary) conditions (also for variable projection)
-  ! small zbig at axis diagonal matrix elements => pastix results
-  if(itype .eq. 0) then
-    if(ivar_out .eq. 710) then
-      zbig = 1.d-10
-    else
-      zbig = 0.d0
-    endif
+      ! --- On axis, we fix the t-derivatives, plus all cross-derivatives
+      if (node_list%node(i)%axis_node) then
+      
+        if (treat_axis) then ! For G1 elements only at the moment !
+          ! penalize 4th DoF to enforce C0 continuity at the grid center        
+          index_i = node_list%node(i)%index(4)  ! base index in the main matrix
+          a_mat%irn(ilarge+1) = index_i
+          a_mat%jcn(ilarge+1) = index_i
+          a_mat%val(ilarge+1)   = zbig
+          ilarge = ilarge + 1
+        endif
+
+        if(fix_axis_nodes)then
+          do k = 1,(n_order+1)/2
+            do l = 2,(n_order+1)/2 ! start t-index from 2 to keep only the pure s-derivatives
+              index = node_indices(k,l)
+              index_i = node_list%node(i)%index(index)  ! base index in the main matrix
+              a_mat%irn(ilarge+1) = index_i
+              a_mat%jcn(ilarge+1) = index_i
+              a_mat%val(ilarge+1)   = zbig
+              ilarge = ilarge + 1
+            enddo
+          enddo
+        endif
+
+      endif
+    enddo
+    nz_AA_old = nz_AA
+    nz_AA     = ilarge
+    a_mat%nnz = nz_AA
   endif
 #endif
 
+elseif (itype .ne. 0) then        ! apply fixed boundary conditions (not for variable projection)
   if (my_id == 0 ) then
 
     ! --- calculate node_indices

@@ -354,6 +354,13 @@ subroutine sanity_checks(my_id, n_cpu, mpi_required, mpi_provided)
     regrid_from_GS = .false.
   endif
 
+  if(regrid .and. (.not. restart)) then
+    write(*,*) 'WARNING: The restart option is disabled but regrid enabled.'
+    write(*,*) '  now set regrid/regrid_from_GS = .false.' 
+    regrid_from_GS = .false.
+    regrid = .false.
+  endif
+
 end subroutine sanity_checks
 
 

@@ -13,6 +13,13 @@ subroutine initialise_and_broadcast_parameters(my_id, filename)
   character(len=*),             intent(in) :: filename
   
   call initialise_parameters(my_id, filename)
+
+  if ((my_id .eq. 0) .and. (n_R > 0) .and. (n_Z > 0) .and. (n_radial > 0) .and. (.not. RZ_grid_inside_wall)) then
+    R_end = 2.d0 * R_geo - R_begin
+    Z_end = 2.d0 * Z_geo - Z_begin
+    write(*,*) 'For grid_bezier_square_polar: Set R_end = 2 * R_geo - R_begin = ', R_end
+    write(*,*) 'For grid_bezier_square_polar: Set Z_end = 2 * Z_geo - Z_begin = ', Z_end
+  endif
   
   ! --- Broadcast input parameters from MPI thread 0 to the others.
   call broadcast_phys(my_id)

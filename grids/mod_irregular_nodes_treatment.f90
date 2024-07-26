@@ -229,15 +229,17 @@ elseif(n_order == 5)then
 
   Pmat(7,2) = node%x(1,7,1)
   Pmat(7,3) = node%x(1,7,2)
-  Pmat(7,4) = node%x(1,4,2)
-  Pmat(7,5) = node%x(1,4,2)
-  Pmat(7,6) = node%x(1,4,2)
+  Pmat(7,4) = 2.d0 * (node%x(1,2,1)*node%x(1,4,1) + node%x(1,3,1)*node%x(1,4,1) + node%x(1,4,1)*node%x(1,2,1) )
+  Pmat(7,5) = 2.d0 * (node%x(1,2,2)*node%x(1,4,1) + node%x(1,3,2)*node%x(1,4,1) + node%x(1,4,2)*node%x(1,2,1)) &
+            + 2.d0 * (node%x(1,2,1)*node%x(1,4,2) + node%x(1,3,1)*node%x(1,4,2) + node%x(1,4,1)*node%x(1,2,2))
+  Pmat(7,6) = 2.d0 * (node%x(1,2,2)*node%x(1,4,2) + node%x(1,3,2)*node%x(1,4,2) + node%x(1,4,2)*node%x(1,2,2) )
 
   Pmat(8,2) = node%x(1,8,1)
   Pmat(8,3) = node%x(1,8,2)
-  Pmat(8,4) = node%x(1,4,2)
-  Pmat(8,5) = node%x(1,4,2)
-  Pmat(8,6) = node%x(1,4,2)
+  Pmat(8,4) = 2.d0 * (node%x(1,3,1)*node%x(1,4,1) + node%x(1,2,1)*node%x(1,4,1) + node%x(1,4,1)*node%x(1,3,1) )
+  Pmat(8,5) = 2.d0 * (node%x(1,3,2)*node%x(1,4,1) + node%x(1,2,2)*node%x(1,4,1) + node%x(1,4,2)*node%x(1,3,1)) &
+            + 2.d0 * (node%x(1,3,1)*node%x(1,4,2) + node%x(1,2,1)*node%x(1,4,2) + node%x(1,4,1)*node%x(1,3,2))
+  Pmat(8,6) = 2.d0 * (node%x(1,3,2)*node%x(1,4,2) + node%x(1,2,2)*node%x(1,4,2) + node%x(1,4,2)*node%x(1,3,2) )
 
   Pmat(9,4) = node%x(1,5,1) * node%x(1,6,1)
   Pmat(9,5) = node%x(1,5,1) * node%x(1,6,2) + node%x(1,6,1) * node%x(1,5,2)
@@ -245,7 +247,7 @@ elseif(n_order == 5)then
   
 else
 
-  write(*,*) 'Irregular point treatment is implemented for n_order 3 or 5 only'
+  write(*,*) 'Irregular point treatment is implemented for n_order 3 and 5 only'
   stop
 
 endif  

@@ -87,7 +87,7 @@ type(type_RHS) :: rhs_vec, sol_vec
 type(type_SP_SOLVER) :: solver
 real*8 :: tmp
 
-real*8 :: new_dofs(1:4), old_dofs(1:4)
+real*8 :: new_dofs(1:n_degrees), old_dofs(1:n_degrees)
 
 if (my_id == 0) then
   write(*,*) '**************************************'
@@ -294,7 +294,8 @@ if (my_id == 0) then
     endif
     
     ! Transform basis functions for irregular nodes. This will solve for new degrees of freedom at irregular nodes.
-    if( (treat_irregular_nodes) .and. (nodes(1)%irregular_node .or. nodes(2)%irregular_node .or. nodes(3)%irregular_node .or. nodes(4)%irregular_node) ) then
+    if( (treat_irregular_nodes) .and. ((nodes(1)%irregular_node .ne. 0) .or. (nodes(2)%irregular_node .ne. 0) .or. &
+         (nodes(3)%irregular_node  .ne. 0) .or. (nodes(4)%irregular_node .ne. 0) ) ) then
       call transform_basis_for_irregular_element_poisson(nodes, ELM, RHS, ivar_in, ivar_out, i_harm)
     endif
 
@@ -598,7 +599,7 @@ if (my_id == 0) then
         enddo
       endif
           
-      if(treat_irregular_nodes .and. node_list%node(i)%irregular_node)then
+      if(treat_irregular_nodes .and. (node_list%node(i)%irregular_node .ne. 0))then
         do k=1,n_degrees
           index = node_list%node(i)%index(k)
           new_dofs(k) = rhs_vec%val(index)
@@ -644,7 +645,7 @@ if (my_id == 0) then
           rhs_vec%val(index) = new_dofs(k)
         enddo
       endif
-      if(treat_irregular_nodes .and. node_list%node(i)%irregular_node)then
+      if(treat_irregular_nodes .and. (node_list%node(i)%irregular_node .ne. 0))then
         do k=1,n_degrees
           index = node_list%node(i)%index(k)
           rhs_vec%val(index) = new_dofs(k)

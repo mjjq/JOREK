@@ -99,6 +99,7 @@ subroutine export_binary_restart(node_list,element_list,filename)
      write(21) node_list%node(i)%ref_lambda
      write(21) node_list%node(i)%ref_mu
      write(21) node_list%node(i)%constrained
+     write(21) node_list%node(i)%irregular_node
   enddo
 
   write(21) element_list%element(1:element_list%n_elements)
@@ -311,6 +312,7 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
   real(RKIND), allocatable :: t_ref_lambda(:)
   real(RKIND), allocatable :: t_ref_mu(:)
   character,   allocatable :: t_constrained(:)     
+  integer,     allocatable :: t_irregular_node(:)
 
   ! element, element_list%n_elements
   integer,     allocatable :: t_vertex(:,:)                ! n_vertex_max
@@ -383,6 +385,7 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
   call tr_allocate(t_ref_lambda,1,node_list%n_nodes,"ref_lambade",CAT_UNKNOWN)
   call tr_allocate(t_ref_mu,1,node_list%n_nodes,"ref_mu",CAT_UNKNOWN)
   call tr_allocate(t_constrained,1,node_list%n_nodes,"constrained",CAT_UNKNOWN)
+  call tr_allocate(t_irregular_node,1,node_list%n_nodes,"irregular_node",CAT_UNKNOWN)
 
   ! element_list%n_elements
   call tr_allocate(t_vertex,1,element_list%n_elements,1,n_vertex_max,"vertex",CAT_UNKNOWN)
@@ -452,6 +455,7 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
      else
         t_constrained(i)  = 'F'
      end if
+     t_irregular_node(i)     = node_list%node(i)%irregular_node
   end do
 
   do i=1,element_list%n_elements
@@ -552,6 +556,8 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
        node_list%n_nodes,'ref_mu'//char(0))
   call HDF5_array1D_saving_char(file_id,t_constrained, &
        node_list%n_nodes,'constrained'//char(0))
+  call HDF5_array1D_saving_int(file_id,t_irregular_node, &
+       node_list%n_nodes,'irregular_node'//char(0))
 
   call HDF5_array2D_saving_int(file_id,t_vertex, &
        element_list%n_elements,n_vertex_max,'vertex'//char(0))
@@ -847,6 +853,7 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
   call tr_deallocate(t_ref_lambda,"ref_lambda",CAT_UNKNOWN)
   call tr_deallocate(t_ref_mu,"ref_mu",CAT_UNKNOWN)
   call tr_deallocate(t_constrained,"constrained",CAT_UNKNOWN)
+  call tr_deallocate(t_irregular_node,"irregular_node",CAT_UNKNOWN)
 
   call tr_deallocate(t_vertex,"vertex",CAT_UNKNOWN)
   call tr_deallocate(t_neighbours,"neighbours",CAT_UNKNOWN)

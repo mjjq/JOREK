@@ -93,7 +93,7 @@ do i = 1, n_nodes_max
   newnode_list%node(i)%ref_lambda  = 0.d0
   newnode_list%node(i)%ref_mu      = 0.d0
   newnode_list%node(i)%constrained = .false.
-  newnode_list%node(i)%irregular_node = .false.  
+  newnode_list%node(i)%irregular_node = 0
 end do
 
 

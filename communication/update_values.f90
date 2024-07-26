@@ -28,7 +28,7 @@ integer, dimension(2)    :: parent
 integer :: index_elm,l,i_tor,ivar
 integer :: i, j, k, in, index_node, index, i_tor_min
 integer :: id
-real*8  :: stored_dofs(1:n_degrees*n_var*n_tor), new_dofs(1:4), old_dofs(1:4)
+real*8  :: stored_dofs(1:n_degrees*n_var*n_tor), new_dofs(1:n_degrees), old_dofs(1:n_degrees)
 
 i_tor_min = 1
 if ( keep_n0_const ) i_tor_min = 2 ! Keep equilibrium unchanged during the run
@@ -64,7 +64,7 @@ do i = 1, node_list%n_nodes
   ! The respective RHS entries at irregular nodes (which are shared)
   ! are updated during the transformation. At the end of the loop,
   ! we recover RHS entries so that they same can be used for all the irregular nodes.
-    if(treat_irregular_nodes .and. node_list%node(i)%irregular_node)then
+    if(treat_irregular_nodes .and. (node_list%node(i)%irregular_node .ne. 0))then
       do k=1,n_var
         do in=1,n_tor
           do j=1,n_degrees
@@ -137,7 +137,7 @@ do i = 1, node_list%n_nodes
     endif
     
     ! recover RHS entries.
-    if(treat_irregular_nodes .and. node_list%node(i)%irregular_node)then
+    if(treat_irregular_nodes .and. (node_list%node(i)%irregular_node .ne. 0))then
       do k=1,n_var
         do in=i_tor_min,n_tor
           do j=1,n_degrees

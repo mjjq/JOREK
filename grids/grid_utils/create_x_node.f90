@@ -116,7 +116,7 @@ do i=1,4
     newnode_list%node(index)%x(1,3,:) = (/ alpha_min,1.d0 /) / sqrt(alpha_min**2 + 1.d0)
   endif
 
-  newnode_list%node(index)%irregular_node = .true.
+  newnode_list%node(index)%irregular_node = 1
   
 enddo
 newnode_list%n_nodes = index

@@ -40,16 +40,18 @@ write(*,*) '* creating square/polar grid     *'
 write(*,*) '**********************************'
 write(*,*) '  n_R, n_Z, n_radial : ',nR,nZ,n_radial
 
-node_list%node(:)%irregular_node = .false.
+node_list%node(:)%irregular_node = 0
 
 !-------------- start with a square central grid
 
 call grid_bezier_square(nR,nZ,R_begin,R_end,Z_begin,Z_end,.false.,node_list,element_list)
 
-node_list%node(1)%irregular_node = .true.
-node_list%node(nR)%irregular_node = .true.
-node_list%node(nR*(nZ-1)+1)%irregular_node = .true.
-node_list%node(nR*nZ)%irregular_node = .true.
+if(treat_irregular_nodes)then
+  node_list%node(1)%irregular_node = 1
+  node_list%node(nR)%irregular_node = 1
+  node_list%node(nR*(nZ-1)+1)%irregular_node = 1
+  node_list%node(nR*nZ)%irregular_node = 1
+endif
 
 write(*,'(A,i6)') ' number of nodes    : ',node_list%n_nodes
 write(*,'(A,i6)') ' number of elements : ',element_list%n_elements
@@ -80,17 +82,19 @@ n_node_start = node_list%n_nodes
 do i=1, nR
   node_list%node(n_node_start+i) = node_list%node(i)
 
-  x_tmp = node_list%node(n_node_start+i)%x
-  node_list%node(n_node_start+i)%x(1,2,:) = x_tmp(1,3,:)
-  node_list%node(n_node_start+i)%x(1,3,:) = x_tmp(1,2,:)
-
-  if(treat_irregular_nodes .and. node_list%node(n_node_start+i)%irregular_node) then
+  if(treat_irregular_nodes .and. (node_list%node(n_node_start+i)%irregular_node .ne. 0))then
+    node_list%node(n_node_start+i)%irregular_node = 2  
   else        
+    x_tmp = node_list%node(n_node_start+i)%x
+    node_list%node(n_node_start+i)%x(1,2,:) = x_tmp(1,3,:)
+    node_list%node(n_node_start+i)%x(1,3,:) = x_tmp(1,2,:)
+
     index_tmp = node_list%node(n_node_start+i)%index
     node_list%node(n_node_start+i)%index(2) = index_tmp(3)
     node_list%node(n_node_start+i)%index(3) = index_tmp(2)
   endif
 enddo
+
 node_list%n_nodes = node_list%n_nodes + nR
 n_node_start      = node_list%n_nodes
 
@@ -105,18 +109,19 @@ n_node_start      = node_list%n_nodes
 do i=1, nR
   node_list%node(n_node_start+i) = node_list%node(nR*nZ - i + 1)
 
-  x_tmp = node_list%node(n_node_start+i)%x
-  node_list%node(n_node_start+i)%x(1,2,:) = x_tmp(1,3,:)
-  node_list%node(n_node_start+i)%x(1,3,:) = x_tmp(1,2,:)
+  if(treat_irregular_nodes .and. (node_list%node(n_node_start+i)%irregular_node .ne. 0))then
+    node_list%node(n_node_start+i)%irregular_node = 2          
+  else  
+    x_tmp = node_list%node(n_node_start+i)%x
+    node_list%node(n_node_start+i)%x(1,2,:) = x_tmp(1,3,:)
+    node_list%node(n_node_start+i)%x(1,3,:) = x_tmp(1,2,:)
 
-  if(treat_irregular_nodes .and. node_list%node(n_node_start+i)%irregular_node) then  
-  else
     index_tmp = node_list%node(n_node_start+i)%index
     node_list%node(n_node_start+i)%index(2) = index_tmp(3)
     node_list%node(n_node_start+i)%index(3) = index_tmp(2)
   endif
-
 enddo
+
 node_list%n_nodes = node_list%n_nodes + nR
 n_node_start      = node_list%n_nodes
 
@@ -136,15 +141,26 @@ enddo
 
 if(treat_irregular_nodes)then
 
-  node_list%node(nR*nZ+1)%index(4)          = n_index_start + 1
-  node_list%node(nR*nZ+nR)%index(4)         = n_index_start + 2
-  node_list%node(nR*nZ+nR+1)%index(4)       = n_index_start + 3
-  node_list%node(nR*nZ+nR+nZ)%index(4)      = n_index_start + 4
-  node_list%node(nR*nZ+nR+nZ+1)%index(4)    = n_index_start + 5
-  node_list%node(nR*nZ+2*nR+nZ)%index(4)    = n_index_start + 6
-  node_list%node(nR*nZ+2*nR+nZ+1)%index(4)  = n_index_start + 7
-  node_list%node(nR*nZ+2*nR+2*nZ)%index(4)  = n_index_start + 8
-
+  if(n_order == 3)then      
+    node_list%node(nR*nZ+1)%index(4)          = n_index_start + 1
+    node_list%node(nR*nZ+nR)%index(4)         = n_index_start + 2
+    node_list%node(nR*nZ+nR+1)%index(4)       = n_index_start + 3
+    node_list%node(nR*nZ+nR+nZ)%index(4)      = n_index_start + 4
+    node_list%node(nR*nZ+nR+nZ+1)%index(4)    = n_index_start + 5
+    node_list%node(nR*nZ+2*nR+nZ)%index(4)    = n_index_start + 6
+    node_list%node(nR*nZ+2*nR+nZ+1)%index(4)  = n_index_start + 7
+    node_list%node(nR*nZ+2*nR+2*nZ)%index(4)  = n_index_start + 8
+  elseif(n_order == 5)then
+    node_list%node(nR*nZ+1)%index(7:9)        = (/n_index_start+1, n_index_start+2, n_index_start+3/)
+    node_list%node(nR*nZ+nR)%index(7:9)       = (/n_index_start+4, n_index_start+5, n_index_start+6/)
+    node_list%node(nR*nZ+nR+1)%index(7:9)     = (/n_index_start+7, n_index_start+8, n_index_start+9/)
+    node_list%node(nR*nZ+nR+nZ)%index(7:9)    = (/n_index_start+10, n_index_start+11, n_index_start+12/)
+    node_list%node(nR*nZ+nR+nZ+1)%index(7:9)  = (/n_index_start+13, n_index_start+14, n_index_start+15/)
+    node_list%node(nR*nZ+2*nR+nZ)%index(7:9)  = (/n_index_start+16, n_index_start+17, n_index_start+18/)
+    node_list%node(nR*nZ+2*nR+nZ+1)%index(7:9)= (/n_index_start+19, n_index_start+20, n_index_start+21/)
+    node_list%node(nR*nZ+2*nR+2*nZ)%index(7:9)= (/n_index_start+22, n_index_start+23, n_index_start+24/)
+  endif
+  
 else
 
   node_list%node(nR*nZ+1)%index(2)          = n_index_start + 1
@@ -160,7 +176,6 @@ endif
 !do i=nR*nZ+1,node_list%n_nodes
 !  write(*,*) i, node_list%node(i)%index
 !enddo
-
 
 element_list%n_elements = element_list%n_elements + 2*(nR-1)+2*(nZ-1)
 

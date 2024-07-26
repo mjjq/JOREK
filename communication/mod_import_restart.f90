@@ -41,7 +41,12 @@ subroutine import_restart(node_list, element_list, filename, format_rst, ierr, n
   ! --- Required initializations to update equilibrium state
   call initialise_basis
   call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.)
-  call update_equil_state(0,node_list, element_list, bnd_elm_list, xpoint, xcase)
+
+  if(jorek_model .ge. 010 .and. jorek_model .le. 020)then 
+  else
+    call update_equil_state(0,node_list, element_list, bnd_elm_list, xpoint, xcase)
+  endif
+
   write(*,*) " "
   write(*,*) " The equilibrium state has been updated "
   
@@ -182,6 +187,7 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
     read(21) node_list%node(i)%ref_lambda
     read(21) node_list%node(i)%ref_mu
     read(21) node_list%node(i)%constrained
+    read(21) node_list%node(i)%irregular_node
 
     node_list%node(i)%values = 0.d0
     node_list%node(i)%deltas = 0.d0
@@ -752,6 +758,7 @@ endif
    	read(21) node_list_perturbation%node(i)%ref_lambda
    	read(21) node_list_perturbation%node(i)%ref_mu
    	read(21) node_list_perturbation%node(i)%constrained
+        read(21) node_list_perturbation%node(i)%irregular_node
 
    	node_list_perturbation%node(i)%values = 0.d0
    	node_list_perturbation%node(i)%deltas = 0.d0
@@ -904,6 +911,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   real(RKIND), allocatable :: t_ref_lambda(:)
   real(RKIND), allocatable :: t_ref_mu(:)
   character,   allocatable :: t_constrained(:)     
+  integer,     allocatable :: t_irregular_node(:)
 
   integer,     allocatable :: t_vertex(:,:)
   integer,     allocatable :: t_neighbours(:,:)
@@ -1083,6 +1091,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   call tr_allocate(t_ref_lambda, 1,node_list%n_nodes,                "ref_lambda" ,CAT_UNKNOWN)
   call tr_allocate(t_ref_mu,     1,node_list%n_nodes,                "ref_mu",     CAT_UNKNOWN)
   call tr_allocate(t_constrained,1,node_list%n_nodes,                "constrained",CAT_UNKNOWN)
+  call tr_allocate(t_irregular_node,   1,node_list%n_nodes,          "irregular_node",  CAT_UNKNOWN)
 
   ! type_element, element_list%n_elements
   call tr_allocate(t_vertex,      1,element_list%n_elements,1,n_vertex_max,                 "vertex",CAT_UNKNOWN)
@@ -1119,6 +1128,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   call HDF5_array1D_reading     (file_id,t_ref_lambda,  'ref_lambda')
   call HDF5_array1D_reading     (file_id,t_ref_mu,      'ref_mu')
   call HDF5_array1D_reading_char(file_id,t_constrained, 'constrained')
+  call HDF5_array1D_reading_int (file_id,t_irregular_node,    'irregular_node')
 
   ! --- Detect new modes that need to be initialized to noise level
   if (allocated(new_mode))   call tr_deallocate(new_mode,"new_mode",CAT_UNKNOWN)
@@ -1200,6 +1210,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
     else
        node_list%node(i)%constrained = .false.
     end if
+    node_list%node(i)%irregular_node = t_irregular_node(i)
   end do
 
   call HDF5_array2D_reading_int(file_id,t_vertex,      'vertex')
@@ -2032,6 +2043,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   call tr_deallocate(t_ref_lambda,"ref_lambda",CAT_UNKNOWN)
   call tr_deallocate(t_ref_mu,"ref_mu",CAT_UNKNOWN)
   call tr_deallocate(t_constrained,"constrained",CAT_UNKNOWN)
+  call tr_deallocate(t_irregular_node,"irregular_node",CAT_UNKNOWN)
  
   call tr_deallocate(t_vertex,"t_vertex",CAT_UNKNOWN)
   call tr_deallocate(t_neighbours,"t_neighbours",CAT_UNKNOWN)

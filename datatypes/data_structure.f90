@@ -32,7 +32,7 @@ module data_structure
     integer    :: parent_elem                     !< which element do parent nodes belong to ? "refinement"
     real*8     :: ref_lambda, ref_mu              !< Local coordinates of node inside the parent element. "refinement"
     logical    :: constrained                     !< Constrained node or not..."refinement"
-    logical    :: irregular_node                  !< Flag nodes that are irregular
+    integer    :: irregular_node                  !< Flag nodes that are irregular
   end type type_node
 
   type type_node_list                             !< type definition of a list of nodes

@@ -165,7 +165,7 @@ program JOREK2
   integer :: holder
   integer :: getpid
 
-  logical :: input_treat_axis
+  logical :: input_treat_axis, input_treat_irregular_nodes
   
   type(type_MHD_SIM)          :: mhd_sim
   type(type_SP_MATRIX)        :: a_mat
@@ -275,6 +275,7 @@ mpi_required = 0
   !***********************************************************************
   
   input_treat_axis = treat_axis   ! store the value from the input file
+  input_treat_irregular_nodes = treat_irregular_nodes
 
   if ( restart .and. (my_id == 0) ) then
     call import_restart(node_list, element_list, 'jorek_restart', rst_format, ierr)
@@ -300,6 +301,13 @@ mpi_required = 0
       write(*,*) 'Earlier treat_axis was set to = ', treat_axis
       write(*,*) 'STOP' 
       stop      
+    endif
+    if (input_treat_irregular_nodes .neqv. treat_irregular_nodes) then
+      write(*,*) 'WARNING: Irregular nodes treatments set via input file is not the same as that in the restart file.'
+      write(*,*) 'You are trying to restart the simulation with treat_irregular_nodes = ', input_treat_irregular_nodes
+      write(*,*) 'Earlier treat_irregular_nodes was set to = ', treat_irregular_nodes
+      write(*,*) 'STOP'
+      stop
     endif
 
     ! --- Write live data for previous time-steps

@@ -9,7 +9,7 @@ subroutine Poisson(my_id,itype,node_list,element_list,bnd_node_list,bnd_elm_list
 use tr_module 
 use data_structure
 use phys_module, only: amix, amix_freeb, delta_psi_GS, newton_GS_freebnd, newton_GS_fixbnd, &
-                       n_limiter, treat_axis, fix_axis_nodes, &
+                       n_limiter, treat_axis, fix_axis_nodes, treat_irregular_nodes, &
                        use_mumps_eq, use_pastix_eq, use_strumpack_eq
 use equil_info,  only: ES
 use vacuum_equilibrium, only: vacuum_equil
@@ -20,6 +20,7 @@ use mod_integer_types
 use mod_node_indices
 
 use mod_axis_treatment
+use mod_irregular_nodes_treatment
 #ifdef USE_PASTIX6
 use mod_pastix
 #endif
@@ -292,6 +293,11 @@ if (my_id == 0) then
       call transform_basis_for_axis_element_poisson(nodes, ELM, RHS, ivar_in, ivar_out, i_harm)
     endif
     
+    ! Transform basis functions for the axis nodes. This will solve for new degrees of freedom at the axis.
+    if( (treat_irregular_nodes) .and. (nodes(1)%irregular_node .or. nodes(2)%irregular_node .or. nodes(3)%irregular_node .or. nodes(4)%irregular_node) ) then
+      call transform_basis_for_irregular_element_poisson(nodes, ELM, RHS, ivar_in, ivar_out, i_harm)
+    endif
+
     if (refinement) then ! Processing  "constrained nodes"
       call Chgmt_node(ife,element,nodes,element_father,nodes_father,ELM,RHS,node_out) 
     else
@@ -591,7 +597,19 @@ if (my_id == 0) then
           rhs_vec%val(index) = old_dofs(k)
         enddo
       endif
-            
+          
+      if(treat_irregular_nodes .and. node_list%node(i)%irregular_node)then
+        do k=1,n_degrees
+          index = node_list%node(i)%index(k)
+          new_dofs(k) = rhs_vec%val(index)
+        enddo
+        call new_to_old_dofs_on_irregular_node(node_list, i, new_dofs, old_dofs)
+        do k=1,n_degrees
+          index = node_list%node(i)%index(k)
+          rhs_vec%val(index) = old_dofs(k)
+        enddo
+      endif
+  
       do k=1,n_degrees
   
         index = node_list%node(i)%index(k)
@@ -626,7 +644,13 @@ if (my_id == 0) then
           rhs_vec%val(index) = new_dofs(k)
         enddo
       endif
-      
+      if(treat_irregular_nodes .and. node_list%node(i)%irregular_node)then
+        do k=1,n_degrees
+          index = node_list%node(i)%index(k)
+          rhs_vec%val(index) = new_dofs(k)
+        enddo
+      endif
+
     endif      ! refinement, constrained
   enddo        ! nodes
   

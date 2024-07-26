@@ -293,7 +293,7 @@ if (my_id == 0) then
       call transform_basis_for_axis_element_poisson(nodes, ELM, RHS, ivar_in, ivar_out, i_harm)
     endif
     
-    ! Transform basis functions for the axis nodes. This will solve for new degrees of freedom at the axis.
+    ! Transform basis functions for irregular nodes. This will solve for new degrees of freedom at irregular nodes.
     if( (treat_irregular_nodes) .and. (nodes(1)%irregular_node .or. nodes(2)%irregular_node .or. nodes(3)%irregular_node .or. nodes(4)%irregular_node) ) then
       call transform_basis_for_irregular_element_poisson(nodes, ELM, RHS, ivar_in, ivar_out, i_harm)
     endif

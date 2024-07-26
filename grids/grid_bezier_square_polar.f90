@@ -84,7 +84,8 @@ do i=1, nR
   node_list%node(n_node_start+i)%x(1,2,:) = x_tmp(1,3,:)
   node_list%node(n_node_start+i)%x(1,3,:) = x_tmp(1,2,:)
 
-  if(.not. treat_irregular_nodes)then
+  if(treat_irregular_nodes .and. node_list%node(n_node_start+i)%irregular_node) then
+  else        
     index_tmp = node_list%node(n_node_start+i)%index
     node_list%node(n_node_start+i)%index(2) = index_tmp(3)
     node_list%node(n_node_start+i)%index(3) = index_tmp(2)
@@ -108,7 +109,8 @@ do i=1, nR
   node_list%node(n_node_start+i)%x(1,2,:) = x_tmp(1,3,:)
   node_list%node(n_node_start+i)%x(1,3,:) = x_tmp(1,2,:)
 
-  if(.not. treat_irregular_nodes)then  
+  if(treat_irregular_nodes .and. node_list%node(n_node_start+i)%irregular_node) then  
+  else
     index_tmp = node_list%node(n_node_start+i)%index
     node_list%node(n_node_start+i)%index(2) = index_tmp(3)
     node_list%node(n_node_start+i)%index(3) = index_tmp(2)

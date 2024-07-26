@@ -302,6 +302,7 @@ subroutine construct_matrix(mhd_sim, local_elms, n_local_elms, a_mat, rhs_vec, h
   use mod_locate_irn_jcn
   use mod_integer_types
   use mod_axis_treatment
+  use mod_irregular_nodes_treatment
   use mod_simulation_data, only: type_MHD_SIM
   use global_distributed_matrix, only: global_matrix_structure_vacuum
   
@@ -462,7 +463,7 @@ subroutine construct_matrix(mhd_sim, local_elms, n_local_elms, a_mat, rhs_vec, h
   !$omp           i_father,element_father, nodes_father, inode_father, node_out, ivertex, iorder,          &
   !$omp           ivar, itor, jvertex, jorder, jvar, jtor, random_element, n_var_reduced, v1, v2, im,      &
   !$omp           index_ij_model400_e, index_kl_model400_e,  tmp_rhs, tmp_elm, tmp_elm_v2_8,    &
-  !$omp           i_v, i_harm                                                                              )
+  !$omp           i_v, i_harm, treat_irregular_nodes                                                       )
 
 ! --- omp id
 #ifdef _OPENMP
@@ -474,7 +475,7 @@ subroutine construct_matrix(mhd_sim, local_elms, n_local_elms, a_mat, rhs_vec, h
 #endif
  
   n_tor_local = a_mat%i_tor_max - a_mat%i_tor_min + 1
-  if(treat_axis) then
+  if(treat_axis .or. treat_irregular_nodes) then
      do i = 1, n_var
        i_v(i) = i
      enddo
@@ -521,6 +522,10 @@ subroutine construct_matrix(mhd_sim, local_elms, n_local_elms, a_mat, rhs_vec, h
     ! Transform basis functions for the axis nodes. mhd_sim% will solve for new degrees of freedom at the axis.
     if(treat_axis .and. (nodes(1)%axis_node .or. nodes(2)%axis_node .or. nodes(3)%axis_node .or. nodes(4)%axis_node) ) then
       call transform_basis_for_axis_element(nodes, thread_struct(omp_tid)%ELM, thread_struct(omp_tid)%RHS, i_v, n_var, i_harm, n_tor_local)
+    endif
+    ! Transform basis functions for the irregular nodes. mhd_sim% will solve for new degrees of freedom at irregular nodes.
+    if(treat_irregular_nodes .and. (nodes(1)%irregular_node .or. nodes(2)%irregular_node .or. nodes(3)%irregular_node .or. nodes(4)%irregular_node) ) then
+      call transform_basis_for_irregular_element(nodes, thread_struct(omp_tid)%ELM, thread_struct(omp_tid)%RHS, i_v, n_var, i_harm, n_tor_local)
     endif
 
 #ifdef PRINT_ELM_RHS

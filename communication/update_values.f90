@@ -4,10 +4,11 @@ subroutine update_values(element_list, node_list, rhs_vec)
 !-----------------------------------------------------------------------
 
 use data_structure, only: type_element_list, type_node_list, type_RHS
-use phys_module, only: keep_n0_const, treat_axis
+use phys_module, only: keep_n0_const, treat_axis, treat_irregular_nodes
 use mod_parameters, only: n_tor, n_var, n_degrees, n_vertex_max
 use mod_basisfunctions
 use mod_axis_treatment
+use mod_irregular_nodes_treatment
 
 implicit none
 
@@ -59,6 +60,30 @@ do i = 1, node_list%n_nodes
       enddo
     endif       
 
+  ! We need to transform the new dof to old ones on irregular nodes.
+  ! The respective RHS entries at irregular nodes (which are shared)
+  ! are updated during the transformation. At the end of the loop,
+  ! we recover RHS entries so that they same can be used for all the irregular nodes.
+    if(treat_irregular_nodes .and. node_list%node(i)%irregular_node)then
+      do k=1,n_var
+        do in=1,n_tor
+          do j=1,n_degrees
+             index_node = node_list%node(i)%index(j)
+             index = n_tor*n_var * (index_node - 1) + n_tor*(k-1) + in
+             new_dofs(j) = rhs_vec%val(index)
+             id = n_degrees*(n_tor)*(k-1) + n_degrees*(in-1) + j
+             stored_dofs(id) = rhs_vec%val(index)
+          enddo
+          call new_to_old_dofs_on_irregular_node(node_list, i, new_dofs, old_dofs)
+          do j=1,n_degrees
+             index_node = node_list%node(i)%index(j)
+             index = n_tor*n_var * (index_node - 1) + n_tor*(k-1) + in
+             rhs_vec%val(index) = old_dofs(j)
+          enddo
+        enddo
+      enddo
+    endif
+    
     do j=1,n_degrees
   
       index_node = node_list%node(i)%index(j)
@@ -111,6 +136,20 @@ do i = 1, node_list%n_nodes
       enddo
     endif
     
+    ! recover RHS entries.
+    if(treat_irregular_nodes .and. node_list%node(i)%irregular_node)then
+      do k=1,n_var
+        do in=i_tor_min,n_tor
+          do j=1,n_degrees
+            index_node = node_list%node(i)%index(j)
+            index = n_tor*n_var * (index_node - 1) + n_tor*(k-1) + in
+            id = n_degrees*(n_tor)*(k-1) + n_degrees*(in-1) + j
+            rhs_vec%val(index) = stored_dofs(id)
+          enddo
+        enddo
+      enddo
+    endif
+
   endif
 !   write(*,'(i5,20e12.4)') i,node_list%node(i)%values(1,:,2),node_list%node(i)%values(2,:,2)
 

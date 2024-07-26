@@ -849,7 +849,10 @@ subroutine preset_parameters
 !===================== Polar axis treatment flag========
 
   treat_axis = .false.
-  
+
+!===================== Irregular point treatment flag========  
+  treat_irregular_nodes = .false.
+
 !===================== not used?
   Q_bar = 0.d0
   Sigma = 0.d0

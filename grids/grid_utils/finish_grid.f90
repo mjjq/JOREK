@@ -7,7 +7,7 @@ use constants
 use tr_module 
 use data_structure
 use grid_xpoint_data
-use phys_module, only: xcase, RZ_grid_inside_wall, force_central_node, fix_axis_nodes, R_geo, Z_geo, xpoint, n_pol, treat_axis
+use phys_module, only: xcase, RZ_grid_inside_wall, force_central_node, fix_axis_nodes, R_geo, Z_geo, xpoint, n_pol, treat_axis, treat_irregular_nodes
 use mod_eqdsk_tools
 use mod_interp, only: interp_RZ, interp
 use mod_element_rtree
@@ -481,57 +481,71 @@ do i=1,node_list%n_nodes
       endif
     endif
     
-    ! Remove all but one node at first Xpoint
     if (include_xpoint) then
-      call get_node_coords_from_index(node_indices, k, ii, jj)
-      ! Remove all but one node at first Xpoint
-      if (i .eq. 2) then
-        if (ii .eq. 1) then ! t-derivatives
-          node_list%node(i)%index(k) = node_list%node(1)%index(k)
+      if(treat_irregular_nodes)then
+        if ((i .eq. 2) .or. (i .eq. 3) .or. (i .eq. 4) .and. (k .lt. n_order+1)) then
+          newnode_list%node(i)%index(k) = newnode_list%node(1)%index(k)
           index = index - 1
         endif
-      endif
-      if (i .eq. 3) then
-        if (jj .eq. 1) then ! s-derivatives
-          node_list%node(i)%index(k) = node_list%node(2)%index(k)
-          index = index - 1
-        endif
-      endif
-      if (i .eq. 4) then
-        if (jj .eq. 1) then ! s-derivatives
-          node_list%node(i)%index(k) = node_list%node(1)%index(k)
-          index = index - 1
-        endif
-        if ( (ii .eq. 1) .and. (k .gt. 1) ) then ! t-derivatives (k=1 already done just above)
-          node_list%node(i)%index(k) = node_list%node(3)%index(k)
-          index = index - 1
-        endif
-      endif
-     
-      ! Remove all but one node at second Xpoint
-      if (xcase .eq. DOUBLE_NULL) then
-        if (i .eq. 6) then
+      else
+        call get_node_coords_from_index(node_indices, k, ii, jj)
+        ! Remove all but one node at first Xpoint
+        if (i .eq. 2) then
           if (ii .eq. 1) then ! t-derivatives
-            node_list%node(i)%index(k) = node_list%node(5)%index(k)
+            node_list%node(i)%index(k) = node_list%node(1)%index(k)
             index = index - 1
           endif
         endif
-        if (i .eq. 7) then
+        if (i .eq. 3) then
           if (jj .eq. 1) then ! s-derivatives
-            node_list%node(i)%index(k) = node_list%node(6)%index(k)
+            node_list%node(i)%index(k) = node_list%node(2)%index(k)
             index = index - 1
           endif
         endif
-        if (i .eq. 8) then
+        if (i .eq. 4) then
           if (jj .eq. 1) then ! s-derivatives
-            node_list%node(i)%index(k) = node_list%node(5)%index(k)
+            node_list%node(i)%index(k) = node_list%node(1)%index(k)
             index = index - 1
           endif
           if ( (ii .eq. 1) .and. (k .gt. 1) ) then ! t-derivatives (k=1 already done just above)
-            node_list%node(i)%index(k) = node_list%node(7)%index(k)
+            node_list%node(i)%index(k) = node_list%node(3)%index(k)
             index = index - 1
           endif
         endif
+      endif
+
+      ! Remove all but one node at second Xpoint
+
+      if (xcase .eq. DOUBLE_NULL) then
+        if(treat_irregular_nodes)then
+          if ((i .eq. 6) .or. (i .eq. 7) .or. (i .eq. 8) .and. (k .lt. n_order+1)) then
+            newnode_list%node(i)%index(k) = newnode_list%node(5)%index(k)
+            index = index - 1
+          endif
+        else
+          if (i .eq. 6) then
+            if (ii .eq. 1) then ! t-derivatives
+              node_list%node(i)%index(k) = node_list%node(5)%index(k)
+              index = index - 1
+            endif
+          endif
+          if (i .eq. 7) then
+            if (jj .eq. 1) then ! s-derivatives
+              node_list%node(i)%index(k) = node_list%node(6)%index(k)
+              index = index - 1
+            endif
+          endif
+          if (i .eq. 8) then
+            if (jj .eq. 1) then ! s-derivatives
+              node_list%node(i)%index(k) = node_list%node(5)%index(k)
+              index = index - 1
+            endif
+            if ( (ii .eq. 1) .and. (k .gt. 1) ) then ! t-derivatives (k=1 already done just above)
+              node_list%node(i)%index(k) = node_list%node(7)%index(k)
+              index = index - 1
+            endif
+          endif
+        endif  
       endif
       
     endif

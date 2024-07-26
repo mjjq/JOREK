@@ -9,7 +9,7 @@ use tr_module
 use data_structure
 use grid_xpoint_data
 use mod_interp
-use phys_module, only: write_ps, force_central_node, SDN_threshold, fix_axis_nodes, treat_axis
+use phys_module, only: write_ps, force_central_node, SDN_threshold, fix_axis_nodes, treat_axis, treat_irregular_nodes
 use mod_grid_conversions
 use mod_poiss
 use mod_node_indices
@@ -93,6 +93,7 @@ do i = 1, n_nodes_max
   newnode_list%node(i)%ref_lambda  = 0.d0
   newnode_list%node(i)%ref_mu      = 0.d0
   newnode_list%node(i)%constrained = .false.
+  newnode_list%node(i)%irregular_node = .false.  
 end do
 
 
@@ -1338,56 +1339,69 @@ do i=1,newnode_list%n_nodes
     endif
     
     ! Remove all but one node at first Xpoint
-    call get_node_coords_from_index(node_indices, k, ii, jj)
-    if (i .eq. 2) then
-      if (ii .eq. 1) then ! t-derivatives
-        node_list%node(i)%index(k) = node_list%node(1)%index(k)
+    if(treat_irregular_nodes)then
+      if ((i .eq. 2) .or. (i .eq. 3) .or. (i .eq. 4) .and. (k .lt. n_order+1)) then
+        newnode_list%node(i)%index(k) = newnode_list%node(1)%index(k)
         index = index - 1
       endif
-    endif
-    if (i .eq. 3) then
-      if (jj .eq. 1) then ! s-derivatives
-        node_list%node(i)%index(k) = node_list%node(2)%index(k)
-        index = index - 1
-      endif
-    endif
-    if (i .eq. 4) then
-      if (jj .eq. 1) then ! s-derivatives
-        node_list%node(i)%index(k) = node_list%node(1)%index(k)
-        index = index - 1
-      endif
-      if ( (ii .eq. 1) .and. (k .gt. 1) ) then ! t-derivatives (k=1 already done just above)
-        node_list%node(i)%index(k) = node_list%node(3)%index(k)
-        index = index - 1
-      endif
-    endif
-
-    ! Remove all but one node at second Xpoint
-    if (xcase .eq. DOUBLE_NULL) then
-      if (i .eq. 6) then
+    else
+      call get_node_coords_from_index(node_indices, k, ii, jj)
+      if (i .eq. 2) then
         if (ii .eq. 1) then ! t-derivatives
-          node_list%node(i)%index(k) = node_list%node(5)%index(k)
+          node_list%node(i)%index(k) = node_list%node(1)%index(k)
           index = index - 1
         endif
       endif
-      if (i .eq. 7) then
+      if (i .eq. 3) then
         if (jj .eq. 1) then ! s-derivatives
-          node_list%node(i)%index(k) = node_list%node(6)%index(k)
+          node_list%node(i)%index(k) = node_list%node(2)%index(k)
           index = index - 1
         endif
       endif
-      if (i .eq. 8) then
+      if (i .eq. 4) then
         if (jj .eq. 1) then ! s-derivatives
-          node_list%node(i)%index(k) = node_list%node(5)%index(k)
+          node_list%node(i)%index(k) = node_list%node(1)%index(k)
           index = index - 1
         endif
         if ( (ii .eq. 1) .and. (k .gt. 1) ) then ! t-derivatives (k=1 already done just above)
-          node_list%node(i)%index(k) = node_list%node(7)%index(k)
+          node_list%node(i)%index(k) = node_list%node(3)%index(k)
           index = index - 1
         endif
       endif
     endif
-  
+    ! Remove all but one node at second Xpoint
+    if(treat_irregular_nodes)then
+      if ((i .eq. 6) .or. (i .eq. 7) .or. (i .eq. 8) .and. (k .lt. n_order+1)) then
+        newnode_list%node(i)%index(k) = newnode_list%node(5)%index(k)
+        index = index - 1
+      endif
+    else    
+      if (xcase .eq. DOUBLE_NULL) then
+        if (i .eq. 6) then
+          if (ii .eq. 1) then ! t-derivatives
+            node_list%node(i)%index(k) = node_list%node(5)%index(k)
+            index = index - 1
+          endif
+        endif
+        if (i .eq. 7) then
+          if (jj .eq. 1) then ! s-derivatives
+            node_list%node(i)%index(k) = node_list%node(6)%index(k)
+            index = index - 1
+          endif
+        endif
+        if (i .eq. 8) then
+          if (jj .eq. 1) then ! s-derivatives
+            node_list%node(i)%index(k) = node_list%node(5)%index(k)
+            index = index - 1
+          endif
+          if ( (ii .eq. 1) .and. (k .gt. 1) ) then ! t-derivatives (k=1 already done just above)
+            node_list%node(i)%index(k) = node_list%node(7)%index(k)
+            index = index - 1
+          endif
+        endif
+      endif
+    endif
+
   enddo  
   node_list%node(i)%constrained = .false.
 enddo

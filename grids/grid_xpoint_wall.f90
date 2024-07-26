@@ -11,7 +11,7 @@ use data_structure
 use tr_module 
 use gauss
 use basis_at_gaussian
-use phys_module, only:   n_limiter, R_limiter, Z_limiter, write_ps, fix_axis_nodes, force_central_node, treat_axis
+use phys_module, only:   n_limiter, R_limiter, Z_limiter, write_ps, fix_axis_nodes, force_central_node, treat_axis, treat_irregular_nodes
 use mod_neighbours, only: update_neighbours
 use mod_interp
 use mod_grid_conversions
@@ -878,6 +878,7 @@ do i = 1, n_nodes_max
   newnode_list%node(i)%ref_lambda  = 0.d0
   newnode_list%node(i)%ref_mu      = 0.d0
   newnode_list%node(i)%constrained = .false.
+  newnode_list%node(i)%irregular_node = .false.  
 end do
 newelement_list%n_elements = 0
 do i = 1, n_elements_max
@@ -971,24 +972,28 @@ newnode_list%node(index_xpoint)%x(1,2,:) = (/ cos(angle_L9),sin(angle_L9) /)
 newnode_list%node(index_xpoint)%x(1,3,:) = (/ alpha_max,1.d0 /) / sqrt(alpha_max**2 + 1.d0)
 newnode_list%node(index_xpoint)%x(1,4,:) = 0.d0
 newnode_list%node(index_xpoint)%boundary = 0
+newnode_list%node(index_xpoint)%irregular_node = .true.
 
 newnode_list%node(index_xpoint+1)%x(1,1,:) = (/ R_xpoint(1), Z_xpoint(1) /)
 newnode_list%node(index_xpoint+1)%x(1,2,:) = (/ R_xpoint(1)-R_axis,Z_xpoint(1)-Z_axis/)/sqrt((R_xpoint(1)-R_axis)**2+(Z_xpoint(1)-Z_axis)**2)
 newnode_list%node(index_xpoint+1)%x(1,3,:) = (/ alpha_max,1.d0 /) / sqrt(alpha_max**2 + 1.d0)
 newnode_list%node(index_xpoint+1)%x(1,4,:) = 0.d0
 newnode_list%node(index_xpoint+1)%boundary = 0
+newnode_list%node(index_xpoint+1)%irregular_node = .true.
 
 newnode_list%node(index_xpoint+2)%x(1,1,:) = (/ R_xpoint(1), Z_xpoint(1) /)
 newnode_list%node(index_xpoint+2)%x(1,2,:) = (/ R_xpoint(1)-R_axis,Z_xpoint(1)-Z_axis/)/sqrt((R_xpoint(1)-R_axis)**2+(Z_xpoint(1)-Z_axis)**2)
 newnode_list%node(index_xpoint+2)%x(1,3,:) = (/ alpha_min,1.d0 /) / sqrt(alpha_min**2 + 1.d0)
 newnode_list%node(index_xpoint+2)%x(1,4,:) = 0.d0
 newnode_list%node(index_xpoint+2)%boundary = 0
+newnode_list%node(index_xpoint+2)%irregular_node = .true.
 
 newnode_list%node(index_xpoint+3)%x(1,1,:) = (/ R_xpoint(1), Z_xpoint(1) /)
 newnode_list%node(index_xpoint+3)%x(1,2,:) = (/ -cos(angle_L8),-sin(angle_L8) /)
 newnode_list%node(index_xpoint+3)%x(1,3,:) = (/ alpha_min,1.d0 /) / sqrt(alpha_min**2 + 1.d0)
 newnode_list%node(index_xpoint+3)%x(1,4,:) = 0.d0
 newnode_list%node(index_xpoint+3)%boundary = 0
+newnode_list%node(index_xpoint+3)%irregular_node = .true.
 
 newnode_list%n_nodes = newnode_list%n_nodes + n_xpoint
 
@@ -1795,27 +1800,34 @@ do i=1,newnode_list%n_nodes
       index = index - 1
     endif    
     ! --- Remove Xpoint nodes
-    call get_node_coords_from_index(node_indices, k, ii, jj)
-    if (i .eq. index_xpoint+1) then
-      if (ii .eq. 1) then ! t-derivatives
+    if(treat_irregular_nodes)then
+      if ((i .eq. index_xpoint+1) .or. (i .eq. index_xpoint+2) .or. (i .eq. index_xpoint+3) .and. (k .lt. n_order+1)) then
         newnode_list%node(i)%index(k) = newnode_list%node(index_xpoint)%index(k)
         index = index - 1
       endif
-    endif
-    if (i .eq. index_xpoint+2) then
-      if (jj .eq. 1) then ! s-derivatives
-        newnode_list%node(i)%index(k) = newnode_list%node(index_xpoint+1)%index(k)
-        index = index - 1
+    else
+      call get_node_coords_from_index(node_indices, k, ii, jj)
+      if (i .eq. index_xpoint+1) then
+        if (ii .eq. 1) then ! t-derivatives
+          newnode_list%node(i)%index(k) = newnode_list%node(index_xpoint)%index(k)
+          index = index - 1
+        endif
       endif
-    endif
-    if (i .eq. index_xpoint+3) then
-      if (jj .eq. 1) then ! s-derivatives
-        newnode_list%node(i)%index(k) = newnode_list%node(index_xpoint)%index(k)
-        index = index - 1
+      if (i .eq. index_xpoint+2) then
+        if (jj .eq. 1) then ! s-derivatives
+          newnode_list%node(i)%index(k) = newnode_list%node(index_xpoint+1)%index(k)
+          index = index - 1
+        endif
       endif
-      if ( (ii .eq. 1) .and. (k .gt. 1) ) then ! t-derivatives (k=1 already done just above)
-        newnode_list%node(i)%index(k) = newnode_list%node(index_xpoint+2)%index(k)
-        index = index - 1
+      if (i .eq. index_xpoint+3) then
+        if (jj .eq. 1) then ! s-derivatives
+          newnode_list%node(i)%index(k) = newnode_list%node(index_xpoint)%index(k)
+          index = index - 1
+        endif
+        if ( (ii .eq. 1) .and. (k .gt. 1) ) then ! t-derivatives (k=1 already done just above)
+          newnode_list%node(i)%index(k) = newnode_list%node(index_xpoint+2)%index(k)
+          index = index - 1
+        endif
       endif
     endif
 

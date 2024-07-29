@@ -9,7 +9,7 @@ use tr_module
 use data_structure
 use grid_xpoint_data
 use mod_interp
-use phys_module, only: write_ps, force_central_node, SDN_threshold, fix_axis_nodes, treat_axis, treat_irregular_nodes
+use phys_module, only: write_ps, force_central_node, SDN_threshold, fix_axis_nodes, treat_axis, treat_irregular_nodes, fix_irregular_nodes
 use mod_grid_conversions
 use mod_poiss
 use mod_node_indices
@@ -1419,7 +1419,20 @@ if (fix_axis_nodes) then
   if (n_order .ge. 5) call set_high_order_sizes_on_axis(node_list,element_list)
 endif
 
-
+if (fix_irregular_nodes) then
+  do k=1, element_list%n_elements
+    do iv=1,4
+      j = element_list%element(k)%vertex(iv)
+      if (node_list%node(j)%irregular_node) then
+        element_list%element(k)%size(iv,4) = 0.d0
+      endif
+    enddo
+  enddo
+  if (n_order .ge. 5) then
+    write(*,*) "Warning: fix_irregular_nodes not enabled for n_order >= 5 !!!"
+    call exit(-1)
+  endif
+endif
 
 
 !----temporary, needs to be completed, neighbour information

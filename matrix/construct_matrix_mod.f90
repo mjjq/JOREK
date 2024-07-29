@@ -298,7 +298,7 @@ subroutine construct_matrix(mhd_sim, local_elms, n_local_elms, a_mat, rhs_vec, h
   use mod_elt_matrix_fft
   use mpi_mod
   use mod_boundary_conditions, only : boundary_conditions
-  use mod_fix_axis_nodes, only : fix_nodes_on_axis
+  use mod_fix_axis_nodes, only : fix_nodes_on_axis, fix_nodes_on_irregular_nodes
   use mod_locate_irn_jcn
   use mod_integer_types
   use mod_axis_treatment
@@ -743,6 +743,11 @@ subroutine construct_matrix(mhd_sim, local_elms, n_local_elms, a_mat, rhs_vec, h
     call fix_nodes_on_axis(node_list, element_list, local_elms, n_local_elms, my_ind_min, my_ind_max, a_mat)
   elseif(treat_axis)then
     call penalize_dof_on_axis(node_list, 4, element_list, local_elms, n_local_elms, my_ind_min, my_ind_max, a_mat)
+  endif
+
+  ! TODO
+  if (fix_irregular_nodes) then
+    call fix_nodes_on_irregular_nodes(node_list, element_list, local_elms, n_local_elms, my_ind_min, my_ind_max, a_mat)
   endif
 
   ! --- Memory tracking

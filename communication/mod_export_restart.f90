@@ -110,6 +110,7 @@ subroutine export_binary_restart(node_list,element_list,filename)
   ! save axis treatment
   write(21) treat_axis
   write(21) treat_irregular_nodes
+  write(21) fix_irregular_nodes
 
   if (index_now .gt. 0) then
      write(21) xtime(1:index_now)
@@ -326,7 +327,7 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
   integer,     allocatable :: t_nref(:)
 
   ! for axis treatment setting
-  character(len=50)        :: t_treat_axis, t_treat_irregular_nodes
+  character(len=50)        :: t_treat_axis, t_treat_irregular_nodes, t_fix_irregular_nodes
   
   ! local variables
   real*8, allocatable :: spi_R_arr (:)
@@ -827,6 +828,11 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
   if(treat_irregular_nodes) t_treat_irregular_nodes = 'T'
   write(t_treat_irregular_nodes,'(A)') trim(adjustl(t_treat_irregular_nodes))
   call HDF5_char_saving(file_id,t_treat_irregular_nodes,"treat_irregular_nodes"//char(0))
+
+  t_fix_irregular_nodes = 'F'
+  if(fix_irregular_nodes) t_fix_irregular_nodes = 'T'
+  write(t_fix_irregular_nodes,'(A)') trim(adjustl(t_fix_irregular_nodes))
+  call HDF5_char_saving(file_id,t_fix_irregular_nodes,"fix_irregular_nodes"//char(0))
   
   ! Export restart vacuum 
   call export_HDF5_restart_vacuum(file_id, freeboundary, resistive_wall)

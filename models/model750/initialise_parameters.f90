@@ -179,7 +179,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 autodistribute_modes, modes_per_family,             &
                 mode_families_modes, n_mode_families,               &
                 weights_per_family, autodistribute_ranks,           &
-                ranks_per_family, treat_irregular_nodes,                                   &                
+                ranks_per_family, treat_irregular_nodes,            &                
                 use_sc, add_sources_in_sc, visco_sc_num,            &
                 D_perp_sc_num, D_par_sc_num, ZK_perp_sc_num,        &
                 ZK_par_sc_num, ZK_i_perp_sc_num, ZK_i_par_sc_num,   &
@@ -190,7 +190,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 vms_coeff_UR, vms_coeff_UZ, vms_coeff_Up,           &
                 vms_coeff_rho, vms_coeff_Ti, vms_coeff_Te,          &
                 vms_coeff_T, vms_coeff_rhon, vms_coeff_rhoimp,      &
-                vacuum_min, strumpack_matching
+                vacuum_min, strumpack_matching, fix_irregular_nodes
 
 if (my_id .eq. 0) then
 

@@ -151,8 +151,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 visco_par_heating, CARIDDI_mode,                    &
                 T_min_ZKpar,                                        &
                 use_newton, maxNewton, gamma_Newton, alpha_Newton,  &
-                treat_irregular_nodes
-,  &
+                treat_irregular_nodes, fix_irregular_nodes,         &
                 vacuum_min, strumpack_matching
 if (my_id .eq. 0) then
 

@@ -186,7 +186,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 use_cx, use_sputtering, use_ionisation,             &
                 use_ncs, use_pcs, use_ccs,                          &
                 min_sheath_angle, bcs, cte_current_FB_fact,         &
-                treat_irregular_nodes, vacuum_min
+                treat_irregular_nodes, vacuum_min, fix_irregular_nodes
 
 
 if (my_id .eq. 0) then

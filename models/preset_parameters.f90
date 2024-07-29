@@ -852,6 +852,7 @@ subroutine preset_parameters
 
 !===================== Irregular point treatment flag========  
   treat_irregular_nodes = .false.
+  fix_irregular_nodes   = .false.
 
 !===================== not used?
   Q_bar = 0.d0

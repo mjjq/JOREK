@@ -7,7 +7,7 @@ use constants
 use tr_module 
 use data_structure
 use grid_xpoint_data
-use phys_module, only: xcase, RZ_grid_inside_wall, force_central_node, fix_axis_nodes, R_geo, Z_geo, xpoint, n_pol, treat_axis, treat_irregular_nodes
+use phys_module, only: xcase, RZ_grid_inside_wall, force_central_node, fix_axis_nodes, R_geo, Z_geo, xpoint, n_pol, treat_axis, treat_irregular_nodes, fix_irregular_nodes
 use mod_eqdsk_tools
 use mod_interp, only: interp_RZ, interp
 use mod_element_rtree
@@ -565,6 +565,21 @@ if (fix_axis_nodes .and. include_axis) then
     enddo
   enddo
   if (n_order .ge. 5) call set_high_order_sizes_on_axis(node_list,element_list)
+endif
+
+if (fix_irregular_nodes) then
+  do k=1, element_list%n_elements
+    do iv=1,4
+      j = element_list%element(k)%vertex(iv)
+      if (node_list%node(j)%irregular_node) then
+        element_list%element(k)%size(iv,4) = 0.d0
+      endif
+    enddo
+  enddo
+  if (n_order .ge. 5) then
+    write(*,*) "Warning: fix_irregular_nodes not enabled for n_order >= 5 !!!"
+    call exit(-1)
+  endif
 endif
 
 

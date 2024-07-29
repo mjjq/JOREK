@@ -217,6 +217,7 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
   ! Status of the axis treatment
   read(21) treat_axis
   read(21) treat_irregular_nodes
+  read(21) fix_irregular_nodes
  
   write(*,*) 'CHECK (1): allocating energies in import_restart : ',index_start,index_start+nstep
 
@@ -888,7 +889,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   real*8               :: growth_mag, growth_kin, amplitude
   integer, allocatable :: mode_tmp(:), new_mode(:)
   real*8,  allocatable :: values_tmp(:,:,:), deltas_tmp(:,:,:)
-  character*50         :: version_control, version_control_tmp, t_treat_axis, t_treat_irregular_nodes
+  character*50         :: version_control, version_control_tmp, t_treat_axis, t_treat_irregular_nodes, t_fix_irregular_nodes
   logical              :: kept, modes_changed, import_3xx_4xx
   
 #ifdef USE_HDF5
@@ -1948,6 +1949,12 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
     treat_irregular_nodes = .true.
   else
     treat_irregular_nodes = .false.
+  endif
+  call HDF5_char_reading(file_id,t_fix_irregular_nodes,"fix_irregular_nodes")
+  if (trim(t_fix_irregular_nodes) .eq. 'T') then
+    fix_irregular_nodes = .true.
+  else
+    fix_irregular_nodes = .false.
   endif
 
   call HDF5_close(file_id)

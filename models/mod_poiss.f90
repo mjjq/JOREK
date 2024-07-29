@@ -9,7 +9,7 @@ subroutine Poisson(my_id,itype,node_list,element_list,bnd_node_list,bnd_elm_list
 use tr_module 
 use data_structure
 use phys_module, only: amix, amix_freeb, delta_psi_GS, newton_GS_freebnd, newton_GS_fixbnd, &
-                       n_limiter, treat_axis, fix_axis_nodes, treat_irregular_nodes, &
+                       n_limiter, treat_axis, fix_axis_nodes, treat_irregular_nodes, fix_irregular_nodes, &
                        use_mumps_eq, use_pastix_eq, use_strumpack_eq
 use equil_info,  only: ES
 use vacuum_equilibrium, only: vacuum_equil
@@ -433,6 +433,22 @@ elseif (itype .eq. 0 .and. ivar_out .eq. 710) then
           enddo
         endif
 
+        if(fix_irregular_nodes)then
+          k = (n_order+1)/2
+          l = (n_order+1)/2
+          index = node_indices(k,l)
+          index_i = node_list%node(i)%index(index)  ! base index in the main matrix
+          a_mat%irn(ilarge+1) = index_i
+          a_mat%jcn(ilarge+1) = index_i
+          a_mat%val(ilarge+1)   = zbig
+          ilarge = ilarge + 1
+          
+          if (n_order .ge. 5) then
+            write(*,*) "Warning: fix_irregular_nodes not enabled for n_order >= 5 !!!"
+            call exit(-1)
+          endif
+        endif
+
       endif
     enddo
     nz_AA_old = nz_AA
@@ -472,6 +488,22 @@ elseif (itype .ne. 0) then        ! apply fixed boundary conditions (not for var
               ilarge = ilarge + 1
             enddo
           enddo
+        endif
+
+        if(fix_irregular_nodes)then
+          k = (n_order+1)/2
+          l = (n_order+1)/2
+          index = node_indices(k,l)
+          index_i = node_list%node(i)%index(index)  ! base index in the main matrix
+          a_mat%irn(ilarge+1) = index_i
+          a_mat%jcn(ilarge+1) = index_i
+          a_mat%val(ilarge+1)   = zbig
+          ilarge = ilarge + 1
+          
+          if (n_order .ge. 5) then
+            write(*,*) "Warning: fix_irregular_nodes not enabled for n_order >= 5 !!!"
+            call exit(-1)
+          endif
         endif
 
       endif

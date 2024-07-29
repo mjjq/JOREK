@@ -11,7 +11,7 @@ use data_structure
 use tr_module 
 use gauss
 use basis_at_gaussian
-use phys_module, only:   n_limiter, R_limiter, Z_limiter, write_ps, fix_axis_nodes, force_central_node, treat_axis, treat_irregular_nodes
+use phys_module, only:   n_limiter, R_limiter, Z_limiter, write_ps, fix_axis_nodes, force_central_node, treat_axis, treat_irregular_nodes, fix_irregular_nodes
 use mod_neighbours, only: update_neighbours
 use mod_interp
 use mod_grid_conversions
@@ -1847,6 +1847,21 @@ if (fix_axis_nodes) then
     enddo
   enddo
   if (n_order .ge. 5) call set_high_order_sizes_on_axis(newnode_list,newelement_list)
+endif
+
+if (fix_irregular_nodes) then
+  do k=1, newelement_list%n_elements
+    do iv=1,4
+      j = newelement_list%element(k)%vertex(iv)
+      if (newnode_list%node(j)%irregular_node) then
+        newelement_list%element(k)%size(iv,4) = 0.d0
+      endif
+    enddo
+  enddo
+  if (n_order .ge. 5) then
+    write(*,*) "Warning: fix_irregular_nodes not enabled for n_order >= 5 !!!"
+    call exit(-1)
+  endif
 endif
 
 do i=1,newnode_list%n_nodes

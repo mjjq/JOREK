@@ -1,4 +1,24 @@
 !> Create a square grid surrounded by a transition ring and a polar grid
+!>
+!> At each corner, there are three nodes located at the same (R, Z) position
+!>
+!>                          -------------
+!>                          |           |
+!>                        t |   elm I   |
+!>                 \ elm II |           |
+!>                  \       +------------
+!>                   \     /      s
+!>                    \  s/   (t, for III)
+!>                     \ /
+!>         dR(●)/ds =>  ●      elm III
+!>                     / \
+!>                   s/   \
+!>                   /     \
+!>
+!> For + at element I  : dX/ds = -1,       dX/dt =  0; dZ/ds = 0,        dZ/dt = -1
+!> For + at element II : dX/ds = dX(●)/ds, dX/dt =  0; dZ/ds = dZ(●)/ds, dZ/dt = -1
+!> For + at element III: dX/ds = dX(●)/ds, dX/dt = -1; dZ/ds = dZ(●)/ds, dZ/dt =  0
+
 subroutine grid_bezier_square_polar(nR, nZ, n_radial, R_begin, R_end, Z_begin, Z_end, R_geo, Z_geo,&
   amin, fbnd, fpsi, mf, boundary, node_list, element_list)
 
@@ -6,7 +26,7 @@ use constants
 use mod_parameters
 use data_structure
 use mod_neighbours, only: update_neighbours
-use phys_module, only: treat_irregular_nodes
+use phys_module, only: treat_irregular_nodes, fix_irregular_nodes
 implicit none
 
 ! --- Routine parameters
@@ -46,7 +66,7 @@ node_list%node(:)%irregular_node = 0
 
 call grid_bezier_square(nR,nZ,R_begin,R_end,Z_begin,Z_end,.false.,node_list,element_list)
 
-if(treat_irregular_nodes)then
+if(treat_irregular_nodes .or. fix_irregular_nodes)then
   node_list%node(1)%irregular_node = 1
   node_list%node(nR)%irregular_node = 1
   node_list%node(nR*(nZ-1)+1)%irregular_node = 1

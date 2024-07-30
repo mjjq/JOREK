@@ -74,6 +74,9 @@ if (my_id .eq. 0) then
     node_list%node(i)%values(1,4,2) = W_RR * R_s*R_t + W_R * R_st + W_RZ * (R_s*Z_t+R_t*Z_s) + W_ZZ*Z_s*Z_t + W_Z*Z_st
 
     node_list%node(i)%deltas = 0.d0
+    if(fix_irregular_nodes .and. node_list%node(i)%irregular_node) then
+      node_list%node(i)%values(1,4,:) = 0.d0
+    endif
     
   enddo
 

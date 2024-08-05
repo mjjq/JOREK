@@ -112,11 +112,11 @@ real*8                :: T0_corr, r0_corr, rn0_corr, ne_JOREK, T_or_Te, T_or_Te_
 integer               :: i_imp, offset_bgimp, i_bg     ! Loop for more than one background impurity
 integer               :: i_proj
 integer               :: i_psin, i_test, iimp(6), i_ne, ineu(7), ibg_tot, i_pellet(2), i_flux(8), i_neo(10), i_boot(2)
-integer               :: i_full(17), i_vec_B, i_vec_V, i_vec_E, i_vec_Jpol
+integer               :: i_full(19), i_vec_B, i_vec_V, i_vec_E, i_vec_Jpol
 integer, allocatable  :: iibg(:), iproj(:)
 character*36          :: imp_label, proj_label
 
-real*8                :: A_radial, A_poloidal, U_radial, U_poloidal, B_radial, B_poloidal
+real*8                :: A_radial, A_poloidal, U_radial, U_poloidal, B_radial, B_poloidal, current_source_phi, A300, psi_norm00
 real*8                :: A30_Z, AZ0_p, AR0_p, A30_R, BR0, BZ0, B_poloidal0, wR2r, wR2p, wZ2r, wZ2p
 
 #ifdef WITH_Impurities
@@ -404,6 +404,8 @@ endif
   call add_vtk_entry('U_poloidal  ', 'U_poloidal  ',    i_full(15), n_scalars, si_units, scalar_names) 
   call add_vtk_entry('B_radial    ', 'B_radial    ',    i_full(16), n_scalars, si_units, scalar_names) 
   call add_vtk_entry('B_poloidal  ', 'B_poloidal  ',    i_full(17), n_scalars, si_units, scalar_names) 
+  call add_vtk_entry('etaSpz      ', 'etaSpz      ',    i_full(18), n_scalars, si_units, scalar_names) 
+  call add_vtk_entry('Jsource     ', 'Jsource     ',    i_full(19), n_scalars, si_units, scalar_names) 
 #endif /*fullmhd*/
 ! --- end adding scalars
 
@@ -733,7 +735,7 @@ do i=1,element_list%n_elements
         
         AR    = 0.d0
         AZ    = 0.d0
-        A3    = 0.d0
+        A3    = 0.d0  ;  A300  = 0.d0
         A3_R  = 0.d0  ;  AR_R  = 0.d0  ;  AZ_R  = 0.d0  ;  rho   = 0.d0  ;  TT    = 0.d0
         A3_Z  = 0.d0  ;  AR_Z  = 0.d0  ;  AZ_Z  = 0.d0  ;  rho_x = 0.d0  ;  TT_x  = 0.d0
         A3_RR = 0.d0  ;  AR_RR = 0.d0  ;  AZ_RR = 0.d0  ;  rho_y = 0.d0  ;  TT_y  = 0.d0
@@ -803,6 +805,7 @@ do i=1,element_list%n_elements
           if (i_tor == 1) then
             call interp(node_list,element_list,i,710,i_tor,s,t,F_prof  ,F_prof_s  ,F_prof_t  ,W_st,W_ss,W_tt)
             call interp(node_list,element_list,i,711,i_tor,s,t,psi_equi,psi_equi_s,psi_equi_t,W_st,W_ss,W_tt)
+            A300 = A30
           endif
           
           AR    = AR   + AR0 * HZ(i_tor,i_plane)
@@ -976,7 +979,8 @@ do i=1,element_list%n_elements
         scalars(inode,i_full(16))= B_radial
         scalars(inode,i_full(17))= B_poloidal
 
-        psi_norm = get_psi_n(A3, Z)
+        psi_norm = get_psi_n(A3, Z) ! from all components
+        psi_norm00 = get_psi_n(A300, Z) ! from n = 0 component
 
         grad_psi = sqrt(A3_R**2 + A3_Z**2)
 
@@ -984,6 +988,11 @@ do i=1,element_list%n_elements
         ZK_prof = get_zkperp(psi_norm)
 
         call resistivity(eta, T_or_Te, T_or_Te_corr, T_max_eta, T_or_Te_0, 1.d0, eta_T)  ! NEEDS TO BE ADAPTED FOR IMPURITIES (Z_eff)!! 
+        scalars(inode,i_full(18))= eta_T
+
+        call current(ES%xpoint, ES%xcase, R, Z, ES%Z_xpoint, psi_norm00, 0.d0, 1.d0, current_source_phi)
+        current_source_phi = - current_source_phi / R
+        scalars(inode,i_full(19))= current_source_phi
 
         if (include_bootstrap) then
           call bootstrap_current(R, Z, ES%R_axis, ES%Z_axis, ES%psi_axis, ES%R_xpoint, ES%Z_xpoint, ES%psi_bnd, psi_norm,&

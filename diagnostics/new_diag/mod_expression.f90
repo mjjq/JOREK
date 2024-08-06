@@ -201,6 +201,12 @@ module mod_expression
     call add(exprs_all, 'etaJt       ', 'eta J toroidal                                        ')
     call add(exprs_all, 'etaSJt      ', 'eta Jsource toroidal                                  ')
     call add(exprs_all, 'etaJminusSJt', 'eta (J - Jsource) toroidal                            ')
+    call add(exprs_all, 'VXBt_R2     ', 'Dynamo loop voltage term (n=1), dividied by R^2       ')
+    call add(exprs_all, 'VXBt_all_R2 ', 'Dynamo loop voltage term (n>=1), dividied by R^2      ')
+    call add(exprs_all, 'VXBt00_R2   ', 'Dynamo loop voltage term (n=0), dividied by R^2       ')
+    call add(exprs_all, 'etaJt_R2    ', 'eta J toroidal, dividied by R^2                       ')
+    call add(exprs_all, 'etaSJt_R2   ', 'eta Jsource toroidal, dividied by R^2                 ')
+    call add(exprs_all, 'etaJminSJ_R2', 'eta (J - Jsource) toroidal, dividied by R^2           ')
     call add(exprs_all, 'E_||        ', 'E_|| for RE acceleration                              ')
     call add(exprs_all, 'E_crit      ', 'E_crit for RE avalanching (Connor-Hastie)             ')
     call add(exprs_all, 'E_dreicer   ', 'Electrical field for Dreicer RE primary source        ')
@@ -606,7 +612,8 @@ module mod_expression
     real*8  :: eta_T, deta_dT, d2eta_d2T, visco_T, dvisco_dT, D_prof, ZK_prof, ZKi_prof, ZKe_prof, &
       ZKpar_T, dZKpar_dT, ZKi_par_T, dZKi_par_dT, ZKe_par_T, dZKe_par_dT, eta_num_T, visco_num_T
     real*8  :: VXB_tor, VXB_tor_all, VXB00_tor
-    real*8  :: etaJtor, etaSJtor, current_source_Jp, etaJ_minus_SJ_tor
+    real*8  :: etaJtor, etaSJtor, current_source_Jp
+    real*8  :: VXB_tor_R2, VXB_tor_all_R2, VXB00_tor_R2, etaJtor_R2, etaSJtor_R2
     real*8 :: Ti0, Ti0_s, Ti0_t, Ti0_st, Ti0_ss, Ti0_tt, Ti0_p, Ti0_pp, Te0, Te0_s, Te0_t, Te0_st, &
       Te0_ss, Te0_tt, Te0_p, Te0_pp, Ti0_R, Ti0_Z, Te0_R, Te0_Z, Er, Vtheta, Mach_par, Mach_pol,   &
       Vsound, Vneo, Vperp_e, Vperp_i, V_ExB, Vstar_e, Vstar_i, mu_neo, ki_neo, J_boot, Te0_eV,     &
@@ -1496,6 +1503,12 @@ module mod_expression
           VXB00_tor= 0.d0
           etaJtor  = 0.d0
           etaSJtor = 0.d0
+
+          VXB_tor_R2           = 0.d0
+          VXB_tor_all_R2       = 0.d0 
+          VXB00_tor_R2         = 0.d0 
+          etaJtor_R2           = 0.d0
+          etaSJtor_R2          = 0.d0 
           
           if ( (psi_abs > 1.d-6) .and. (r0 > 1.d-6) .and. (abs(Btheta) > 1.d-6) ) then
             
@@ -1618,6 +1631,10 @@ module mod_expression
           VXB_tor = uR_1 * BZ_1 - uZ_1 * BR_1
           VXB_tor_all = uR_all * BZ_all - uZ_all * BR_all
           VXB00_tor = uR_0 * BZ_0 - uZ_0 * BR_0
+
+          VXB_tor_R2 = VXB_tor / R**2
+          VXB_tor_all_R2 = VXB_tor_all / R**2
+          VXB00_tor_R2 = VXB00_tor / R**2
 #endif
 
 #ifdef WITH_Impurities
@@ -1685,6 +1702,9 @@ module mod_expression
           
           etaJtor = eta_T * Jtor
           etaSJtor = eta_T * current_source_Jp / R
+
+          etaJtor_R2 = etaJtor / R**2
+          etaSJtor_R2 = etaSJtor / R**2
 #endif
 
 
@@ -2018,6 +2038,24 @@ module mod_expression
 
               case ( 'etaJminusSJt' )
                 res = (etaJtor - etaSJtor) * fact_resistiv / fact_mu_zero
+
+              case ( 'VXBt_R2' )
+                res = VXB_tor_R2 * fact_VXB
+                
+              case ( 'VXBt_all_R2' )
+                res = VXB_tor_all_R2 * fact_VXB
+
+              case ( 'VXBt00_R2' )
+                res = VXB00_tor_R2 * fact_VXB
+
+              case ( 'etaJt_R2' )
+                res = etaJtor_R2 * fact_resistiv / fact_mu_zero
+
+              case ( 'etaSJt_R2' )
+                res = etaSJtor_R2 * fact_resistiv / fact_mu_zero
+
+              case ( 'etaJminSJ_R2' )
+                res = (etaJtor_R2 - etaSJtor_R2) * fact_resistiv / fact_mu_zero
 
               case ( 'E_||' )
                 res = E_par / fact_time

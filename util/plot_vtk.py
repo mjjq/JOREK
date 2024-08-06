@@ -365,6 +365,10 @@ def read_and_plot_data(args, reader, variable, data_reference=0):
             UR = vtk_nump.vtk_to_numpy(UR_array)
             UZ = vtk_nump.vtk_to_numpy(UZ_array)
             # Uphi = vtk_nump.vtk_to_numpy(Uphi_array)
+            URdata_reference = read_reference(args, reader, 'UR')
+            UZdata_reference = read_reference(args, reader, 'UZ')
+            UR = UR - URdata_reference
+            UZ = UZ - UZdata_reference
             nan_indices = np.where(np.isnan(UR))
             if np.size(nan_indices) > 0:
                 UR[nan_indices] = 0.e0

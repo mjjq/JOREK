@@ -207,6 +207,8 @@ module mod_expression
     call add(exprs_all, 'etaJt_R2    ', 'eta J toroidal, dividied by R^2                       ')
     call add(exprs_all, 'etaSJt_R2   ', 'eta Jsource toroidal, dividied by R^2                 ')
     call add(exprs_all, 'etaJminSJ_R2', 'eta (J - Jsource) toroidal, dividied by R^2           ')
+    call add(exprs_all, 'gradPsi2    ', 'grad_psi ^ 2, normalized psi and n = 0 only           ')
+    call add(exprs_all, 'lapPsi      ', 'Laplace of psi, normalized psi and n = 0 only         ')
     call add(exprs_all, 'E_||        ', 'E_|| for RE acceleration                              ')
     call add(exprs_all, 'E_crit      ', 'E_crit for RE avalanching (Connor-Hastie)             ')
     call add(exprs_all, 'E_dreicer   ', 'Electrical field for Dreicer RE primary source        ')
@@ -614,6 +616,8 @@ module mod_expression
     real*8  :: VXB_tor, VXB_tor_all, VXB00_tor
     real*8  :: etaJtor, etaSJtor, current_source_Jp
     real*8  :: VXB_tor_R2, VXB_tor_all_R2, VXB00_tor_R2, etaJtor_R2, etaSJtor_R2
+    real*8  :: grad_psi_2, lap_psi
+    real*8  :: A30_0_ss, A30_0_tt, A30_0_st, A30_0_RR, A30_0_ZZ
     real*8 :: Ti0, Ti0_s, Ti0_t, Ti0_st, Ti0_ss, Ti0_tt, Ti0_p, Ti0_pp, Te0, Te0_s, Te0_t, Te0_st, &
       Te0_ss, Te0_tt, Te0_p, Te0_pp, Ti0_R, Ti0_Z, Te0_R, Te0_Z, Er, Vtheta, Mach_par, Mach_pol,   &
       Vsound, Vneo, Vperp_e, Vperp_i, V_ExB, Vstar_e, Vstar_i, mu_neo, ki_neo, J_boot, Te0_eV,     &
@@ -820,6 +824,7 @@ module mod_expression
           uR_all     = 0.d0; uZ_all     = 0.d0
 
           A30_0_s = 0.d0; A30_0_t = 0.d0
+          A30_0_ss = 0.d0; A30_0_tt = 0.d0; A30_0_st = 0.d0
 
           delta_g(:) = 0.d0; delta_s(:) = 0.d0; delta_t(:) = 0.d0
           Fprofile = 0.d0;  Fprofile_s = 0.d0;  Fprofile_t = 0.d0
@@ -1028,6 +1033,9 @@ module mod_expression
                   AZ0_0_p    = AZ0_0_p    + vv(var_AZ) * sz * hh    * hhz_p
                   A30_0_s    = A30_0_s    + vv(var_A3) * sz * hh_s  * hhz
                   A30_0_t    = A30_0_t    + vv(var_A3) * sz * hh_t  * hhz    
+                  A30_0_ss   = A30_0_ss   + vv(var_A3) * sz * hh_ss  * hhz
+                  A30_0_tt   = A30_0_tt   + vv(var_A3) * sz * hh_tt  * hhz 
+                  A30_0_st   = A30_0_st   + vv(var_A3) * sz * hh_st  * hhz    
                   uR_0       = uR_0       + vv(var_uR) * sz * hh    * hhz
                   uZ_0       = uZ_0       + vv(var_uZ) * sz * hh    * hhz
                 endif
@@ -1273,6 +1281,15 @@ module mod_expression
                       - A30_t * (R_st*Z_s  - R_ss*Z_t ) )  / xjac**2               &
                       - xjac_R * (- A30_s * R_t + A30_t * R_s )   / xjac**2
 
+          A30_0_RR   = (A30_0_ss * Z_t**2 - 2.d0*A30_0_st * Z_s*Z_t + A30_0_tt * Z_s**2    &
+                      + A30_0_s * (Z_st*Z_t - Z_tt*Z_s )                             &
+                      + A30_0_t * (Z_st*Z_s - Z_ss*Z_t ) )       / xjac**2           &
+                      - xjac_R * (A30_0_s * Z_t - A30_0_t * Z_s)     / xjac**2
+          A30_0_ZZ   = (A30_0_ss * R_t**2 - 2.d0*A30_0_st * R_s*R_t + A30_0_tt * R_s**2    &
+                      + A30_0_s * (R_st*R_t - R_tt*R_s )                             &
+                      + A30_0_t * (R_st*R_s - R_ss*R_t ) )       / xjac**2           &
+                      - xjac_Z * (- A30_0_s * R_t + A30_0_t * R_s )  / xjac**2
+
           Fprofile_R = (   Z_t * Fprofile_s  - Z_s * Fprofile_t ) / xjac
           Fprofile_Z = ( - R_t * Fprofile_s  + R_s * Fprofile_t ) / xjac
  
@@ -1509,6 +1526,9 @@ module mod_expression
           VXB00_tor_R2         = 0.d0 
           etaJtor_R2           = 0.d0
           etaSJtor_R2          = 0.d0 
+
+          grad_psi_2 = 0.d0
+          lap_psi    = 0.d0
           
           if ( (psi_abs > 1.d-6) .and. (r0 > 1.d-6) .and. (abs(Btheta) > 1.d-6) ) then
             
@@ -1705,6 +1725,9 @@ module mod_expression
 
           etaJtor_R2 = etaJtor / R**2
           etaSJtor_R2 = etaSJtor / R**2
+
+          grad_psi_2 = (A30_0_R * A30_0_R + A30_0_Z * A30_0_Z) / (ES%Psi_bnd - ES%Psi_axis)**2
+          lap_psi    = (A30_0_R / R + A30_0_RR + A30_0_ZZ) / (ES%Psi_bnd - ES%Psi_axis)
 #endif
 
 
@@ -2056,6 +2079,12 @@ module mod_expression
 
               case ( 'etaJminSJ_R2' )
                 res = (etaJtor_R2 - etaSJtor_R2) * fact_resistiv / fact_mu_zero
+
+              case ( 'gradPsi2' )
+                res = grad_psi_2
+
+              case ( 'lapPsi' )
+                res = lap_psi
 
               case ( 'E_||' )
                 res = E_par / fact_time

@@ -12,6 +12,57 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 import argparse
 
+def set_fontsize(fig, fontweight='bold', fontsize=12, title_size=None, label_size=None, tick_size=None, legend_size=None, exponent_size=None):
+    """
+    Set the font size for the title, axis labels, tick labels, and legend of a Matplotlib figure.
+
+    Parameters:
+    - fig: Matplotlib figure object (e.g., plt.gcf()).
+    - fontweight: Font weight for the text (default is 'bold').
+    - fontsize: Default font size to apply if specific sizes are not provided.
+    - title_size: Font size for the title (default is `fontsize`).
+    - label_size: Font size for the axis labels (default is `fontsize`).
+    - tick_size: Font size for the tick labels (default is `fontsize`).
+    - legend_size: Font size for the legend (default is `fontsize`).
+    - exponent_size: Font size for the exponent in scientific notation (default is `fontsize`).
+
+    Returns:
+    - None
+    """
+
+    # Use the default fontsize if specific sizes are not provided
+    title_size = title_size if title_size is not None else fontsize
+    label_size = label_size if label_size is not None else fontsize
+    tick_size = tick_size if tick_size is not None else fontsize
+    legend_size = legend_size if legend_size is not None else fontsize
+    exponent_size = exponent_size if exponent_size is not None else fontsize
+
+    # Iterate over all axes in the figure
+    for ax in fig.get_axes():
+        # Set title fontsize
+        ax.title.set_fontsize(title_size)
+        ax.title.set_fontweight(fontweight)
+
+        # Set axis labels fontsize
+        ax.xaxis.label.set_fontsize(label_size)
+        ax.yaxis.label.set_fontsize(label_size)
+        ax.xaxis.label.set_fontweight(fontweight)
+        ax.yaxis.label.set_fontweight(fontweight)
+
+        # Set tick labels fontsize
+        for label in ax.get_xticklabels() + ax.get_yticklabels():
+            label.set_fontsize(tick_size)
+            label.set_fontweight(fontweight)
+
+        legend = plt.legend(prop={'weight': fontweight, 'size' : legend_size})
+        legend.set_draggable(True)
+
+        # Set exponent fontsize (scientific notation)
+        ax.xaxis.get_offset_text().set_fontsize(exponent_size)
+        ax.yaxis.get_offset_text().set_fontsize(exponent_size)
+        ax.xaxis.get_offset_text().set_fontweight(fontweight)
+        ax.yaxis.get_offset_text().set_fontweight(fontweight)
+
 
 def read_ascii_file(file_path, skiprows, droprows=-1):
     """

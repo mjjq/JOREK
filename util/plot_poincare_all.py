@@ -8,8 +8,8 @@ import plot_q_versus_time as plot_q_time
 import os
 import plot_multiple_files as pltmpf
 
-def get_time(num):
-    timefile = 'times.dat'
+def get_time(num, path = './'):
+    timefile = path + 'times.dat'
     time = 0
     if os.path.exists(timefile):
         column_names, data = pltmpf.read_ascii_file(timefile, 1)

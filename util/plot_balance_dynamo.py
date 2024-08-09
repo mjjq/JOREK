@@ -33,7 +33,9 @@ plt.rcParams.update({
     # 'ytick.labelsize': 12,          # Font size for y-tick labels
 })
 
+# load the 3D data
 folder = 'postproc/'
+filenamerule0 = 'exprs_averaged_s00000.dat' # initial
 filenamerule1 = 'exprs_averaged_s[3][6-9]???.dat'
 filenamerule2 = 'exprs_averaged_s[4][0-2]???.dat'
 
@@ -41,16 +43,26 @@ filenamerule2 = 'exprs_averaged_s[4][0-2]???.dat'
 # filenamerule1 = 'exprs_averaged_s[0][3-5]???.dat'
 # filenamerule2 = 'exprs_averaged_s[9][0-2]???.dat'
 
-# balance in base case
-pattern0 = os.path.join(folder, filenamerule1)
-pattern1 = os.path.join(folder, filenamerule2)
+pattern1 = os.path.join(folder, filenamerule1)
+pattern2 = os.path.join(folder, filenamerule2)
 
-matched_file_list = [os.path.basename(file) for file in glob.glob(pattern0)] + [os.path.basename(file) for file in glob.glob(pattern1)]
+file0 = folder + filenamerule0
+matched_file_list = [os.path.basename(file) for file in glob.glob(pattern1)] + [os.path.basename(file) for file in glob.glob(pattern2)]
 file_list = sorted(matched_file_list, key=lambda x: int(x.split('_s')[-1].split('.dat')[0]))
 nfiles = len(file_list)
 
 min_time = pltpoinc.get_time(int(file_list[0].split('_s')[-1].split('.dat')[0]))
 max_time = pltpoinc.get_time(int(file_list[-1].split('_s')[-1].split('.dat')[0]))
+
+# load the 2D data
+folder2D = '../Base_case2D/postproc/'
+filenamerule2D = 'exprs_averaged_s[3][3]????.dat'
+pattern2D = os.path.join(folder2D, filenamerule2D)
+matched_file_list2D = [os.path.basename(file) for file in glob.glob(pattern2D)]
+file_list2D = sorted(matched_file_list2D, key=lambda x: int(x.split('_s')[-1].split('.dat')[0]))
+nfiles2D = len(file_list2D)
+min_time2D = pltpoinc.get_time(int(file_list2D[0].split('_s')[-1].split('.dat')[0]), '../Base_case2D/')
+max_time2D = pltpoinc.get_time(int(file_list2D[-1].split('_s')[-1].split('.dat')[0]), '../Base_case2D/')
 
 plot_R2 = False
 
@@ -64,17 +76,6 @@ fact_J_mu_zero  = MU_zero
 fact_time       = 1/4.607490970E-04
 fact_eta        = 1.0 / math.sqrt ( MU_zero / rho_norm )
 fact_VXB        = math.sqrt( MU_zero * central_mass * central_density * 1.e20 * mass_proton )
-
-
-folder2 = 'postproc/'
-
-# balance in base case
-pattern02 = os.path.join(folder2, filenamerule1)
-pattern12 = os.path.join(folder2, filenamerule2)
-
-matched_file_list2 = [os.path.basename(file) for file in glob.glob(pattern02)] + [os.path.basename(file) for file in glob.glob(pattern12)]
-file_list2 = sorted(matched_file_list2, key=lambda x: int(x.split('_s')[-1].split('.dat')[0]))
-nfiles2 = len(file_list2)
 
 if __name__ == "__main__":
 
@@ -102,6 +103,13 @@ if __name__ == "__main__":
             gradPsi2 = data[:,column_names.index("gradPsi2")] / nfiles
             lapPsi = data[:,column_names.index("lapPsi")] / nfiles
 
+            # read the initial equilibrium
+            column_names0, data0 = pltmp.read_ascii_file(file0, skiprows = 1, droprows = -1)
+            Jtor0 = data0[:,column_names0.index("Jtor")]
+            etaJtor0 = data0[:,column_names0.index("etaJt")]
+            etaSJtor0 = data0[:,column_names0.index("etaSJt")]
+            eta_T0 = etaJtor0 / Jtor0
+
             if plot_R2:
                 VxBt_n_eq_one_R2 = data[:,column_names.index("VXBt_R2")] / nfiles
                 VxBt_n_ge_one_R2 = data[:,column_names.index("VXBt_all_R2")] / nfiles
@@ -127,6 +135,32 @@ if __name__ == "__main__":
                 etaJtor_R2 = etaJtor_R2 + data[:,column_names.index("etaJt_R2")] / nfiles
                 etaSJtor_R2 = etaSJtor_R2 + data[:,column_names.index("etaSJt_R2")] / nfiles
 
+    file_count2D = 0
+    print(f'Total {nfiles2D} files')
+    for file_name2D in file_list2D:
+        file_path2D = folder2D + file_name2D
+        column_names2D, data2D = pltmp.read_ascii_file(file_path2D, skiprows = 1, droprows = -1)
+        if file_count2D == 0:
+            print(f'Data list includes {column_names2D}')
+        print(f'Processing No. {file_count2D} of {nfiles2D} file: {file_path2D}')
+
+        file_count2D = file_count2D + 1
+
+        if file_count2D == 1:
+            psiN2D = data2D[:,column_names2D.index("Psi_N")] / nfiles2D
+            Jtor2D = data2D[:,column_names2D.index("Jtor")] / nfiles2D
+            etaJtor2D = data2D[:,column_names2D.index("etaJt")] / nfiles2D
+            etaSJtor2D = data2D[:,column_names2D.index("etaSJt")] / nfiles2D
+
+        else:
+            psiN2D = psiN2D + data2D[:,column_names2D.index("Psi_N")] / nfiles2D
+            Jtor2D = Jtor2D + data2D[:,column_names2D.index("Jtor")] / nfiles2D
+            etaJtor2D = etaJtor2D + data2D[:,column_names2D.index("etaJt")] / nfiles2D
+            etaSJtor2D = etaSJtor2D + data2D[:,column_names2D.index("etaSJt")] / nfiles2D
+
+        eta_T2D = etaJtor2D / Jtor2D
+
+
     VxBt_n_all = VxBt_n_ge_one + VxBt_n_eq_zero
     VxBt_n_all_origin = VxBt_n_all
     etaJtor_origin = etaJtor
@@ -140,6 +174,7 @@ if __name__ == "__main__":
     VxBt_n_eq_zero = gaussian_filter1d(VxBt_n_eq_zero, sigma_VxB)
     etaJtor = gaussian_filter1d(etaJtor, sigma_etaJ)
     etaSJtor = gaussian_filter1d(etaSJtor, sigma_etaJ)
+    Jtor = gaussian_filter1d(Jtor, sigma_etaJ)
 
     rhop = np.sqrt(psiN)
     eta_T = etaJtor / Jtor
@@ -162,17 +197,21 @@ if __name__ == "__main__":
     d2drho2_etaSJtor = np.gradient(ddrho_etaSJtor, psiN) * gradPsi2 + ddrho_etaSJtor * lapPsi
 
     plt.figure()
+    plt.semilogy(rhop, eta_T0 / fact_eta, label = r'$\eta_{spz}^{initial}\ [\Omega m]$')
     plt.semilogy(rhop, eta_T / fact_eta, label = r'$\eta_{spz}\ [\Omega m]$')
+    plt.semilogy(rhop, eta_T2D / fact_eta, label = r'$\eta_{spz, 2D}\ [\Omega m]$')
     plt.xlabel(r'$\sqrt{\psi_N}$')
     plt.ylabel(r'$\eta_{spz}$')
     legend = plt.legend()
     legend.set_draggable(True)
     plt.grid()
-    plt.title(f'Average between {"{:.1f}".format(min_time * time2si)} and {"{:.1f}".format(max_time * time2si)} [ms]')
+    plt.title(f'Average: 3D {"{:.0f}".format(min_time * time2si)}~{"{:.0f}".format(max_time * time2si)}; 2D {"{:.0f}".format(min_time2D * time2si)}~{"{:.0f}".format(max_time2D * time2si)} [ms]')
     plt.tight_layout()
 
     plt.figure()
+    plt.plot(rhop, Jtor0/fact_J_mu_zero, label = r'$J_\varphi^{initial}\ [Am^{-2}]$')
     plt.plot(rhop, Jtor/fact_J_mu_zero, label = r'$J_\varphi\ [Am^{-2}]$')
+    plt.plot(rhop, Jtor2D/fact_J_mu_zero, label = r'$J_{\varphi, 2D}\ [Am^{-2}]$')
     plt.plot(rhop, SJtor/fact_J_mu_zero, label = r'$S_{j,\varphi}\ [Am^{-2}]$')
     plt.xlabel(r'$\sqrt{\psi_N}$')
     plt.ylabel(r'different terms')
@@ -180,7 +219,7 @@ if __name__ == "__main__":
     legend.set_draggable(True)
     # plt.gca().ticklabel_format(style='sci', axis='both', scilimits=(0,0))
     plt.grid()
-    plt.title(f'Average between {"{:.1f}".format(min_time * time2si)} and {"{:.1f}".format(max_time * time2si)} [ms]')
+    plt.title(f'Average: 3D {"{:.0f}".format(min_time * time2si)}~{"{:.0f}".format(max_time * time2si)}; 2D {"{:.0f}".format(min_time2D * time2si)}~{"{:.0f}".format(max_time2D * time2si)} [ms]')
     plt.tight_layout()
 
     if plot_R2:
@@ -192,25 +231,29 @@ if __name__ == "__main__":
         legend = plt.legend()
         legend.set_draggable(True)
         plt.grid()
-        plt.title(f'Average between {"{:.1f}".format(min_time * time2si)} and {"{:.1f}".format(max_time * time2si)} [ms]')
+        plt.title(f'Average: 3D {"{:.0f}".format(min_time * time2si)}~{"{:.0f}".format(max_time * time2si)} [ms]')
         plt.tight_layout()
 
     plt.figure()
-    plt.plot(rhop, (VxBt_n_ge_one + VxBt_n_eq_zero) / fact_VXB, color='red', label = r'$(VxB)_{all}=(VxB)_{(n>0) + (n = 0)}\ [Vm^{-1}]$')
+    plt.plot(rhop, VxBt_n_eq_zero / fact_VXB, linestyle = 'dotted', color = 'C1', label = r'$V_{n=0}xB_{n=0}\ [Vm^{-1}]$')
+    plt.plot(rhop, VxBt_n_ge_one / fact_VXB, linestyle = '--', color = 'C0', label = r'$V_{n>0}xB_{n>0}\ [Vm^{-1}]$')
+    
+    plt.plot(rhop, (VxBt_n_ge_one + VxBt_n_eq_zero) / fact_VXB, color='red', label = r'$(V_{all}xB)_{all}\ [Vm^{-1}]$')
     plt.plot(rhop, (-etaJtor + etaSJtor) / fact_eta / fact_J_mu_zero, color='green', label = r'$-\eta (J_{\varphi} - S_J)\ [Vm^{-1}]$')
+
+    plt.plot(rhop, -eta_T2D * (Jtor - Jtor2D) / fact_eta / fact_J_mu_zero, color='black', label = r'$-\eta_{2D}\Delta J_\varphi\ [Vm^{-1}]$')
+    plt.plot(rhop, -(eta_T - eta_T2D) * Jtor2D / fact_eta / fact_J_mu_zero, color='blue', label = r'$-\Delta\eta J_{\varphi, 2D}\ [Vm^{-1}]$')
 
     plt.plot(rhop, VxBt_n_all_origin / fact_VXB, 'r.',linestyle = 'none')# ,label = r'$(VxB)_{all, unsmoothed}\ [Vm^{-1}]$')
     plt.plot(rhop, (-etaJtor_origin + etaSJtor_origin) / fact_eta / fact_J_mu_zero, 'gx',linestyle = 'none')#, label = r'$-\eta (J_{\varphi} - S_J)_{unsmoothed}\ [Vm^{-1}]$')
 
-    plt.plot(rhop, VxBt_n_ge_one / fact_VXB, '.', linestyle = '--', label = r'$VxB_{n>0}\ [Vm^{-1}]$')
-    plt.plot(rhop, VxBt_n_eq_zero / fact_VXB, linestyle = 'dotted', label = r'$VxB_{n=0}\ [Vm^{-1}]$')
 
     plt.xlabel(r'$\sqrt{\psi_N}$')
     plt.ylabel(r'Different terms')
     legend = plt.legend()
     legend.set_draggable(True)
     plt.grid()
-    plt.title(f'Average between {"{:.1f}".format(min_time * time2si)} and {"{:.1f}".format(max_time * time2si)} [ms]')
+    plt.title(f'Average: 3D {"{:.0f}".format(min_time * time2si)}~{"{:.0f}".format(max_time * time2si)}; 2D {"{:.0f}".format(min_time2D * time2si)}~{"{:.0f}".format(max_time2D * time2si)} [ms]')
     plt.tight_layout()
 
     plt.figure()
@@ -228,7 +271,7 @@ if __name__ == "__main__":
     legend = plt.legend()
     legend.set_draggable(True)
     plt.grid()
-    plt.title(f'Average between {"{:.1f}".format(min_time * time2si)} and {"{:.1f}".format(max_time * time2si)} [ms]')
+    plt.title(f'Average: 3D {"{:.0f}".format(min_time * time2si)}~{"{:.0f}".format(max_time * time2si)} [ms]')
     plt.tight_layout()
 
     plt.show()

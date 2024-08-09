@@ -48,6 +48,13 @@ if __name__ == "__main__":
                         help='Specify cmin, cmax for the contourf.')
     args = parser.parse_args()
 
+    legend_name = r'$(\delta V \times \delta B)_{\varphi,\ n = 0}$'
+    folder_name = args.folder_name
+
+    # plot VxB from n = 0 components of (V, B), by subtract n /= 0 components from the total components.
+    # e.g., plot_VxB_tor.py -np 32 -ns 40000 vtk_no0_iplane  -xylim 1.20 2.00 -0.20 0.30 -qs -1.1 -tm $time2si  -clim -0.00000018 0.00000018
+    plot_eq_component = False
+
     reader = vtk.vtkDataSetReader()
     for itor in range(args.nplane):
         file_path = args.folder_name + str(int(itor + 1)) + '/jorek.' + str(int(args.nstep)).zfill(5) + '.vtk'
@@ -58,6 +65,16 @@ if __name__ == "__main__":
         UZ = data_list[:, 1]
         BR = data_list[:, 2]
         BZ = data_list[:, 3]
+
+        if plot_eq_component:
+            legend_name = r'$(V_0 \times B_0)_{\varphi}$'
+            folder_name = 'vtk_iplane-' + args.folder_name
+            file_path_all = 'vtk_iplane' + str(int(itor + 1)) + '/jorek.' + str(int(args.nstep)).zfill(5) + '.vtk'
+            data_list_all, coordniates_all, time_all = pltvtk.read_data(file_path_all, reader, ['UR', 'UZ', 'B_R', 'B_Z'], itor)
+            UR = data_list_all[:, 0] - data_list[:, 0]
+            UZ = data_list_all[:, 1] - data_list[:, 1]
+            BR = data_list_all[:, 2] - data_list[:, 2]
+            BZ = data_list_all[:, 3] - data_list[:, 3]
 
         if itor == 0:
             distance = np.sqrt((coordniates[:, 0] - args.R_geo) ** 2 + (coordniates[:, 1] - args.Z_geo) ** 2)
@@ -75,14 +92,14 @@ if __name__ == "__main__":
             VXB_tor_n0 += VXB_tor # average to get the n = 0 components
 
         # pltvtk.plot2D_interpolated(
-        #         coordniates[:, 0], coordniates[:, 1], VXB_tor, 'VxB_tor_' + str(int(itor + 1)), args.folder_name, time)
+        #         coordniates[:, 0], coordniates[:, 1], VXB_tor, 'VxB_tor_' + str(int(itor + 1)), folder_name, time)
     si_unit = False if args.multiplier_for_time == 1.0 else True
     if args.method == "sc":
         pltvtk.plot2D_scatter(
-                coordniates[:, 0], coordniates[:, 1], VXB_tor_n0, r'$(V \times B)_{\varphi,\ n = 0}$', args.folder_name, time, args.fontsize, si_unit, args.clim)
+                coordniates[:, 0], coordniates[:, 1], VXB_tor_n0, legend_name, folder_name, time, args.fontsize, si_unit, args.clim)
     else:
         pltvtk.plot2D_interpolated(
-                coordniates[:, 0], coordniates[:, 1], VXB_tor_n0, r'$(V \times B)_{\varphi,\ n = 0}$', args.folder_name, time, args.fontsize, si_unit, args.clim)
+                coordniates[:, 0], coordniates[:, 1], VXB_tor_n0, legend_name, folder_name, time, args.fontsize, si_unit, args.clim)
         
     if args.method != "sf" and not isinstance(args.q_surfaces, float):
         for q_surface in args.q_surfaces:

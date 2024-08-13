@@ -238,7 +238,7 @@ if __name__ == "__main__":
     plt.plot(rhop, VxBt_n_eq_zero / fact_VXB, linestyle = 'dotted', color = 'C1', label = r'$V_{n=0}xB_{n=0}\ [Vm^{-1}]$')
     plt.plot(rhop, VxBt_n_ge_one / fact_VXB, linestyle = '--', color = 'C0', label = r'$V_{n>0}xB_{n>0}\ [Vm^{-1}]$')
     
-    plt.plot(rhop, (VxBt_n_ge_one + VxBt_n_eq_zero) / fact_VXB, color='red', label = r'$(V_{all}xB)_{all}\ [Vm^{-1}]$')
+    plt.plot(rhop, (VxBt_n_ge_one + VxBt_n_eq_zero) / fact_VXB, color='red', label = r'$(V_{all}xB_{all})\ [Vm^{-1}]$')
     plt.plot(rhop, (-etaJtor + etaSJtor) / fact_eta / fact_J_mu_zero, color='green', label = r'$-\eta (J_{\varphi} - S_J)\ [Vm^{-1}]$')
 
     plt.plot(rhop, -eta_T2D * (Jtor - Jtor2D) / fact_eta / fact_J_mu_zero, color='black', label = r'$-\eta_{2D}\Delta J_\varphi\ [Vm^{-1}]$')

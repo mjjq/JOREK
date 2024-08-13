@@ -73,7 +73,7 @@ central_mass    = 1.0
 mass_proton     = 1.67262178e-27
 rho_norm        = central_density *1.e20 * central_mass * mass_proton
 fact_J_mu_zero  = MU_zero
-fact_time       = 1/4.607490970E-04
+fact_time       = 1/time2si
 fact_eta        = 1.0 / math.sqrt ( MU_zero / rho_norm )
 fact_VXB        = math.sqrt( MU_zero * central_mass * central_density * 1.e20 * mass_proton )
 

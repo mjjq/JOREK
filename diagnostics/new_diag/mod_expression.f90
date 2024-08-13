@@ -26,6 +26,7 @@ module mod_expression
   use mod_impurity, only: radiation_function, radiation_function_linear
   use mod_atomic_coeff_deuterium, only : atomic_coeff_deuterium
   use mod_plasma_functions
+  use mod_sources
 
   implicit none
   
@@ -208,7 +209,11 @@ module mod_expression
     call add(exprs_all, 'etaSJt_R2   ', 'eta Jsource toroidal, dividied by R^2                 ')
     call add(exprs_all, 'etaJminSJ_R2', 'eta (J - Jsource) toroidal, dividied by R^2           ')
     call add(exprs_all, 'gradPsi2    ', 'grad_psi ^ 2, normalized psi and n = 0 only           ')
-    call add(exprs_all, 'lapPsi      ', 'Laplace of psi, normalized psi and n = 0 only         ')
+    call add(exprs_all, 'lapPsi      ', 'Laplace of psi, normalized psi and n = 0 only         ')   
+    call add(exprs_all, 'rho_comprs  ', 'particle compressible term in continuity equation     ')
+    call add(exprs_all, 'rho_convect ', 'particle convective term in continuity equation       ')
+    call add(exprs_all, 'rho_diffus  ', 'particle diffusive term in continuity equation (assume uniform D_perp and ignore D_par) ')
+    call add(exprs_all, 'rho_source  ', 'particle source term in continuity equation           ')
     call add(exprs_all, 'E_||        ', 'E_|| for RE acceleration                              ')
     call add(exprs_all, 'E_crit      ', 'E_crit for RE avalanching (Connor-Hastie)             ')
     call add(exprs_all, 'E_dreicer   ', 'Electrical field for Dreicer RE primary source        ')
@@ -617,6 +622,13 @@ module mod_expression
     real*8  :: etaJtor, etaSJtor, current_source_Jp
     real*8  :: VXB_tor_R2, VXB_tor_all_R2, VXB00_tor_R2, etaJtor_R2, etaSJtor_R2
     real*8  :: grad_psi_2, lap_psi
+    real*8  :: rho_compress_term, rho_convect_term, rho_diffusive_term, rho_source_term
+    real*8  :: particle_source, heat_source_i, heat_source_e
+    real*8  :: rho_GS,dd1,dd2,dd3,dd4,dd5,dd6,dd7,dd8
+    real*8  :: r0_axisym
+    real*8  :: UR0_R, UR0_Z, UR0_p, UR0_s, UR0_t
+    real*8  :: UZ0_R, UZ0_Z, UZ0_p, UZ0_s, UZ0_t
+    real*8  :: Up0_R, Up0_Z, Up0_p, Up0_s, Up0_t
     real*8  :: A30_0_ss, A30_0_tt, A30_0_st, A30_0_RR, A30_0_ZZ
     real*8 :: Ti0, Ti0_s, Ti0_t, Ti0_st, Ti0_ss, Ti0_tt, Ti0_p, Ti0_pp, Te0, Te0_s, Te0_t, Te0_st, &
       Te0_ss, Te0_tt, Te0_p, Te0_pp, Ti0_R, Ti0_Z, Te0_R, Te0_Z, Er, Vtheta, Mach_par, Mach_pol,   &
@@ -806,6 +818,9 @@ module mod_expression
           rimp0 = 0.d0; rimp0_s = 0.d0; rimp0_t = 0.d0; rimp0_ss = 0.d0; rimp0_tt = 0.d0; rimp0_st = 0.d0; rimp0_p = 0.d0; rimp0_pp = 0.d0
           UR0   = 0.d0; UZ0     = 0.d0; Up0     = 0.d0
           ps00  = 0.d0; A300    = 0.d0
+          UR0_R = 0.d0; UR0_Z = 0.d0; UR0_p = 0.d0; UR0_s = 0.d0; UR0_t = 0.d0
+          UZ0_R = 0.d0; UZ0_Z = 0.d0; UZ0_p = 0.d0; UZ0_s = 0.d0; UZ0_t = 0.d0
+          Up0_R = 0.d0; Up0_Z = 0.d0; Up0_p = 0.d0; Up0_s = 0.d0; Up0_t = 0.d0
 
           deltaTe = 0.d0; deltaTi = 0.d0; deltaRho = 0.d0
 
@@ -828,6 +843,7 @@ module mod_expression
 
           delta_g(:) = 0.d0; delta_s(:) = 0.d0; delta_t(:) = 0.d0
           Fprofile = 0.d0;  Fprofile_s = 0.d0;  Fprofile_t = 0.d0
+          r0_axisym = 0.d0
           
           ! --- Reconstruct variables
           do i = 1, n_vertex_max
@@ -1013,8 +1029,19 @@ module mod_expression
 
                 ! --- U0
                 UR0      = UR0      + vv(var_uR) * sz * hh    * hhz
+                UR0_p    = UR0_p    + vv(var_uR) * sz * hh    * hhz_p
+                UR0_s    = UR0_s    + vv(var_uR) * sz * hh_s  * hhz
+                UR0_t    = UR0_t    + vv(var_uR) * sz * hh_t  * hhz
+
                 UZ0      = UZ0      + vv(var_uZ) * sz * hh    * hhz
+                UZ0_p    = UZ0_p    + vv(var_uZ) * sz * hh    * hhz_p
+                UZ0_s    = UZ0_s    + vv(var_uZ) * sz * hh_s  * hhz
+                UZ0_t    = UZ0_t    + vv(var_uZ) * sz * hh_t  * hhz
+
                 Up0      = Up0      + vv(var_up) * sz * hh    * hhz
+                Up0_p    = Up0_p    + vv(var_up) * sz * hh    * hhz_p
+                Up0_s    = Up0_s    + vv(var_up) * sz * hh_s  * hhz
+                Up0_t    = Up0_t    + vv(var_up) * sz * hh_t  * hhz
 
                 if ( ( i_tor ==  2 ) .or. ( i_tor == 3 ) ) then
                   AR0_1_p    = AR0_1_p    + vv(var_AR) * sz * hh    * hhz_p
@@ -1038,6 +1065,7 @@ module mod_expression
                   A30_0_st   = A30_0_st   + vv(var_A3) * sz * hh_st  * hhz    
                   uR_0       = uR_0       + vv(var_uR) * sz * hh    * hhz
                   uZ_0       = uZ_0       + vv(var_uZ) * sz * hh    * hhz
+                  r0_axisym  = r0_axisym  + vv(var_rho) * sz * hh    * hhz
                 endif
 
                 if ( i_tor .ge. 2 ) then
@@ -1060,6 +1088,13 @@ module mod_expression
             end do
           end do
           
+          UR0_R = (   Z_t * UR0_s - Z_s * UR0_t ) / xjac
+          UR0_Z = ( - R_t * UR0_s + R_s * UR0_t ) / xjac
+          UZ0_R = (   Z_t * UZ0_s - Z_s * UZ0_t ) / xjac
+          UZ0_Z = ( - R_t * UZ0_s + R_s * UZ0_t ) / xjac
+          Up0_R = (   Z_t * Up0_s - Z_s * Up0_t ) / xjac
+          Up0_Z = ( - R_t * Up0_s + R_s * Up0_t ) / xjac
+
           ! --- Construct Cartesian Derivatives of Variables.
           ps0_R    = (   Z_t * ps0_s - Z_s * ps0_t ) / xjac
           ps0_Z    = ( - R_t * ps0_s + R_s * ps0_t ) / xjac
@@ -1529,6 +1564,15 @@ module mod_expression
 
           grad_psi_2 = 0.d0
           lap_psi    = 0.d0
+
+          rho_compress_term  = 0.d0
+          rho_convect_term   = 0.d0
+          rho_diffusive_term = 0.d0
+          rho_source_term    = 0.d0
+          particle_source    = 0.d0
+          heat_source_i      = 0.d0
+          heat_source_e      = 0.d0
+          rho_GS             = 0.d0
           
           if ( (psi_abs > 1.d-6) .and. (r0 > 1.d-6) .and. (abs(Btheta) > 1.d-6) ) then
             
@@ -1726,8 +1770,24 @@ module mod_expression
           etaJtor_R2 = etaJtor / R**2
           etaSJtor_R2 = etaSJtor / R**2
 
-          grad_psi_2 = (A30_0_R * A30_0_R + A30_0_Z * A30_0_Z) / (ES%Psi_bnd - ES%Psi_axis)**2
-          lap_psi    = (A30_0_R / R + A30_0_RR + A30_0_ZZ) / (ES%Psi_bnd - ES%Psi_axis)
+          grad_psi_2 = (A30_0_R * A30_0_R + A30_0_Z * A30_0_Z) / (eq%Psi_bnd - eq%Psi_axis)**2
+          lap_psi    = (A30_0_R / R + A30_0_RR + A30_0_ZZ) / (eq%Psi_bnd - eq%Psi_axis)
+#endif
+
+#ifdef fullmhd
+          call sources(eq%xpoint, eq%xcase, Z, eq%Z_xpoint, psi_norm,0.d0,1.d0,particle_source,heat_source_i,heat_source_e)
+          ! --- Adaptive source to make sure density/temperature stays exactly at input profiles
+          if (particlesource_fix_profile) then
+            if (psi_norm .lt. particlesource_fix_profile_psi_max) then
+              call density    (eq%xpoint, eq%xcase, Z, eq%Z_xpoint, psi_norm,0.d0,1.d0, rho_GS,dd1,dd2,dd3,dd4,dd5,dd6,dd7,dd8)
+              if ( (r0_axisym .lt. rho_GS) .or. particlesource_fix_profile_allow_negative ) &
+                particle_source = (1.0/particlesource_fix_profile_tsteps) * (rho_GS-r0_axisym) ! / tstep
+            endif
+          endif
+          rho_compress_term = - r0 * (UR0 / R + UR0_R + UZ0_Z + Up0_p / R)
+          rho_convect_term  = - (UR0 * r0_R + UZ0 * r0_Z + Up0 * r0_p / R)
+          rho_diffusive_term = D_prof * (r0_R / R + r0_RR + r0_ZZ + r0_pp / R**2)
+          rho_source_term = particle_source
 #endif
 
 
@@ -2085,6 +2145,18 @@ module mod_expression
 
               case ( 'lapPsi' )
                 res = lap_psi
+
+              case ( 'rho_comprs' )
+                res = rho_compress_term * fact_rho / fact_time
+
+              case ( 'rho_convect' )
+                res = rho_convect_term * fact_rho / fact_time
+
+              case ( 'rho_diffus' )
+                res = rho_diffusive_term * fact_rho / fact_time
+
+              case ( 'rho_source' )
+                res = rho_source_term * fact_rho / fact_time
 
               case ( 'E_||' )
                 res = E_par / fact_time

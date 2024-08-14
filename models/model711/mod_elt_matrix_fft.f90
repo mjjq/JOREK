@@ -39,6 +39,7 @@ real*8,  intent(in)    :: R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint(2), Z_xpoi
 #define ENABLE_DIA_DRIFT_TEMPERATURE
 #define MOMENTUM_UPHI_IN_PARALLEL
 #define TEMPERATURE_DEPENDENT_UPDATE
+#define ENABLE_PARTICLE_SOURCE_IN_MOMENTUM_EQUATION
 
 ! In model 710, viscType=0 and 22 corresponds to the form: \mu\nabla^2\vec{v}
 ! #define VISCOSITY_TENSOR_FORM
@@ -2008,7 +2009,9 @@ do j=1,n_degrees
 #endif
 #endif
                                 - v * PneoR             &
+#ifdef ENABLE_PARTICLE_SOURCE_IN_MOMENTUM_EQUATION
                                 - v * particle_source(ms,mt) * UR0 &
+#endif
                                 - visco_num * lap_Vstar * lap_UR
             Qvec_k(var_UR)    = + JxB_UR__k             &
                                 + visco_T * Qvisc_UR__k
@@ -2047,7 +2050,9 @@ do j=1,n_degrees
 #endif
 #endif
                               - v * PneoZ             &
+#ifdef ENABLE_PARTICLE_SOURCE_IN_MOMENTUM_EQUATION
                               - v * particle_source(ms,mt) * UZ0 &
+#endif
                               - visco_num * lap_Vstar * lap_UZ
             Qvec_k(var_UZ)  = + JxB_UZ__k             &
                               + visco_T * Qvisc_UZ__k
@@ -2105,7 +2110,9 @@ do j=1,n_degrees
 #endif
                                 + p0 * BgradVstar__p          &
                                 - v * (BR0*PneoR + BZ0*PneoZ) &
+#ifdef ENABLE_PARTICLE_SOURCE_IN_MOMENTUM_EQUATION
                                 - v * particle_source(ms,mt) * (BR0*UR0 + BZ0*UZ0 + Bp0*Up0) &
+#endif
                                 - visco_num * lap_Vstar * (BR0 * lap_UR + BZ0 * lap_UZ + Bp0 * lap_Up)
             Qvec_k(var_Up)    = + BR0 * visco_T * Qvisc_UR__k &
                                 + BZ0 * visco_T * Qvisc_UZ__k &
@@ -2148,7 +2155,9 @@ do j=1,n_degrees
                                 +     Q_1_over_3_visc_grad_divU_Up__p       &
 #endif
 #endif
+#ifdef ENABLE_PARTICLE_SOURCE_IN_MOMENTUM_EQUATION
                                 - v * particle_source(ms,mt) * Up0 &
+#endif
                                 - visco_num * lap_Vstar * lap_Up
             Qvec_k(var_Up)    = + v_p__k * p0 / R             &
                                 + JxB_Up__k                   &
@@ -6024,7 +6033,10 @@ do j=1,n_degrees
                     -visco_pp_diff_prof * Qjac_UR_visco_parpar_A3_knn
 #endif
 
-                  Qjac_p (var_UR,var_UR ) =  Qconv_UR_UR__p + visco_T * Qvisc_UR_UR__p  - v * PneoR_UR - v * particle_source(ms,mt) * UR &
+                  Qjac_p (var_UR,var_UR ) =  Qconv_UR_UR__p + visco_T * Qvisc_UR_UR__p  - v * PneoR_UR &
+#ifdef ENABLE_PARTICLE_SOURCE_IN_MOMENTUM_EQUATION
+                                            - v * particle_source(ms,mt) * UR &
+#endif
                                             - visco_num * lap_Vstar * lap_bf
                   Qjac_n (var_UR,var_UR ) =  Qconv_UR_UR__n + visco_T * Qvisc_UR_UR__n
                   Qjac_k (var_UR,var_UR ) =                 + visco_T * Qvisc_UR_UR__k
@@ -6320,7 +6332,10 @@ do j=1,n_degrees
                     -visco_pp_diff_prof * Qjac_UZ_visco_parpar_UR_knn
 #endif
 
-                  Qjac_p (var_UZ,var_UZ )  =  Qconv_UZ_UZ__p + visco_T * Qvisc_UZ_UZ__p - v * PneoZ_UZ - v * particle_source(ms,mt) * UZ &
+                  Qjac_p (var_UZ,var_UZ )  =  Qconv_UZ_UZ__p + visco_T * Qvisc_UZ_UZ__p - v * PneoZ_UZ &
+#ifdef ENABLE_PARTICLE_SOURCE_IN_MOMENTUM_EQUATION
+                                            - v * particle_source(ms,mt) * UZ &
+#endif
                                             - visco_num * lap_Vstar * lap_bf
                   Qjac_n (var_UZ,var_UZ )  =  Qconv_UZ_UZ__n + visco_T * Qvisc_UZ_UZ__n
                   Qjac_k (var_UZ,var_UZ )  =                 + visco_T * Qvisc_UZ_UZ__k
@@ -6456,7 +6471,9 @@ do j=1,n_degrees
                                             + Bp0_AR * visco_T * Qvisc_Up__p &
                                             + p0 * BgradVstar_AR__p          &
                                             - v * (BR0*PneoR_AR__p + BZ0*PneoZ_AR__p) &
+#ifdef ENABLE_PARTICLE_SOURCE_IN_MOMENTUM_EQUATION
                                             - v * particle_source(ms,mt) * (Bp0_AR*Up0) &
+#endif
                                             - visco_num * lap_Vstar * (BR0_AR * lap_UR               + Bp0_AR * lap_Up)
                   Qjac_n (var_Up,var_AR)  = + BZ0_AR__n * Qconv_UZ              &
                                             + BR0       * Qconv_UR_AR__n        &
@@ -6466,7 +6483,9 @@ do j=1,n_degrees
                                             + p0 * BgradVstar_AR__n             &
                                             - v * (BR0*PneoR_AR__n + BZ0*PneoZ_AR__n) &
                                             - v * (                + BZ0_AR__n*PneoZ) &
+#ifdef ENABLE_PARTICLE_SOURCE_IN_MOMENTUM_EQUATION
                                             - v * particle_source(ms,mt) * (BZ0_AR__n*UZ0) &
+#endif
                                             - visco_num * lap_Vstar * (               + BZ0_AR__n * lap_UZ)
                   Qjac_k (var_Up,var_AR)  = + BR0_AR * visco_T * Qvisc_UR__k &
                                             + Bp0_AR * visco_T * Qvisc_Up__k &
@@ -6576,7 +6595,9 @@ do j=1,n_degrees
                                             + Bp0_AZ * visco_T * Qvisc_Up__p &
                                             + p0 * BgradVstar_AZ__p          &
                                             - v * (BR0*PneoR_AZ__p + BZ0*PneoZ_AZ__p) &
+#ifdef ENABLE_PARTICLE_SOURCE_IN_MOMENTUM_EQUATION
                                             - v * particle_source(ms,mt) * (Bp0_AZ*Up0) &
+#endif
                                             - visco_num * lap_Vstar * (              + BZ0_AZ * lap_UZ + Bp0_AZ * lap_Up)
                   Qjac_n (var_Up,var_AZ)  = + BR0_AZ__n * Qconv_UR              &
                                             + BR0       * Qconv_UR_AZ__n        &
@@ -6586,7 +6607,9 @@ do j=1,n_degrees
                                             + p0 * BgradVstar_AZ__n             &
                                             - v * (BR0*PneoR_AZ__n + BZ0*PneoZ_AZ__n) &
                                             - v * (BR0_AZ__n*PneoR                  ) &
+#ifdef ENABLE_PARTICLE_SOURCE_IN_MOMENTUM_EQUATION
                                             - v * particle_source(ms,mt) * (BR0_AZ__n*UR0) &
+#endif
                                             - visco_num * lap_Vstar * (BR0_AZ__n * lap_UR )
                   Qjac_k (var_Up,var_AZ)  = + BZ0_AZ * visco_T * Qvisc_UZ__k &
                                             + Bp0_AZ * visco_T * Qvisc_Up__k &
@@ -6698,7 +6721,9 @@ do j=1,n_degrees
                                             + p0 * BgradVstar_A3__p          &
                                             - v * (BR0*PneoR_A3__p + BZ0*PneoZ_A3__p) &
                                             - v * (BR0_A3*PneoR    + BZ0_A3*PneoZ   ) &
+#ifdef ENABLE_PARTICLE_SOURCE_IN_MOMENTUM_EQUATION
                                             - v * particle_source(ms,mt) * (BR0_A3*UR0 + BZ0_A3*UZ0) &
+#endif
                                             - visco_num * lap_Vstar * (BR0_A3 * lap_UR + BZ0_A3 * lap_UZ + Bp0_A3 * lap_Up)
                   Qjac_n (var_Up,var_A3)  = + BR0    * Qconv_UR_A3__n        &
                                             + BZ0    * Qconv_UZ_A3__n        &
@@ -6794,7 +6819,9 @@ do j=1,n_degrees
                                             + BZ0 * visco_T * Qvisc_UZ_UR__p &
                                             + Bp0 * visco_T * Qvisc_Up_UR__p &
                                             - v * (BR0*PneoR_UR + BZ0*PneoZ_UR) &
+#ifdef ENABLE_PARTICLE_SOURCE_IN_MOMENTUM_EQUATION
                                             - v * particle_source(ms,mt) * (BR0*UR) &
+#endif
                                             - visco_num * lap_Vstar * BR0 * lap_bf
                   Qjac_n (var_Up,var_UR)  = + BR0 * Qconv_UR_UR__n           &
                                             + BZ0 * Qconv_UZ_UR__n           &
@@ -6888,7 +6915,9 @@ do j=1,n_degrees
                                             + BZ0 * visco_T * Qvisc_UZ_UZ__p &
                                             + Bp0 * visco_T * Qvisc_Up_UZ__p &
                                             - v * (BR0*PneoR_UZ + BZ0*PneoZ_UZ) &
+#ifdef ENABLE_PARTICLE_SOURCE_IN_MOMENTUM_EQUATION
                                             - v * particle_source(ms,mt) * (BZ0*UZ) &
+#endif
                                             - visco_num * lap_Vstar * BZ0 * lap_bf
                   Qjac_n (var_Up,var_UZ)  = + BR0 * Qconv_UR_UZ__n           &
                                             + BZ0 * Qconv_UZ_UZ__n           &
@@ -6977,7 +7006,9 @@ do j=1,n_degrees
                                             + BR0 * visco_T * Qvisc_UR_Up__p &
                                             + BZ0 * visco_T * Qvisc_UZ_Up__p &
                                             + Bp0 * visco_T * Qvisc_Up_Up__p &
+#ifdef ENABLE_PARTICLE_SOURCE_IN_MOMENTUM_EQUATION
                                             - v * particle_source(ms,mt) * (Bp0*Up) &
+#endif
                                             - visco_num * lap_Vstar * Bp0 * lap_bf
                   Qjac_n (var_Up,var_Up)  = + BR0 * Qconv_UR_Up__n              &
                                             + BZ0 * Qconv_UZ_Up__n              &
@@ -7329,7 +7360,9 @@ do j=1,n_degrees
 #endif
 
                   Qjac_p (var_Up,var_Up)  = Qconv_Up_Up__p + visco_T * Qvisc_Up_Up__p &
+#ifdef ENABLE_PARTICLE_SOURCE_IN_MOMENTUM_EQUATION
                                             - v * particle_source(ms,mt) * Up &
+#endif
                                             - visco_num * lap_Vstar * lap_bf
                   Qjac_n (var_Up,var_Up)  = Qconv_Up_Up__n + visco_T * Qvisc_Up_Up__n
                   Qjac_k (var_Up,var_Up)  =                  visco_T * Qvisc_Up_Up__k
@@ -8325,11 +8358,20 @@ subroutine add_vms_to_rhs()
   
   ! residual in momentum
   res(var_UR) = rho0 * UgradUR - rho0 * Up0 * Up0/R + rho0 * VdiaGradUR - rho0 * VdiaP0*Up0 / R &
-              + p0_R   - visco_T * vsR - PneoR + particle_source(ms,mt) * UR0
+#ifdef ENABLE_PARTICLE_SOURCE_IN_MOMENTUM_EQUATION
+              + particle_source(ms,mt) * UR0                                                    &
+#endif
+              + p0_R   - visco_T * vsR - PneoR
   res(var_UZ) = rho0 * UgradUZ                      + rho0 * VdiaGradUZ                  & 
-              + p0_Z   - visco_T * vsZ - PneoZ + particle_source(ms,mt) * UZ0
+#ifdef ENABLE_PARTICLE_SOURCE_IN_MOMENTUM_EQUATION
+              + particle_source(ms,mt) * UZ0                                             &
+#endif
+              + p0_Z   - visco_T * vsZ - PneoZ
   res(var_Up) = rho0 * UgradUp + rho0 * UR0 * Up0/R + rho0 * VdiaGradUp + rho0 * VdiaP0*UR0 / R &
-              + p0_p/R - visco_T * vsp         + particle_source(ms,mt) * Up0
+#ifdef ENABLE_PARTICLE_SOURCE_IN_MOMENTUM_EQUATION
+              + particle_source(ms,mt) * Up0                                                    &
+#endif
+              + p0_p/R - visco_T * vsp
   
   ! residual in density equation
   res(var_rho)=   UgradRho + rho0 * divU - D_prof * (rho0_R / R + rho0_RR + rho0_ZZ + rho0_pp/R**2)
@@ -8638,7 +8680,10 @@ subroutine add_vms_to_elm()
   res_jac__n(var_UR,var_A3 ) =  rho0 * ( VdiaGradUR_A3__n  - VdiaP0_A3__n * Up0 / R ) - PneoR_A3__n
   
   res_jac__p(var_UR, var_UR) =  rho0 * UgradUR_UR__p + rho0 * VdiaGradUR_UR__p &
-                               - visco_T * vsR_UR__p - PneoR_UR + particle_source(ms,mt) * UR 
+#ifdef ENABLE_PARTICLE_SOURCE_IN_MOMENTUM_EQUATION
+                               + particle_source(ms,mt) * UR                   &
+#endif
+                               - visco_T * vsR_UR__p - PneoR_UR
   res_jac__n(var_UR, var_UR) =  rho0 * UgradUR_UR__n + rho0 * VdiaGradUR_UR__n &
                                - visco_T * vsR_UR__n
   res_jac__nn(var_UR, var_UR)= - visco_T * vsR_UR__nn
@@ -8682,7 +8727,11 @@ subroutine add_vms_to_elm()
   res_jac__n(var_UZ, var_UR) =                    - visco_T * vsR_UR__n           
   res_jac__nn(var_UZ, var_UR)=                    - visco_T * vsR_UR__nn          
   
-  res_jac__p(var_UZ, var_UZ) = rho0 * UgradUZ_UZ__p - visco_T * vsZ_UZ__p - PneoZ_UZ + particle_source(ms,mt) * UZ
+  res_jac__p(var_UZ, var_UZ) = rho0 * UgradUZ_UZ__p - visco_T * vsZ_UZ__p &
+#ifdef ENABLE_PARTICLE_SOURCE_IN_MOMENTUM_EQUATION
+                               + particle_source(ms,mt) * UZ              &
+#endif
+                               - PneoZ_UZ
   res_jac__n(var_UZ, var_UZ) = rho0 * UgradUZ_UZ__n - visco_T * vsZ_UZ__n
   res_jac__nn(var_UZ, var_UZ)=                      - visco_T * vsZ_UZ__nn
   
@@ -8719,7 +8768,10 @@ subroutine add_vms_to_elm()
   res_jac__nn(var_Up, var_UZ)=                    - visco_T * vsp_UZ__nn
   
   res_jac__p(var_Up, var_Up) =  rho0 * UgradUp_Up__p + rho0 * UR0 * Up / R - rho0 * VdiaGradUp_Up__p &
-                                             - visco_T * vsR_Up__p + particle_source(ms,mt) * Up
+#ifdef ENABLE_PARTICLE_SOURCE_IN_MOMENTUM_EQUATION
+                                             + particle_source(ms,mt) * Up                           &
+#endif
+                                             - visco_T * vsR_Up__p 
   res_jac__n(var_Up, var_Up) =  rho0 * UgradUp_Up__n                       - rho0 * VdiaGradUp_Up__n &
                                              - visco_T * vsR_Up__n 
   res_jac__nn(var_Up, var_Up)=               - visco_T * vsR_Up__nn

@@ -187,7 +187,11 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
     read(21) node_list%node(i)%ref_lambda
     read(21) node_list%node(i)%ref_mu
     read(21) node_list%node(i)%constrained
-    read(21) node_list%node(i)%irregular_node
+    if ((n_R > 0) .and. (n_Z > 0) .and. (n_radial > 0)) then
+      read(21) node_list%node(i)%irregular_node
+    else
+      node_list%node(i)%irregular_node = 0
+    endif
 
     node_list%node(i)%values = 0.d0
     node_list%node(i)%deltas = 0.d0
@@ -216,8 +220,13 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
   
   ! Status of the axis treatment
   read(21) treat_axis
-  read(21) treat_irregular_nodes
-  read(21) fix_irregular_nodes
+  if ((n_R > 0) .and. (n_Z > 0) .and. (n_radial > 0)) then
+    read(21) treat_irregular_nodes
+    read(21) fix_irregular_nodes
+  else
+    treat_irregular_nodes = .false.
+    fix_irregular_nodes   = .false.
+  endif
  
   write(*,*) 'CHECK (1): allocating energies in import_restart : ',index_start,index_start+nstep
 
@@ -759,7 +768,11 @@ endif
    	read(21) node_list_perturbation%node(i)%ref_lambda
    	read(21) node_list_perturbation%node(i)%ref_mu
    	read(21) node_list_perturbation%node(i)%constrained
-        read(21) node_list_perturbation%node(i)%irregular_node
+    if ((n_R > 0) .and. (n_Z > 0) .and. (n_radial > 0)) then
+      read(21) node_list_perturbation%node(i)%irregular_node
+    else
+      node_list_perturbation%node(i)%irregular_node = 0
+    endif
 
    	node_list_perturbation%node(i)%values = 0.d0
    	node_list_perturbation%node(i)%deltas = 0.d0
@@ -1092,7 +1105,9 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   call tr_allocate(t_ref_lambda, 1,node_list%n_nodes,                "ref_lambda" ,CAT_UNKNOWN)
   call tr_allocate(t_ref_mu,     1,node_list%n_nodes,                "ref_mu",     CAT_UNKNOWN)
   call tr_allocate(t_constrained,1,node_list%n_nodes,                "constrained",CAT_UNKNOWN)
-  call tr_allocate(t_irregular_node,   1,node_list%n_nodes,          "irregular_node",  CAT_UNKNOWN)
+  if ((n_R > 0) .and. (n_Z > 0) .and. (n_radial > 0)) then
+    call tr_allocate(t_irregular_node,   1,node_list%n_nodes,          "irregular_node",  CAT_UNKNOWN)
+  endif
 
   ! type_element, element_list%n_elements
   call tr_allocate(t_vertex,      1,element_list%n_elements,1,n_vertex_max,                 "vertex",CAT_UNKNOWN)
@@ -1129,7 +1144,9 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   call HDF5_array1D_reading     (file_id,t_ref_lambda,  'ref_lambda')
   call HDF5_array1D_reading     (file_id,t_ref_mu,      'ref_mu')
   call HDF5_array1D_reading_char(file_id,t_constrained, 'constrained')
-  call HDF5_array1D_reading_int (file_id,t_irregular_node,    'irregular_node')
+  if ((n_R > 0) .and. (n_Z > 0) .and. (n_radial > 0)) then
+    call HDF5_array1D_reading_int (file_id,t_irregular_node,    'irregular_node')
+  endif
 
   ! --- Detect new modes that need to be initialized to noise level
   if (allocated(new_mode))   call tr_deallocate(new_mode,"new_mode",CAT_UNKNOWN)
@@ -1211,7 +1228,11 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
     else
        node_list%node(i)%constrained = .false.
     end if
-    node_list%node(i)%irregular_node = t_irregular_node(i)
+    if ((n_R > 0) .and. (n_Z > 0) .and. (n_radial > 0)) then
+      node_list%node(i)%irregular_node = t_irregular_node(i)
+    else
+      node_list%node(i)%irregular_node = 0
+    endif
   end do
 
   call HDF5_array2D_reading_int(file_id,t_vertex,      'vertex')
@@ -1944,17 +1965,22 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   else
     treat_axis = .false.
   endif
-  call HDF5_char_reading(file_id,t_treat_irregular_nodes,"treat_irregular_nodes")
-  if (trim(t_treat_irregular_nodes) .eq. 'T') then
-    treat_irregular_nodes = .true.
+  if ((n_R > 0) .and. (n_Z > 0) .and. (n_radial > 0)) then
+    call HDF5_char_reading(file_id,t_treat_irregular_nodes,"treat_irregular_nodes")
+    if (trim(t_treat_irregular_nodes) .eq. 'T') then
+      treat_irregular_nodes = .true.
+    else
+      treat_irregular_nodes = .false.
+    endif
+    call HDF5_char_reading(file_id,t_fix_irregular_nodes,"fix_irregular_nodes")
+    if (trim(t_fix_irregular_nodes) .eq. 'T') then
+      fix_irregular_nodes = .true.
+    else
+      fix_irregular_nodes = .false.
+    endif
   else
     treat_irregular_nodes = .false.
-  endif
-  call HDF5_char_reading(file_id,t_fix_irregular_nodes,"fix_irregular_nodes")
-  if (trim(t_fix_irregular_nodes) .eq. 'T') then
-    fix_irregular_nodes = .true.
-  else
-    fix_irregular_nodes = .false.
+    fix_irregular_nodes   = .false.
   endif
 
   call HDF5_close(file_id)
@@ -2050,7 +2076,9 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   call tr_deallocate(t_ref_lambda,"ref_lambda",CAT_UNKNOWN)
   call tr_deallocate(t_ref_mu,"ref_mu",CAT_UNKNOWN)
   call tr_deallocate(t_constrained,"constrained",CAT_UNKNOWN)
-  call tr_deallocate(t_irregular_node,"irregular_node",CAT_UNKNOWN)
+  if ((n_R > 0) .and. (n_Z > 0) .and. (n_radial > 0)) then
+    call tr_deallocate(t_irregular_node,"irregular_node",CAT_UNKNOWN)
+  endif
  
   call tr_deallocate(t_vertex,"t_vertex",CAT_UNKNOWN)
   call tr_deallocate(t_neighbours,"t_neighbours",CAT_UNKNOWN)

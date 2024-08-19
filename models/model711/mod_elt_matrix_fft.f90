@@ -35,8 +35,8 @@ real*8,  intent(in)    :: R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint(2), Z_xpoi
 #define DIM1 n_plane
 #define DIM2 1:n_vertex_max*n_var*n_degrees
 
-#define ENABLE_VISCO_PAR_AND_PARPAR
-#define ENABLE_DIA_DRIFT_TEMPERATURE
+! #define ENABLE_VISCO_PAR_AND_PARPAR
+! #define ENABLE_DIA_DRIFT_TEMPERATURE
 #define MOMENTUM_UPHI_IN_PARALLEL
 #define TEMPERATURE_DEPENDENT_UPDATE
 #define ENABLE_PARTICLE_SOURCE_IN_MOMENTUM_EQUATION
@@ -558,17 +558,8 @@ real*8     :: vsZ, vsZ_UR__p, vsZ_UR__n, vsZ_UR__nn, vsZ_UZ__p, vsZ_UZ__n, vsZ_U
 real*8     :: vsp, vsp_UR__p, vsp_UR__n, vsp_UR__nn, vsp_UZ__p, vsp_UZ__n, vsp_UZ__nn, vsp_Up__p, vsp_Up__n, vsp_Up__nn
 
 real*8, dimension(DIM1, DIM2, DIM2), intent(inout) :: ELM_knn
-#ifdef ENABLE_VISCO_PAR_AND_PARPAR
-!  --- For visco_par and visco_par_par
-real*8, dimension(n_var,n_var)                     :: Qjac_knn
-real*8     :: qparR, qparZ, qparPhi, qparpar, qparparR, qparparZ, qparparPhi
-real*8     :: grad_BRVstar_R, grad_BRVstar_Z, grad_BRVstar_phi, grad_BRVstar_phi_k
-real*8     :: grad_BpVstar_R, grad_BpVstar_Z, grad_BpVstar_phi, grad_BpVstar_phi_k
-real*8     :: grad_BZVstar_R, grad_BZVstar_Z, grad_BZVstar_phi, grad_BZVstar_phi_k
-real*8     :: BB2_R, BB2_Z, BB2_phi
-real*8     :: B_dot_grad_BB2, B_dot_U0, B_dot_grad_BdotU0
-real*8     :: grad_BdotU0_R, grad_BdotU0_Z, grad_BdotU0_phi
 
+!  --- For visco, visco_par and visco_par_par
 real*8     :: grad_BR_AR__R, grad_BZ_AR__R__n, grad_Bp_AR__R
 real*8     :: grad_BR_AZ__R__n, grad_BZ_AZ__R, grad_Bp_AZ__R
 real*8     :: grad_BR_A3__R, grad_BZ_A3__R, grad_Bp_A3__R
@@ -581,8 +572,20 @@ real*8     :: grad_BR_AR__phi, grad_BZ_AR__phi__nn, grad_Bp_AR__phi__n
 real*8     :: grad_BR_AZ__phi__nn, grad_BZ_AZ__phi, grad_Bp_AZ__phi__n
 real*8     :: grad_BR_A3__phi__n, grad_BZ_A3__phi__n, grad_Bp_A3__phi
 
+!  --- For visco_par and visco_par_par
+#ifdef ENABLE_VISCO_PAR_AND_PARPAR
+real*8, dimension(n_var,n_var)                     :: Qjac_knn
+real*8     :: qparR, qparZ, qparPhi, qparpar, qparparR, qparparZ, qparparPhi
+real*8     :: grad_BRVstar_R, grad_BRVstar_Z, grad_BRVstar_phi, grad_BRVstar_phi_k
+real*8     :: grad_BpVstar_R, grad_BpVstar_Z, grad_BpVstar_phi, grad_BpVstar_phi_k
+real*8     :: grad_BZVstar_R, grad_BZVstar_Z, grad_BZVstar_phi, grad_BZVstar_phi_k
+real*8     :: BB2_R, BB2_Z, BB2_phi
+real*8     :: B_dot_grad_BB2, B_dot_U0, B_dot_grad_BdotU0
+real*8     :: grad_BdotU0_R, grad_BdotU0_Z, grad_BdotU0_phi
+
 real*8     :: B_dot_grad_BR, B_dot_grad_BZ, B_dot_grad_Bp
 real*8     :: B_AR_dot_U__p, B_AR_dot_U__n, B_AZ_dot_U__p, B_AZ_dot_U__n, B_A3_dot_U__p, B_A3_dot_U__n
+
 real*8     :: grad_B_AR_dot_U__R__p, grad_B_AR_dot_U__R__n, grad_B_AZ_dot_U__R__p, grad_B_AZ_dot_U__R__n, grad_B_A3_dot_U__R__p, grad_B_A3_dot_U__R__n
 real*8     :: grad_B_AR_dot_U__Z__p, grad_B_AR_dot_U__Z__n, grad_B_AZ_dot_U__Z__p, grad_B_AZ_dot_U__Z__n, grad_B_A3_dot_U__Z__p, grad_B_A3_dot_U__Z__n
 real*8     :: grad_B_AR_dot_U__phi__p, grad_B_AR_dot_U__phi__n, grad_B_AR_dot_U__phi__nn, grad_B_AZ_dot_U__phi__p, grad_B_AZ_dot_U__phi__n, grad_B_AZ_dot_U__phi__nn, grad_B_A3_dot_U__phi__p, grad_B_A3_dot_U__phi__n, grad_B_A3_dot_U__phi__nn
@@ -1350,8 +1353,10 @@ do j=1,n_degrees
           D_prof   = get_dperp (psi_norm)
           ZKi_prof = get_zk_iperp(psi_norm)
           ZKe_prof = get_zk_eperp(psi_norm)
+#ifdef ENABLE_VISCO_PAR_AND_PARPAR
           visco_par_prof = visco_par
           visco_pp_diff_prof = visco_pp_diff
+#endif
 #ifdef TEMPERATURE_DEPENDENT_UPDATE
           ! --- Resistivity
           if ( eta_T_dependent .and. Te0_corr <= T_max_eta) then
@@ -2870,8 +2875,7 @@ do j=1,n_degrees
 
                   endif
 
-#ifdef ENABLE_VISCO_PAR_AND_PARPAR
-                  !  --- For visco_par and visco_par_par
+                  !  --- For visco, visco_par and visco_par_par
                   grad_BR_AR__R    = 0.d0
                   grad_BZ_AR__R__n = -1.d0 / R**2 * AR_p__n + 1.d0 / R * AR_Rp
                   grad_Bp_AR__R    = -AR_RZ
@@ -2908,6 +2912,8 @@ do j=1,n_degrees
                   grad_BZ_A3__phi__n    = -1.d0 / R * A3_Rp
                   grad_Bp_A3__phi    = 0.d0
 
+#ifdef ENABLE_VISCO_PAR_AND_PARPAR
+                  !  --- For visco_par and visco_par_par
                   B_AR_dot_U__p = BR0_AR * UR0 + Bp0_AR * Up0
                   B_AR_dot_U__n = BZ0_AR__n * UZ0 
                   B_AZ_dot_U__p = BZ0_AZ * UZ0 + Bp0_AZ * Up0
@@ -8322,9 +8328,11 @@ subroutine calculate_sc_quantities()
   ZKi_prof   = ZKi_prof   + ZK_i_perp_sc_num * tau_sc
   ZKe_par_T  = ZKe_par_T  + ZK_e_par_sc_num  * tau_sc
   ZKe_prof   = ZKe_prof   + ZK_e_perp_sc_num * tau_sc
+#ifdef ENABLE_VISCO_PAR_AND_PARPAR
   visco_par_prof = visco_par_prof + visco_par_sc_num * tau_sc
   ! the defination of visco_par_par_sc_num or visco_pp_diff_sc_num is strange, here used just for numerical reasons.
   visco_pp_diff_prof = visco_pp_diff_prof + visco_par_par_sc_num * tau_sc 
+#endif
 
 end subroutine calculate_sc_quantities
 

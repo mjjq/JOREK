@@ -84,6 +84,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 particlesource_gauss_psin, particlesource_gauss_sig,&
                 particlesource, heatsource, tauIC,                  &
                 particlesource_fix_profile               ,          &
+                particlesource_fix_profile_const_Dperp   ,          &
                 particlesource_fix_profile_allow_negative,          &
                 particlesource_fix_profile_tsteps        ,          &
                 particlesource_fix_profile_psi_max       ,          &

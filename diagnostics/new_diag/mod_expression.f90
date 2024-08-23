@@ -1783,6 +1783,9 @@ module mod_expression
               if ( (r0_axisym .lt. rho_GS) .or. particlesource_fix_profile_allow_negative ) &
                 particle_source = (1.0/particlesource_fix_profile_tsteps) * (rho_GS-r0_axisym) ! / tstep
             endif
+          elseif (particlesource_fix_profile_const_Dperp) then
+            call density    (eq%xpoint, eq%xcase, Z, eq%Z_xpoint, psi_norm,0.d0,1.d0, rho_GS,dd1,dd2,dd3,dd4,dd5,dd6,dd7,dd8)
+            particle_source = - D_perp(1) * ( grad_psi_2 * dd3 + lap_psi * dd1 )
           endif
           rho_compress_term = - r0 * (UR0 / R + UR0_R + UZ0_Z + Up0_p / R)
           rho_convect_term  = - (UR0 * r0_R + UZ0 * r0_Z + Up0 * r0_p / R)

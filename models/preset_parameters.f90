@@ -357,6 +357,7 @@ subroutine preset_parameters
   particlesource_fix_profile_allow_negative = .false.
   particlesource_fix_profile_tsteps         = 2.0
   particlesource_fix_profile_psi_max        = 0.9
+  particlesource_fix_profile_const_Dperp    = .false.
   heatsource_fix_profile                    = .false.
   heatsource_fix_profile_allow_negative     = .false.
   heatsource_fix_profile_tsteps             = 2.0

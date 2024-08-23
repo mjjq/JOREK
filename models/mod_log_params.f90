@@ -838,6 +838,7 @@ write(*,'(1x,a)',advance='no') ' RTREE_H               : '
   write(*,LOGI_FMT) 'particlesource_fix_profile_allow_negative',particlesource_fix_profile_allow_negative
   write(*,REAL_FMT) 'particlesource_fix_profile_tsteps        ',particlesource_fix_profile_tsteps
   write(*,REAL_FMT) 'particlesource_fix_profile_psi_max       ',particlesource_fix_profile_psi_max
+  write(*,LOGI_FMT) 'particlesource_fix_profile_const_Dperp   ',particlesource_fix_profile_const_Dperp
   write(*,LOGI_FMT) 'heatsource_fix_profile                   ',heatsource_fix_profile
   write(*,LOGI_FMT) 'heatsource_fix_profile_allow_negative    ',heatsource_fix_profile_allow_negative
   write(*,REAL_FMT) 'heatsource_fix_profile_tsteps            ',heatsource_fix_profile_tsteps

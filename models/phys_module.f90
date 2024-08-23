@@ -9,12 +9,12 @@ module phys_module
 
   implicit none
 
-  real*8  :: loop_voltage
-  real*8  :: loop_voltage_control
-  real*8  :: loop_voltage_prop
-  real*8  :: loop_voltage_der
-  real*8  :: loop_voltage_int
-  real*8  :: I_target
+  real*8  :: loop_voltage         !< Constant loop voltage at the boundary of the computational domain (in V; works only for fixed boundary)
+  real*8  :: loop_voltage_control !< PID feedback loop voltage (in V)
+  real*8  :: loop_voltage_prop    !< Proportional gains
+  real*8  :: loop_voltage_der     !< Derivative gains
+  real*8  :: loop_voltage_int     !< Integral gains
+  real*8  :: I_target             !< I_target (negative) usually opposes to the I_tot
   
   !> @name Various parameters
   real*8  :: eta                  !< Resistivity at plasma cener (normalized)
@@ -311,6 +311,7 @@ module phys_module
   logical :: particlesource_fix_profile_allow_negative   !< allow a negative source
   real*8  :: particlesource_fix_profile_tsteps           !< time-scale over which this is enforced (ideally >=2)
   real*8  :: particlesource_fix_profile_psi_max          !< max psi-norm where this is applied
+  logical :: particlesource_fix_profile_const_Dperp      !< particle source to fix profile onto input Grad-Shafranov profile, only works with constant D_perp profile
   logical :: heatsource_fix_profile                      !< adaptive source to fix profile onto input Grad-Shafranov profile
   logical :: heatsource_fix_profile_allow_negative       !< allow a negative source
   real*8  :: heatsource_fix_profile_tsteps               !< time-scale over which this is enforced (ideally >=2)

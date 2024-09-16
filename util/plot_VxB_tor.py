@@ -54,10 +54,15 @@ if __name__ == "__main__":
     # plot VxB from n = 0 components of (V, B), by subtract n /= 0 components from the total components.
     # e.g., plot_VxB_tor.py -np 32 -ns 40000 vtk_no0_iplane  -xylim 1.20 2.00 -0.20 0.30 -qs -1.1 -tm $time2si  -clim -0.00000018 0.00000018
     plot_eq_component = False
+    more_outfile_digits = True
+
+    zfill_num = 5
+    if more_outfile_digits:
+        zfill_num = 6
 
     reader = vtk.vtkDataSetReader()
     for itor in range(args.nplane):
-        file_path = args.folder_name + str(int(itor + 1)) + '/jorek.' + str(int(args.nstep)).zfill(5) + '.vtk'
+        file_path = args.folder_name + str(int(itor + 1)) + '/jorek.' + str(int(args.nstep)).zfill(zfill_num) + '.vtk'
         
         data_list, coordniates, time = pltvtk.read_data(file_path, reader, ['UR', 'UZ', 'B_R', 'B_Z'], itor)
         time = time * args.multiplier_for_time
@@ -69,7 +74,7 @@ if __name__ == "__main__":
         if plot_eq_component:
             legend_name = r'$(V_0 \times B_0)_{\varphi}$'
             folder_name = 'vtk_iplane-' + args.folder_name
-            file_path_all = 'vtk_iplane' + str(int(itor + 1)) + '/jorek.' + str(int(args.nstep)).zfill(5) + '.vtk'
+            file_path_all = 'vtk_iplane' + str(int(itor + 1)) + '/jorek.' + str(int(args.nstep)).zfill(zfill_num) + '.vtk'
             data_list_all, coordniates_all, time_all = pltvtk.read_data(file_path_all, reader, ['UR', 'UZ', 'B_R', 'B_Z'], itor)
             UR = data_list_all[:, 0] - data_list[:, 0]
             UZ = data_list_all[:, 1] - data_list[:, 1]

@@ -71,9 +71,9 @@ real*8                :: A3,  A3_s,  A3_t,  A3_st,  A3_ss,  A3_tt, A3_R, A3_Z, A
 real*8                :: VR0, VR0_s, VR0_t, VR0_st, VR0_ss, VR0_tt
 real*8                :: VZ0, VZ0_s, VZ0_t, VZ0_st, VZ0_ss, VZ0_tt
 real*8                :: VP0, VP0_s, VP0_t, VP0_st, VP0_ss, VP0_tt
-real*8                :: VR,  VR_s,  VR_t,  VR_st,  VR_ss,  VR_tt
-real*8                :: VZ,  VZ_s,  VZ_t,  VZ_st,  VZ_ss,  VZ_tt
-real*8                :: VP,  VP_s,  VP_t,  VP_st,  VP_ss,  VP_tt
+real*8                :: VR,  VR_s,  VR_t,  VR_st,  VR_ss,  VR_tt, VR_R, VR_Z
+real*8                :: VZ,  VZ_s,  VZ_t,  VZ_st,  VZ_ss,  VZ_tt, VZ_R, VZ_Z
+real*8                :: VP,  VP_s,  VP_t,  VP_st,  VP_ss,  VP_tt, Vp_R, Vp_Z
 real*8                :: Fprof
 real*8                :: BR, BR_R, BR_Z, BR_p
 real*8                :: BZ, BZ_R, BZ_Z, BZ_p
@@ -112,7 +112,7 @@ real*8                :: T0_corr, r0_corr, rn0_corr, ne_JOREK, T_or_Te, T_or_Te_
 integer               :: i_imp, offset_bgimp, i_bg     ! Loop for more than one background impurity
 integer               :: i_proj
 integer               :: i_psin, i_test, iimp(6), i_ne, ineu(7), ibg_tot, i_pellet(2), i_flux(8), i_neo(10), i_boot(2)
-integer               :: i_full(19), i_vec_B, i_vec_V, i_vec_E, i_vec_Jpol
+integer               :: i_full(23), i_vec_B, i_vec_V, i_vec_E, i_vec_Jpol
 integer, allocatable  :: iibg(:), iproj(:)
 character*36          :: imp_label, proj_label
 
@@ -406,6 +406,10 @@ endif
   call add_vtk_entry('B_poloidal  ', 'B_poloidal  ',    i_full(17), n_scalars, si_units, scalar_names) 
   call add_vtk_entry('etaSpz      ', 'etaSpz      ',    i_full(18), n_scalars, si_units, scalar_names) 
   call add_vtk_entry('Jsource     ', 'Jsource     ',    i_full(19), n_scalars, si_units, scalar_names) 
+  call add_vtk_entry('F_over_R    ', 'F_over_R    ',    i_full(20), n_scalars, si_units, scalar_names) 
+  call add_vtk_entry('delta_Bphi  ', 'delta_Bphi  ',    i_full(21), n_scalars, si_units, scalar_names) 
+  call add_vtk_entry('Pres        ', 'Pres        ',    i_full(22), n_scalars, si_units, scalar_names) 
+  call add_vtk_entry('dBphidt     ', 'dBphidt     ',    i_full(23), n_scalars, si_units, scalar_names)
 #endif /*fullmhd*/
 ! --- end adding scalars
 
@@ -748,6 +752,10 @@ do i=1,element_list%n_elements
 
         VR    = 0.d0  ;  VZ    = 0.d0  ;  Vp    = 0.d0
 
+        VR_R  = 0.d0  ;  VR_Z  = 0.d0
+        VZ_R  = 0.d0  ;  VZ_Z  = 0.d0
+        Vp_R  = 0.d0  ;  Vp_Z  = 0.d0
+
         A_radial   = 0.d0
         A_poloidal = 0.d0
         U_radial   = 0.d0
@@ -832,6 +840,15 @@ do i=1,element_list%n_elements
           rho_p = rho_p + zn0* HZ_p(i_tor,i_plane)
 
           if ((xjac .gt. 1.d-6)) then  ! avoid the axis
+
+            VR_R  = VR_R  + (   Z_t * VR0_s - Z_s * VR0_t ) / xjac * HZ(i_tor,i_plane)
+            VR_Z  = VR_Z  + ( - R_t * VR0_s + R_s * VR0_t ) / xjac * HZ(i_tor,i_plane)
+
+            VZ_R  = VZ_R  + (   Z_t * VZ0_s - Z_s * VZ0_t ) / xjac * HZ(i_tor,i_plane)
+            VZ_Z  = VZ_Z  + ( - R_t * VZ0_s + R_s * VZ0_t ) / xjac * HZ(i_tor,i_plane)
+
+            Vp_R  = Vp_R  + (   Z_t * Vp0_s - Z_s * Vp0_t ) / xjac * HZ(i_tor,i_plane)
+            Vp_Z  = Vp_Z  + ( - R_t * Vp0_s + R_s * Vp0_t ) / xjac * HZ(i_tor,i_plane)
 
             AR_R  = AR_R  + (   Z_t * AR0_s - Z_s * AR0_t ) / xjac * HZ(i_tor,i_plane)
             AR_Z  = AR_Z  + ( - R_t * AR0_s + R_s * AR0_t ) / xjac * HZ(i_tor,i_plane)
@@ -993,6 +1010,11 @@ do i=1,element_list%n_elements
         call current(ES%xpoint, ES%xcase, R, Z, ES%Z_xpoint, psi_norm00, 0.d0, 1.d0, current_source_phi)
         current_source_phi = - current_source_phi / R
         scalars(inode,i_full(19))= current_source_phi
+        scalars(inode,i_full(20))= F_prof / R
+        scalars(inode,i_full(21))= AZ_R - AR_Z
+        scalars(inode,i_full(22))= rho * TT
+        scalars(inode,i_full(23))= - BP * (VR_R + VZ_Z) - VR * BP_R - VZ * BP_Z &
+                                   + BR * Vp_R + BZ * Vp_Z + VP * (BR_R + BZ_Z)
 
         if (include_bootstrap) then
           call bootstrap_current(R, Z, ES%R_axis, ES%Z_axis, ES%psi_axis, ES%R_xpoint, ES%Z_xpoint, ES%psi_bnd, psi_norm,&

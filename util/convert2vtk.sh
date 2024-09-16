@@ -188,7 +188,7 @@ function do_convert () {
 
 SCRIPTDIR=`dirname $0`; SCRIPTDIR=`readlink -f $SCRIPTDIR`
 
-more_outfile_digits=false # If ... = true, then the step is in 6 digits. Otherwise (= false), it is in 5 digits.
+more_outfile_digits=true # If ... = true, then the step is in 6 digits. Otherwise (= false), it is in 5 digits.
 
 # --- Process command line parameters
 nthreads="1"

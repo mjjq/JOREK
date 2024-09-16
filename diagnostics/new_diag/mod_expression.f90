@@ -132,6 +132,9 @@ module mod_expression
     call add(exprs_all, 'JxB_R       ', 'JxB force (R component)                               ')
     call add(exprs_all, 'JxB_Z       ', 'JxB force (Z component)                               ')
     call add(exprs_all, 'JxB_phi     ', 'JxB force (phi component)                             ')
+    call add(exprs_all, 'JxB_radial  ', 'JxB force (radial component)                          ')
+    call add(exprs_all, 'JpolxBtor_r ', 'JpolxBtor force (radial component)                    ')
+    call add(exprs_all, 'JtorxBpol_r ', 'JtorxBpol force (radial component)                    ')
     call add(exprs_all, 'gradP_R     ', 'Pressure gradient force (R component)                 ')
     call add(exprs_all, 'gradP_Z     ', 'Pressure gradient force (Z component)                 ')
     call add(exprs_all, 'gradP_phi   ', 'Pressure gradient force (phi component)               ')
@@ -214,6 +217,15 @@ module mod_expression
     call add(exprs_all, 'rho_convect ', 'particle convective term in continuity equation       ')
     call add(exprs_all, 'rho_diffus  ', 'particle diffusive term in continuity equation (assume uniform D_perp and ignore D_par) ')
     call add(exprs_all, 'rho_source  ', 'particle source term in continuity equation           ')
+    call add(exprs_all, 'V_radial    ', 'radial velocity = V\cdot\nabla\psi/|\nabla\psi|       ')
+    call add(exprs_all, 'grad_psi_R  ', 'grad_psi_R/abs{grad_psi} component                    ')
+    call add(exprs_all, 'grad_psi_Z  ', 'grad_psi_Z/abs{grad_psi} component                    ')
+    call add(exprs_all, 'myVnablaV_r ', 'radial component of {-\rho v\cdot\nabla v}     term in momentum equation')
+    call add(exprs_all, 'myDiv_BB_r  ', 'radial component of {\nabla\cdot (BB)}         term in momentum equation')
+    call add(exprs_all, 'myNablaB2_r ', 'radial component of {-0.5\nabla (B^2)}         term in momentum equation')
+    call add(exprs_all, 'myJxB_r     ', 'radial component of {JxB}                      term in momentum equation')
+    call add(exprs_all, 'myGradP_r   ', 'radial component of {-\nabla P}                term in momentum equation')
+    call add(exprs_all, 'myViscTerm_r', 'radial component of {-nabla\cdot(\mu\nabla v)} term in momentum equation')
     call add(exprs_all, 'E_||        ', 'E_|| for RE acceleration                              ')
     call add(exprs_all, 'E_crit      ', 'E_crit for RE avalanching (Connor-Hastie)             ')
     call add(exprs_all, 'E_dreicer   ', 'Electrical field for Dreicer RE primary source        ')
@@ -615,7 +627,7 @@ module mod_expression
       BB2, Btor, BR, BZ, BR_Z, BZ_R, Btheta, psi_abs, E_par, E_crit,                               &
       E_dreicer, AR0_R, AR0_Z, AZ0_R, AZ0_Z, A30_R, A30_Z, AR0_Rp, AZ0_Zp, A30_RR, A30_ZZ, AR0_ZZ, &
       AR0_RR, AZ0_RR, AZ0_ZZ, A30_Rp, A30_Zp, AR0_RZ, AZ0_RZ, AR0_Zp, AZ0_Rp, A30_RZ, BR_p, BZ_p,  &
-      BP_Z, BP_R, BR_R, BZ_Z, B_R, B_Z, Kappa_R, Kappa_Z, Kappa_phi
+      BP_Z, BP_R, BR_R, BZ_Z, B_R, B_Z, Kappa_R, Kappa_Z, Kappa_phi, Bp_p
     real*8  :: eta_T, deta_dT, d2eta_d2T, visco_T, dvisco_dT, D_prof, ZK_prof, ZKi_prof, ZKe_prof, &
       ZKpar_T, dZKpar_dT, ZKi_par_T, dZKi_par_dT, ZKe_par_T, dZKe_par_dT, eta_num_T, visco_num_T
     real*8  :: VXB_tor, VXB_tor_all, VXB00_tor
@@ -626,9 +638,9 @@ module mod_expression
     real*8  :: particle_source, heat_source_i, heat_source_e
     real*8  :: rho_GS,dd1,dd2,dd3,dd4,dd5,dd6,dd7,dd8
     real*8  :: r0_axisym
-    real*8  :: UR0_R, UR0_Z, UR0_p, UR0_s, UR0_t
-    real*8  :: UZ0_R, UZ0_Z, UZ0_p, UZ0_s, UZ0_t
-    real*8  :: Up0_R, Up0_Z, Up0_p, Up0_s, Up0_t
+    real*8  :: UR0_R, UR0_Z, UR0_p, UR0_s, UR0_t, UR0_RR, UR0_ZZ, UR0_pp, UR0_ss, UR0_tt, UR0_st
+    real*8  :: UZ0_R, UZ0_Z, UZ0_p, UZ0_s, UZ0_t, UZ0_RR, UZ0_ZZ, UZ0_pp, UZ0_ss, UZ0_tt, UZ0_st
+    real*8  :: Up0_R, Up0_Z, Up0_p, Up0_s, Up0_t, Up0_RR, Up0_ZZ, Up0_pp, Up0_ss, Up0_tt, Up0_st
     real*8  :: A30_0_ss, A30_0_tt, A30_0_st, A30_0_RR, A30_0_ZZ
     real*8 :: Ti0, Ti0_s, Ti0_t, Ti0_st, Ti0_ss, Ti0_tt, Ti0_p, Ti0_pp, Te0, Te0_s, Te0_t, Te0_st, &
       Te0_ss, Te0_tt, Te0_p, Te0_pp, Ti0_R, Ti0_Z, Te0_R, Te0_Z, Er, Vtheta, Mach_par, Mach_pol,   &
@@ -650,6 +662,13 @@ module mod_expression
       fact_resistiv, fact_Er, fact_flux, fact_rad, fact_VXB
     real*8  :: rn0, rn0_s, rn0_t, rn0_ss, rn0_tt, rn0_st, rn0_p, rn0_pp, rn0_R, rn0_Z
     real*8  :: rimp0, rimp0_s, rimp0_t, rimp0_ss, rimp0_tt, rimp0_st, rimp0_p, rimp0_pp, rimp0_R, rimp0_Z
+
+    real*8  :: visco_R, visco_Z, visco_p
+    real*8  :: rho_v_nabla_v_R, rho_v_nabla_v_Z, rho_v_nabla_v_phi
+    real*8  :: div_BB_R, div_BB_Z, div_BB_phi
+    real*8  :: nabla_B2_R, nabla_B2_Z, nabla_B2_phi
+    real*8  :: grad_P_R, grad_P_Z, grad_P_phi
+    real*8  :: visc_term_R, visc_term_Z, visc_term_phi
 
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
     real*8  :: Te_corr_eV, Te_eV
@@ -821,6 +840,9 @@ module mod_expression
           UR0_R = 0.d0; UR0_Z = 0.d0; UR0_p = 0.d0; UR0_s = 0.d0; UR0_t = 0.d0
           UZ0_R = 0.d0; UZ0_Z = 0.d0; UZ0_p = 0.d0; UZ0_s = 0.d0; UZ0_t = 0.d0
           Up0_R = 0.d0; Up0_Z = 0.d0; Up0_p = 0.d0; Up0_s = 0.d0; Up0_t = 0.d0
+          UR0_RR = 0.d0; UR0_ZZ = 0.d0; UR0_pp = 0.d0; UR0_ss = 0.d0; UR0_tt = 0.d0; UR0_st = 0.d0
+          UZ0_RR = 0.d0; UZ0_ZZ = 0.d0; UZ0_pp = 0.d0; UZ0_ss = 0.d0; UZ0_tt = 0.d0; UZ0_st = 0.d0
+          Up0_RR = 0.d0; Up0_ZZ = 0.d0; Up0_pp = 0.d0; Up0_ss = 0.d0; Up0_tt = 0.d0; Up0_st = 0.d0
 
           deltaTe = 0.d0; deltaTi = 0.d0; deltaRho = 0.d0
 
@@ -1032,16 +1054,28 @@ module mod_expression
                 UR0_p    = UR0_p    + vv(var_uR) * sz * hh    * hhz_p
                 UR0_s    = UR0_s    + vv(var_uR) * sz * hh_s  * hhz
                 UR0_t    = UR0_t    + vv(var_uR) * sz * hh_t  * hhz
+                UR0_ss   = UR0_ss   + vv(var_uR) * sz * hh_ss * hhz
+                UR0_tt   = UR0_tt   + vv(var_uR) * sz * hh_tt * hhz
+                UR0_st   = UR0_st   + vv(var_uR) * sz * hh_st * hhz
+                UR0_pp   = UR0_pp   + vv(var_uR) * sz * hh    * hhz_pp
 
                 UZ0      = UZ0      + vv(var_uZ) * sz * hh    * hhz
                 UZ0_p    = UZ0_p    + vv(var_uZ) * sz * hh    * hhz_p
                 UZ0_s    = UZ0_s    + vv(var_uZ) * sz * hh_s  * hhz
                 UZ0_t    = UZ0_t    + vv(var_uZ) * sz * hh_t  * hhz
+                UZ0_ss   = UZ0_ss   + vv(var_uZ) * sz * hh_ss * hhz
+                UZ0_tt   = UZ0_tt   + vv(var_uZ) * sz * hh_tt * hhz
+                UZ0_st   = UZ0_st   + vv(var_uZ) * sz * hh_st * hhz
+                UZ0_pp   = UZ0_pp   + vv(var_uZ) * sz * hh    * hhz_pp
 
                 Up0      = Up0      + vv(var_up) * sz * hh    * hhz
                 Up0_p    = Up0_p    + vv(var_up) * sz * hh    * hhz_p
                 Up0_s    = Up0_s    + vv(var_up) * sz * hh_s  * hhz
                 Up0_t    = Up0_t    + vv(var_up) * sz * hh_t  * hhz
+                Up0_ss   = Up0_ss   + vv(var_up) * sz * hh_ss * hhz
+                Up0_tt   = Up0_tt   + vv(var_up) * sz * hh_tt * hhz
+                Up0_st   = Up0_st   + vv(var_up) * sz * hh_st * hhz
+                Up0_pp   = Up0_pp   + vv(var_up) * sz * hh    * hhz_pp
 
                 if ( ( i_tor ==  2 ) .or. ( i_tor == 3 ) ) then
                   AR0_1_p    = AR0_1_p    + vv(var_AR) * sz * hh    * hhz_p
@@ -1094,6 +1128,34 @@ module mod_expression
           UZ0_Z = ( - R_t * UZ0_s + R_s * UZ0_t ) / xjac
           Up0_R = (   Z_t * Up0_s - Z_s * Up0_t ) / xjac
           Up0_Z = ( - R_t * Up0_s + R_s * Up0_t ) / xjac
+          
+          UR0_RR   = (UR0_ss * Z_t**2 - 2.d0*UR0_st * Z_s*Z_t + UR0_tt * Z_s**2  &
+                      + UR0_s * (Z_st*Z_t - Z_tt*Z_s )                           &
+                      + UR0_t * (Z_st*Z_s - Z_ss*Z_t ) )       / xjac**2         &
+                    - xjac_R * (UR0_s * Z_t - UR0_t * Z_s)     / xjac**2
+          UR0_ZZ   = (UR0_ss * R_t**2 - 2.d0*UR0_st * R_s*R_t + UR0_tt * R_s**2  &
+                      + UR0_s * (R_st*R_t - R_tt*R_s )                           &
+                      + UR0_t * (R_st*R_s - R_ss*R_t ) )       / xjac**2         &
+                    - xjac_Z * (- UR0_s * R_t + UR0_t * R_s )  / xjac**2
+
+          UZ0_RR   = (UZ0_ss * Z_t**2 - 2.d0*UZ0_st * Z_s*Z_t + UZ0_tt * Z_s**2  &
+                      + UZ0_s * (Z_st*Z_t - Z_tt*Z_s )                           &
+                      + UZ0_t * (Z_st*Z_s - Z_ss*Z_t ) )       / xjac**2         &
+                    - xjac_R * (UZ0_s * Z_t - UZ0_t * Z_s)     / xjac**2
+          UZ0_ZZ   = (UZ0_ss * R_t**2 - 2.d0*UZ0_st * R_s*R_t + UZ0_tt * R_s**2  &
+                      + UZ0_s * (R_st*R_t - R_tt*R_s )                           &
+                      + UZ0_t * (R_st*R_s - R_ss*R_t ) )       / xjac**2         &
+                    - xjac_Z * (- UZ0_s * R_t + UZ0_t * R_s )  / xjac**2
+
+          Up0_RR   = (Up0_ss * Z_t**2 - 2.d0*Up0_st * Z_s*Z_t + Up0_tt * Z_s**2  &
+                      + Up0_s * (Z_st*Z_t - Z_tt*Z_s )                           &
+                      + Up0_t * (Z_st*Z_s - Z_ss*Z_t ) )       / xjac**2         &
+                    - xjac_R * (Up0_s * Z_t - Up0_t * Z_s)     / xjac**2
+          Up0_ZZ   = (Up0_ss * R_t**2 - 2.d0*Up0_st * R_s*R_t + Up0_tt * R_s**2  &
+                      + Up0_s * (R_st*R_t - R_tt*R_s )                           &
+                      + Up0_t * (R_st*R_s - R_ss*R_t ) )       / xjac**2         &
+                    - xjac_Z * (- Up0_s * R_t + Up0_t * R_s )  / xjac**2
+
 
           ! --- Construct Cartesian Derivatives of Variables.
           ps0_R    = (   Z_t * ps0_s - Z_s * ps0_t ) / xjac
@@ -1370,6 +1432,7 @@ module mod_expression
           BZ_p = ( AR0_pp - A30_Rp )/BigR
           BP_R = ( AZ0_RR - AR0_RZ ) + Fprofile_R/BigR - Fprofile/BigR**2
           BP_Z = ( AZ0_RZ - AR0_ZZ ) + Fprofile_Z/BigR
+          Bp_p = ( AZ0_Rp - AR0_Zp )
           B_R  = ( BR_R + BZ_R + Bp_R ) / Btot
           B_Z  = ( BR_Z + BZ_Z + Bp_Z ) / Btot
 
@@ -1462,7 +1525,17 @@ module mod_expression
             T_or_Te_0        = T_0
           endif
 
-          call viscosity(visco, T_or_Te, T_or_Te_corr,T_or_Te_0, visco_T)
+          ! --- Viscosity
+          call viscosity(visco, T_or_Te, T_or_Te_corr,T_or_Te_0, visco_T, dvisco_dT)
+          if (with_TiTe) then
+            visco_R = dvisco_dT * Te0_R
+            visco_Z = dvisco_dT * Te0_Z
+            visco_p = dvisco_dT * Te0_p
+          else
+            visco_R = dvisco_dT * T0_R
+            visco_Z = dvisco_dT * T0_Z
+            visco_p = dvisco_dT * T0_p
+          endif
         
           call hyper_resistivity(T_or_Te, T_or_Te_corr, T_or_Te_0, psi_norm, eta_num_T) 
           
@@ -1791,6 +1864,34 @@ module mod_expression
           rho_convect_term  = - (UR0 * r0_R + UZ0 * r0_Z + Up0 * r0_p / R)
           rho_diffusive_term = D_prof * (r0_R / R + r0_RR + r0_ZZ + r0_pp / R**2)
           rho_source_term = particle_source
+
+          rho_v_nabla_v_R   = -r0 * (UR0 * UR0_R + UZ0 * UR0_Z + Up0 * UR0_p / R - Up0 ** 2 / R)
+          rho_v_nabla_v_Z   = -r0 * (UR0 * UZ0_R + UZ0 * UZ0_Z + Up0 * UZ0_p / R)
+          rho_v_nabla_v_phi = -r0 * (UR0 * Up0_R + UZ0 * Up0_Z + Up0 * Up0_p / R + Up0 * UR0 / R)
+
+          div_BB_R          = BR ** 2 / R + 2 * BR * BR_R + BZ * BR_Z  + BR * BZ_Z + (Btor * BR_p + BR * Bp_p) / R - Btor ** 2 / R
+          div_BB_Z          = BR * BZ / R + BR * BZ_R + BZ * BR_R + 2 * BZ * BZ_Z + (Btor * BZ_p + BZ * Bp_p) / R
+          div_BB_phi        = BR * Btor / R + BR * BP_R + Btor * BR_R + BZ * BP_Z + Btor * BZ_Z + 2 * Btor * Bp_p / R + Btor * BR / R
+
+          nabla_B2_R        = - (BR * BR_R + BZ * BZ_R + Btor * BP_R)
+          nabla_B2_Z        = - (BR * BR_Z + BZ * BZ_Z + Btor * BP_Z)
+          nabla_B2_phi      = - (BR * BR_p + BZ * BZ_p + Btor * Bp_p) / R
+
+          grad_P_R          = - P0_R
+          grad_P_Z          = - P0_Z
+          grad_P_phi        = - P0_p / R
+
+          visc_term_R       = visco * ( UR0_R / R + UR0_RR + UR0_ZZ + UR0_pp / R ** 2   &
+                                      - 2.d0 / R ** 2 * Up0_p - UR0 / R ** 2 )          &
+                            + ( visco_R * UR0_R + visco_Z * UR0_Z + visco_p * ( UR0_p - Up0 ) / R ** 2 )
+          
+          visc_term_Z       = visco * ( UZ0_R / R + UZ0_RR + UZ0_ZZ + UZ0_pp / R ** 2 ) &
+                            + ( visco_R * UZ0_R + visco_Z * UZ0_Z + visco_p * UZ0_p / R ** 2 )
+
+          visc_term_phi     = visco * ( Up0_R / R + Up0_RR + Up0_ZZ + Up0_pp / R ** 2   &
+                                      + 2.d0 / R ** 2 * UR0_p - Up0 / R ** 2)           &
+                            + ( visco_R * Up0_R + visco_Z * Up0_Z + visco_p * ( Up0_p + UR0 ) / R ** 2 )
+
 #endif
 
 
@@ -2026,6 +2127,15 @@ module mod_expression
               case ( 'JxB_Z' )
                 res = (-JpolR*Btor+Jtor*BR) / fact_mu_zero
 
+              case ( 'JxB_radial' )
+                res = ( (JpolZ*Btor-Jtor*BZ) * A30_0_R + (-JpolR*Btor+Jtor*BR) * A30_0_Z ) / dsqrt(A30_0_R * A30_0_R + A30_0_Z * A30_0_Z) / fact_mu_zero
+
+              case ( 'JpolxBtor_r' )
+                res = ( (JpolZ*Btor) * A30_0_R + (-JpolR*Btor) * A30_0_Z ) / dsqrt(A30_0_R * A30_0_R + A30_0_Z * A30_0_Z) / fact_mu_zero
+
+              case ( 'JtorxBpol_r' )
+                res = ( (-Jtor*BZ) * A30_0_R + (+Jtor*BR) * A30_0_Z ) / dsqrt(A30_0_R * A30_0_R + A30_0_Z * A30_0_Z) / fact_mu_zero
+
               case ( 'JxB_phi' )
                 res = (JpolR*BZ-JpolZ*BR) / fact_mu_zero
 
@@ -2160,6 +2270,34 @@ module mod_expression
 
               case ( 'rho_source' )
                 res = rho_source_term * fact_rho / fact_time
+
+              case ( 'V_radial' )
+                res = ((uR_0 + uR_all) * A30_0_R + (uZ_0 + uZ_all) * A30_0_Z)/dsqrt(A30_0_R * A30_0_R + A30_0_Z * A30_0_Z) / fact_time
+
+              case ( 'grad_psi_R' )
+                res = A30_0_R/dsqrt(A30_0_R * A30_0_R + A30_0_Z * A30_0_Z)
+
+              case ( 'grad_psi_Z' )
+                res = A30_0_Z/dsqrt(A30_0_R * A30_0_R + A30_0_Z * A30_0_Z)
+
+              case ( 'myVnablaV_r' )
+                res = (rho_v_nabla_v_R * A30_0_R + rho_v_nabla_v_R * A30_0_Z) / dsqrt(A30_0_R * A30_0_R + A30_0_Z * A30_0_Z) / fact_mu_zero
+
+              case ( 'myDiv_BB_r' )
+                res = (div_BB_R * A30_0_R + div_BB_Z * A30_0_Z) / dsqrt(A30_0_R * A30_0_R + A30_0_Z * A30_0_Z) / fact_mu_zero
+              
+              case ( 'myNablaB2_r' )
+                res = (nabla_B2_R * A30_0_R + nabla_B2_Z * A30_0_Z) / dsqrt(A30_0_R * A30_0_R + A30_0_Z * A30_0_Z) / fact_mu_zero
+
+              case ( 'myGradP_r' )
+                res = (grad_P_R * A30_0_R + grad_P_Z * A30_0_Z) / dsqrt(A30_0_R * A30_0_R + A30_0_Z * A30_0_Z) / fact_mu_zero
+
+              case ( 'myViscTerm_r' )
+                res = (visc_term_R * A30_0_R + visc_term_Z * A30_0_Z) / dsqrt(A30_0_R * A30_0_R + A30_0_Z * A30_0_Z) / fact_mu_zero
+
+              case ( 'myJxB_r' )
+                res = (div_BB_R * A30_0_R + div_BB_Z * A30_0_Z) / dsqrt(A30_0_R * A30_0_R + A30_0_Z * A30_0_Z) / fact_mu_zero + &
+                      (nabla_B2_R * A30_0_R + nabla_B2_Z * A30_0_Z) / dsqrt(A30_0_R * A30_0_R + A30_0_Z * A30_0_Z) / fact_mu_zero
 
               case ( 'E_||' )
                 res = E_par / fact_time

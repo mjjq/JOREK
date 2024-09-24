@@ -230,6 +230,7 @@ subroutine preset_parameters
   ZK_par_max   = 1.d20
   D_perp(1:5)  = (/ 1.d-5, 0.d0, 0.d0, 99.d0, 99.d0 /)
   D_par        = 0.d0
+  D_par_coeff(1:5)  = (/ 0.d0, 0.d0, 0.d0, 99.d0, 99.d0 /)
   D_perp_imp(1:5)  = (/ 1.d-5, 0.d0, 0.d0, 99.d0, 99.d0 /)
   D_par_imp        = 0.d0
 
@@ -584,6 +585,7 @@ subroutine preset_parameters
   Ti_file            = 'none'
   Fprofile_file      = 'none'
   ffprime_file       = 'none'
+  d_par_file         = 'none'
   d_perp_file        = 'none'
   d_perp_imp_file    = 'none'
   zk_perp_file       = 'none'

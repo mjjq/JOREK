@@ -61,6 +61,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 FF_0,  FF_1,  FF_coef,                              &
                 V_0, V_1, V_coef,                                   &
                 ZK_par, ZK_perp, ZK_par_max, D_par, D_perp,         &
+                D_par_coeff, d_par_file,                            &
                 eta, visco, visco_par, ZK_perp_num,                 &
                 T_max_eta,                                          &
                 eta_num, visco_num, visco_par_num, D_perp_num,      &

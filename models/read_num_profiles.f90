@@ -122,7 +122,14 @@ subroutine read_num_profiles(my_id)
     end if
   end if
 #endif
-  
+
+num_d_par = ( d_par_file /= 'none' )
+if ( num_d_par .and. ( my_id == 0 ) ) then
+  call readProf(num_d_par_x, num_d_par_y, num_d_par_len, d_par_file)
+  call check_num_prof(num_d_par, num_d_par_x, num_d_par_y, num_d_par_len, 'd_par',          &
+                      check_positive=.true.)
+end if
+
   num_d_perp = ( d_perp_file /= 'none' )
   if ( num_d_perp .and. ( my_id == 0 ) ) then
     call readProf(num_d_perp_x, num_d_perp_y, num_d_perp_len, d_perp_file)

@@ -43,6 +43,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 T_0,   T_1,   T_coef,                               &
                 FF_0,  FF_1,  FF_coef,                              &
                 ZK_par, ZK_perp, D_par, D_perp,                     &
+                D_par_coeff, d_par_file,                            &
                 particlesource, heatsource,                         &
                 eta_num, visco_num, tgnum,                          &
                 ellip, tria_u, tria_l, quad_u, quad_l,              &

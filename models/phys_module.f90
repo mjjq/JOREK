@@ -634,7 +634,8 @@ module phys_module
   
   !> @name Analytical heat, particle and neutral particles diffusivity parameters
   real*8  :: D_perp(10)    = 0.d0 !< Coefficients for perpendicular particle diffusion profile
-  real*8  :: D_par                !< Parallel particle diffusion (usually not useful)
+  real*8  :: D_par_coeff(10)=0.d0 !< Coefficients for parallel particle diffusion profile
+  real*8  :: D_par                !< Parallel particle diffusion (uniform, usually not useful)
   real*8  :: D_perp_imp(10)= 0.d0 !< Coefficients for perpendicular imp particle diffusion profile
   real*8  :: D_par_imp            !< Parallel impurity particle diffusion (usually not useful)
   real*8  :: ZK_perp(10)   = 0.d0 !< Coefficients for perpendicular heat diffusion profile
@@ -657,21 +658,26 @@ module phys_module
   real*8  :: HW_coef(10)   = 0.d0 !< Coefficients for Hasegawa-Wakatani fluctuation term
 
   !> @name Numerical heat and particle diffusivity profiles
+  character(len=512)  :: d_par_file         !< ASCII file with parallel particle diffusion profile
   character(len=512)  :: d_perp_file        !< ASCII file with perpendicular particle diffusion profile
   character(len=512)  :: d_perp_imp_file    !< ASCII file with perpendicular particle diffusion profile
   character(len=512)  :: zk_perp_file       !< ASCII file with perpendicular heat diffusion profile
   character(len=512)  :: zk_e_perp_file     !< ASCII file with perpendicular electron heat diffusion profile
   character(len=512)  :: zk_i_perp_file     !< ASCII file wtih perpendicular ion heat diffusion profile
+  logical             :: num_d_par          !< automatically set true if d_par_file /= 'none'
   logical             :: num_d_perp         !< automatically set true if d_perp_file /= 'none'
   logical             :: num_d_perp_imp     !< automatically set true if d_perp_file /= 'none'
   logical             :: num_zk_perp        !< automatically set true if zk_perp_file /= 'none'
   logical             :: num_zk_e_perp      !< automatically set true if zk_e_perp_file /= 'none'
   logical             :: num_zk_i_perp      !< automatically set true if zk_i_perp_file /= 'none'
+  integer             :: num_d_par_len      !< Number of datapoints in d_par profile
   integer             :: num_d_perp_len     !< Number of datapoints in d_perp profile
   integer             :: num_d_perp_len_imp !< Number of datapoints in d_perp profile for impurity
   integer             :: num_zk_perp_len    !< Number of datapoints in zk_perp profile
   integer             :: num_zk_e_perp_len  !< Number of datapoints in zk_e_perp profile
   integer             :: num_zk_i_perp_len  !< Number of datapoints in zk_i_perp profile
+  real*8, allocatable :: num_d_par_x(:)     !< Psi_N values of d_par  profile
+  real*8, allocatable :: num_d_par_y(:)     !< D_perp values of d_par profile
   real*8, allocatable :: num_d_perp_x(:)    !< Psi_N values of d_perp  profile
   real*8, allocatable :: num_d_perp_y(:)    !< D_perp values of d_perp profile
   real*8, allocatable :: num_d_perp_x_imp(:)!< Psi_N values of d_perp  profile for impurity

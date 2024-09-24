@@ -56,6 +56,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 FF_0,  FF_1,  FF_coef,                              &
                 ZK_i_par, ZK_e_par, ZK_par_max, Wdia,               &
                 ZK_i_perp, ZK_e_perp, D_par, D_perp, D_perp_imp,    &
+                D_par_coeff, d_par_file,                            &
                 particlesource, heatsource_i, heatsource_e, tauIC,  &
                 eta_num, visco_num, visco_par_num, D_perp_num,      &
                 ZK_perp_num, Dn_perp_num, D_par_imp,                &

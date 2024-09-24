@@ -4,6 +4,7 @@ module diffusivities
   use constants  
   use mod_parameters,  only: jorek_model
   use phys_module, only: num_d_perp, D_perp, num_d_perp_x, num_d_perp_y, num_d_perp_len,           &
+                         num_d_par, D_par_coeff, num_d_par_x, num_d_par_y, num_d_par_len,          &
                          num_zk_perp, num_zk_e_perp, num_zk_i_perp, ZK_perp, ZK_e_perp, ZK_i_perp, num_zk_perp_x, num_zk_perp_y, num_zk_perp_len,      &
                          num_zk_e_perp_x, num_zk_i_perp_x, num_zk_e_perp_y, num_zk_i_perp_y, num_zk_e_perp_len, num_zk_i_perp_len,     &
        xpoint, xcase, rho_0, rho_coef, T_coef, Ti_coef, Te_coef
@@ -13,8 +14,11 @@ module diffusivities
   
   
   private
-  public get_dperp, get_zkperp, get_zk_iperp, get_zk_eperp
-  
+  public get_dpar, get_dperp, get_zkperp, get_zk_iperp, get_zk_eperp
+
+  interface get_dpar
+    module procedure get_dpar1
+  end interface get_dpar
   
   interface get_dperp
     module procedure get_dperp1
@@ -39,6 +43,39 @@ module diffusivities
   end interface get_zk_eperp
   
   contains
+
+  !> Determine parallel particle diffusivity, D_par, as a function of Psi_N
+  real*8 function get_dpar1(psin)
+#if _OPENMP >= 201511
+    !$omp declare simd
+#endif
+    implicit none
+    
+    real*8, intent(in) :: psin
+    
+    if ( num_d_par ) then
+      
+      get_dpar1 = interpolProf(num_d_par_x, num_d_par_y, num_d_par_len, psin)
+      
+    else
+
+      ! Maximize D_par at the boundary
+      get_dpar1 = D_par_coeff(1) * (tanh((dsqrt(psin) - D_par_coeff(2)) / D_par_coeff(3)) + 1.d0) / 2.d0
+      
+      !! Maximize D_par at the core
+      ! get_dpar1 = D_par_coeff(1) * ( (1.d0-D_par_coeff(2)) +                                                 &
+      ! D_par_coeff(2)*(0.5d0 - 0.5d0*tanh((psin-D_par_coeff(5))/D_par_coeff(4))) )
+      
+      ! if ( jorek_model >= 300 ) then
+        
+      !   get_dpar1 = get_dpar1 + D_par_coeff(6)*D_par_coeff(2) *                                              &
+      !     ((0.5d0 - 0.5d0*tanh((-psin+D_par_coeff(5)+D_par_coeff(3)) /D_par_coeff(4))))
+        
+      ! end if
+      
+    end if
+    
+  end function get_dpar1  
   
   !> Determine perpendicular particle diffusivity, D_perp, as a function of Psi_N
   real*8 function get_dperp1(psin)

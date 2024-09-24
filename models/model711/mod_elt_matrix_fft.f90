@@ -14,7 +14,7 @@ use data_structure
 use gauss
 use basis_at_gaussian
 use phys_module
-use diffusivities, only: get_dperp, get_zk_iperp, get_zk_eperp
+use diffusivities, only: get_dpar, get_dperp, get_zk_iperp, get_zk_eperp
 use equil_info, only : get_psi_n, ES
 use mod_F_profile
 use mod_bootstrap_functions
@@ -1372,7 +1372,8 @@ do j=1,n_degrees
           psi_norm = get_psi_n(psi_axisym(ms,mt), y_g(ms,mt))
 
           ! --- Diffusions
-          D_par_prof = D_par
+          ! D_par_prof = D_par
+          D_par_prof = get_dpar(psi_norm)
           D_prof   = get_dperp (psi_norm)
           ZKi_prof = get_zk_iperp(psi_norm)
           ZKe_prof = get_zk_eperp(psi_norm)

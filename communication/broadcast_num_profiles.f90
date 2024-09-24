@@ -149,6 +149,16 @@ if ( num_ffprime ) then
   call MPI_BCAST(num_ffprime_y2,num_ffprime_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
 end if
 
+if ( num_d_par ) then
+  call MPI_BCAST(num_d_par_len,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+  if ( my_id /= 0 ) then
+     call tr_allocate(num_d_par_x,1,num_d_par_len,"num_d_par_x")
+     call tr_allocate(num_d_par_y,1,num_d_par_len,"num_d_par_y")
+  end if
+  call MPI_BCAST(num_d_par_x,num_d_par_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+  call MPI_BCAST(num_d_par_y,num_d_par_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+end if
+
 if ( num_d_perp ) then
   call MPI_BCAST(num_d_perp_len,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
   if ( my_id /= 0 ) then

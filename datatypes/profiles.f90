@@ -1,7 +1,7 @@
 !> Routines for reading/writing/manipulating 1D data profiles.
 !!
 !! The module is used to handle numerical input profiles for temperature,
-!! density, FFprime, D_perp, and ZK_perp.
+!! density, FFprime, D_par, D_perp, and ZK_perp.
 module profiles
   
   use tr_module 

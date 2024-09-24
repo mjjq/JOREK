@@ -69,6 +69,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 V_0, V_1, V_coef,                                   &
                 ZK_par, ZK_i_par, ZK_e_par, ZK_par_max,             &
                 ZK_perp, ZK_i_perp, ZK_e_perp, D_par, D_perp,       &
+                D_par_coeff, d_par_file,                            &
                 heatsource_e, heatsource_i,                         &
                 eta, visco, visco_par, ZK_i_perp_num, ZK_e_perp_num,&
                 T_max_eta,                                          &
@@ -186,6 +187,9 @@ if (my_id .eq. 0) then
   else
     read(5,in1)
   end if
+
+  ! for compatibility with previous input files with only D_par defined
+  D_par_coeff(1) = max(D_par_coeff(1), D_par)
 
   !==============================R_Z_psi_bnd==========================
   if ( (n_boundary.ne.0) .and. (R_Z_psi_bnd_file /= 'none') ) then

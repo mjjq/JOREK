@@ -806,6 +806,11 @@ write(*,'(1x,a)',advance='no') ' RTREE_H               : '
     write(*,REAL_FMT) 'heatsource_gauss_sig  ', heatsource_gauss_sig
   end if ! (with_TiTe), i.e. single temperature ****************************************************
   write(*,REAL_FMT) 'D_par                 ', D_par
+  if ( .not. num_d_par ) then
+    write(*,REAL_FMT) 'D_par_coeff           ', D_par_coeff(1:6)
+  else
+    write(*,CHAR_FMT) 'D_par_file            ', trim(D_par_file)
+  end if
   if ( .not. num_d_perp ) then
     write(*,REAL_FMT) 'D_perp                ', D_perp(1:6)
   else

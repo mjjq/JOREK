@@ -230,7 +230,7 @@ subroutine preset_parameters
   ZK_par_max   = 1.d20
   D_perp(1:5)  = (/ 1.d-5, 0.d0, 0.d0, 99.d0, 99.d0 /)
   D_par        = 0.d0
-  D_par_coeff(1:5)  = (/ 0.d0, 0.d0, 0.d0, 99.d0, 99.d0 /)
+  D_par_coeff(1:5)  = (/ 0.d0, -99.d0, 0.02d0, 0.d0, 0.d0 /) ! default is zero, and uniform (= D_par_coeff[1])
   D_perp_imp(1:5)  = (/ 1.d-5, 0.d0, 0.d0, 99.d0, 99.d0 /)
   D_par_imp        = 0.d0
 

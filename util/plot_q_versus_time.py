@@ -16,6 +16,23 @@ import plot_vtk as pltvtk
 import plot_multiple_files as pltmpf
 from tqdm import tqdm
 
+# Set global font properties using rcParams
+plt.rcParams.update({
+    'axes.formatter.limits': (-3000, 3000),
+    'axes.formatter.useoffset': True,  # Use scientific notation
+    'font.size': 18,                # Global font size
+    'lines.linewidth': 3.0,         # Global line width
+    'axes.linewidth': 3.0           # Set line width for both x and y axes
+    # 'font.family': 'serif',         # Use serif fonts, which includes Times New Roman
+    # 'font.serif': ['Times New Roman'],  # Specifically set Times New Roman
+    # 'font.weight': 'bold'           # Font weight for all text elements
+    # 'legend.fontsize': 18,          # Font size for the legend
+    # 'axes.labelsize': 18,           # Font size for axis labels
+    # 'axes.titlesize': 16,           # Font size for title
+    # 'xtick.labelsize': 12,          # Font size for x-tick labels
+    # 'ytick.labelsize': 12,          # Font size for y-tick labels
+})
+
 # Function to extract the number from the filename
 def extract_number(filename):
     return int(filename.split('_s')[1].split('.')[0])
@@ -25,7 +42,7 @@ if __name__ == "__main__":
         description="Plot radial distribution of q (y-axis) versus time (x-axis) from postproc files.")
     parser.add_argument("-fp", "--file_path", default="postproc/",
                         help="Directory contains qprofile_sxxxxx.dat.")
-    parser.add_argument("-fz", "--fontsize", type=int, default=15,
+    parser.add_argument("-fz", "--fontsize", type=int, default=18,
                         help="Define the fontsize of figure.")
     parser.add_argument("-qc", "--q_cut", type=float, default=1.3,
                         help="Define the cutoff of the q for plotting.")
@@ -136,7 +153,7 @@ if __name__ == "__main__":
     plt.yticks(fontsize=font_size)
 
     contour_line = plt.contour(times_2d, r2d, data_2d_plt, levels=args.contour_surfaces, colors='k', linestyles = 'dotted')
-    plt.clabel(contour_line, inline=True, fontsize=8)
+    plt.clabel(contour_line, inline=True, fontsize=18)
     plt.tight_layout()
 
     x = np.reshape(times_2d, data_2d_num)

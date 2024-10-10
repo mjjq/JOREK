@@ -12,6 +12,23 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 import argparse
 
+# Set global font properties using rcParams
+plt.rcParams.update({
+    'axes.formatter.limits': (-3, 3),
+    'axes.formatter.useoffset': True,  # Use scientific notation
+    'font.size': 18,                # Global font size
+    'lines.linewidth': 3.0,         # Global line width
+    'axes.linewidth': 3.0           # Set line width for both x and y axes
+    # 'font.family': 'serif',         # Use serif fonts, which includes Times New Roman
+    # 'font.serif': ['Times New Roman'],  # Specifically set Times New Roman
+    # 'font.weight': 'bold'           # Font weight for all text elements
+    # 'legend.fontsize': 18,          # Font size for the legend
+    # 'axes.labelsize': 18,           # Font size for axis labels
+    # 'axes.titlesize': 16,           # Font size for title
+    # 'xtick.labelsize': 12,          # Font size for x-tick labels
+    # 'ytick.labelsize': 12,          # Font size for y-tick labels
+})
+
 def set_fontsize(fig, fontweight='bold', fontsize=12, title_size=None, label_size=None, tick_size=None, legend_size=None, exponent_size=None):
     """
     Set the font size for the title, axis labels, tick labels, and legend of a Matplotlib figure.
@@ -177,6 +194,7 @@ def plot_ascii_files(file_paths, xscaleType, yscaleType, title, xlabel, ylabel, 
         ymin, ymax = ylim
         plt.ylim(ymin, ymax)
 
+    plt.tight_layout()
     plt.show()
 
 
@@ -213,9 +231,9 @@ if __name__ == "__main__":
     parser.add_argument("-ym", "--multiplier_for_Y", type=float, default=1.0,
                         help="Multiple the Y-data with the specified value.")
     parser.add_argument("file_paths", nargs="+", help="List of file paths to the ASCII files.")
-    parser.add_argument("-fz", "--fontsize", default=15,
+    parser.add_argument("-fz", "--fontsize", default=18,
                         help="Define the fontsize of figure.")
-    parser.add_argument("-lw", "--linewidth", default=2,
+    parser.add_argument("-lw", "--linewidth", default=3,
                         help="Define the linewidth of figure.")
     parser.add_argument('-xlim', nargs=2, type=float, metavar=('xmin', 'xmax'),
                         help='Specify xmin, xmax for the plot.')

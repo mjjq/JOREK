@@ -20,9 +20,9 @@ from scipy.ndimage import gaussian_filter1d
 plt.rcParams.update({
     'axes.formatter.limits': (-3, 3),
     'axes.formatter.useoffset': True,  # Use scientific notation
-    'font.size': 14,                # Global font size
-    'lines.linewidth': 2.0,         # Global line width
-    'axes.linewidth': 2.0           # Set line width for both x and y axes
+    'font.size': 20,                # Global font size
+    'lines.linewidth': 3.0,         # Global line width
+    'axes.linewidth': 3.0           # Set line width for both x and y axes
     # 'font.family': 'serif',         # Use serif fonts, which includes Times New Roman
     # 'font.serif': ['Times New Roman'],  # Specifically set Times New Roman
     # 'font.weight': 'bold'           # Font weight for all text elements
@@ -200,7 +200,7 @@ if __name__ == "__main__":
     plt.semilogy(rhop, eta_T0 / fact_eta, label = r'$\eta_{spz}^{initial}\ [\Omega m]$')
     plt.semilogy(rhop, eta_T / fact_eta, label = r'$\eta_{spz}\ [\Omega m]$')
     plt.semilogy(rhop, eta_T2D / fact_eta, label = r'$\eta_{spz, 2D}\ [\Omega m]$')
-    plt.xlabel(r'$\sqrt{\psi_N}$')
+    plt.xlabel(r'$\sqrt{\psi_n}$')
     plt.ylabel(r'$\eta_{spz}$')
     legend = plt.legend()
     legend.set_draggable(True)
@@ -213,7 +213,7 @@ if __name__ == "__main__":
     plt.plot(rhop, Jtor/fact_J_mu_zero, label = r'$J_\varphi\ [Am^{-2}]$')
     plt.plot(rhop, Jtor2D/fact_J_mu_zero, label = r'$J_{\varphi, 2D}\ [Am^{-2}]$')
     plt.plot(rhop, SJtor/fact_J_mu_zero, label = r'$S_{j,\varphi}\ [Am^{-2}]$')
-    plt.xlabel(r'$\sqrt{\psi_N}$')
+    plt.xlabel(r'$\sqrt{\psi_n}$')
     plt.ylabel(r'different terms')
     legend = plt.legend()
     legend.set_draggable(True)
@@ -226,7 +226,7 @@ if __name__ == "__main__":
         plt.figure()
         plt.plot(rhop, VxBt_n_ge_one_R2 + VxBt_n_eq_zero_R2, label = r'$(VxB_{n>0} + VxB_{n=0})/R^2$')
         plt.plot(rhop, -etaJtor_R2 + etaSJtor_R2, label = r'$-\eta (J_{\varphi} - S_J)/R^2$')
-        plt.xlabel(r'$\sqrt{\psi_N}$')
+        plt.xlabel(r'$\sqrt{\psi_n}$')
         plt.ylabel(r'Different terms')
         legend = plt.legend()
         legend.set_draggable(True)
@@ -248,7 +248,7 @@ if __name__ == "__main__":
     plt.plot(rhop, (-etaJtor_origin + etaSJtor_origin) / fact_eta / fact_J_mu_zero, 'gx',linestyle = 'none')#, label = r'$-\eta (J_{\varphi} - S_J)_{unsmoothed}\ [Vm^{-1}]$')
 
 
-    plt.xlabel(r'$\sqrt{\psi_N}$')
+    plt.xlabel(r'$\sqrt{\psi_n}$')
     plt.ylabel(r'Different terms')
     legend = plt.legend()
     legend.set_draggable(True)
@@ -266,7 +266,7 @@ if __name__ == "__main__":
     # plt.plot(rhop, VxBt_n_all)
     # plt.plot(rhop, gaussian_filter1d(VxBt_n_all,3), '.')
 
-    plt.xlabel(r'$\sqrt{\psi_N}$')
+    plt.xlabel(r'$\sqrt{\psi_n}$')
     plt.ylabel(r'Different terms')
     legend = plt.legend()
     legend.set_draggable(True)
@@ -286,7 +286,7 @@ if __name__ == "__main__":
     # plt.figure()
     # plt.plot(rhop, d2drho2_testf_ana, 'o', linestyle = '--', label = 'Analytical solution')
     # plt.plot(rhop, d2drho2_testf, 's', linestyle = ':', label = 'Numerical solution')
-    # plt.xlabel(r'$\sqrt{\psi_N}$')
+    # plt.xlabel(r'$\sqrt{\psi_n}$')
     # plt.legend()
     # plt.grid()
     # plt.tight_layout()

@@ -18,6 +18,22 @@ import re
 import os
 # import matplotlib.tri as mtri
 
+# Set global font properties using rcParams
+plt.rcParams.update({
+    'axes.formatter.limits': (-3, 3),
+    'axes.formatter.useoffset': True,  # Use scientific notation
+    'font.size': 18,                # Global font size
+    'lines.linewidth': 3.0,         # Global line width
+    'axes.linewidth': 3.0           # Set line width for both x and y axes
+    # 'font.family': 'serif',         # Use serif fonts, which includes Times New Roman
+    # 'font.serif': ['Times New Roman'],  # Specifically set Times New Roman
+    # 'font.weight': 'bold'           # Font weight for all text elements
+    # 'legend.fontsize': 18,          # Font size for the legend
+    # 'axes.labelsize': 18,           # Font size for axis labels
+    # 'axes.titlesize': 16,           # Font size for title
+    # 'xtick.labelsize': 12,          # Font size for x-tick labels
+    # 'ytick.labelsize': 12,          # Font size for y-tick labels
+})
 
 def str_to_bool(value):
     if isinstance(value, bool):
@@ -164,7 +180,8 @@ def plot2D_scatter(x, y, z, title, file_path, time, font_size, si_unit = False, 
 
 def plot2D_flow_field(x, y, vx, vy, title, file_path, time, font_size, si_unit = False):
 
-    plt.figure(figsize=(9, 7), constrained_layout=True)
+    # plt.figure(figsize=(9, 7), constrained_layout=True)
+    plt.figure(figsize=(5.5, 6), constrained_layout=False)
     # Define a regular grid for the contour plot
     x_grid = np.linspace(min(x), max(x), 100)
     y_grid = np.linspace(min(y), max(y), 100)
@@ -202,7 +219,10 @@ def plot2D_flow_field(x, y, vx, vy, title, file_path, time, font_size, si_unit =
     # plt.xlim([min(x), max(x)])
     # plt.ylim([min(y), max(y)])
 
-    plt.axis('equal')
+    plt.xlim([min(x), max(x)])
+    plt.ylim([min(y), max(y)])
+    plt.gca().set_aspect('equal',adjustable='box')
+    # plt.axis('equal')
     # plt.gca().set_aspect('equal',adjustable='box')
 
     # Show the plot
@@ -214,7 +234,8 @@ def plot2D_flow_field(x, y, vx, vy, title, file_path, time, font_size, si_unit =
 
 def plot2D_interpolated(x, y, z, title, file_path, time, font_size, si_unit = False, clim = []):
 
-    plt.figure(figsize=(9, 7), constrained_layout=True)
+    # plt.figure(figsize=(9, 7), constrained_layout=True)
+    plt.figure(figsize=(5.5, 6), constrained_layout=False)
     # Define a regular grid for the contour plot
     x_grid = np.linspace(min(x), max(x), 400)
     y_grid = np.linspace(min(y), max(y), 400)
@@ -229,9 +250,9 @@ def plot2D_interpolated(x, y, z, title, file_path, time, font_size, si_unit = Fa
     # Create a contour plot
     # You can choose a different colormap if desired
     if clim:
-        plt.contourf(X, Y, Z, 50, levels = np.linspace(clim[0], clim[1], 50), cmap='jet')#, extend = 'both')
+        plt.contourf(X, Y, Z, 50, levels = np.linspace(clim[0], clim[1], 50), cmap='rainbow')#, extend = 'both')
     else:
-        plt.contourf(X, Y, Z, 50, cmap='jet')
+        plt.contourf(X, Y, Z, 50, cmap='rainbow')
 
     # Add a colorbar for reference
     plt.colorbar()
@@ -246,10 +267,11 @@ def plot2D_interpolated(x, y, z, title, file_path, time, font_size, si_unit = Fa
     plt.title(title + " @ Time = " +
               time_str + " (" + file_path + ")", fontsize=font_size)
 
-    # plt.xlim([min(x), max(x)])
-    # plt.ylim([min(y), max(y)])
+    plt.xlim([min(x), max(x)])
+    plt.ylim([min(y), max(y)])
+    plt.gca().set_aspect('equal',adjustable='box')
 
-    plt.axis('equal')
+    # plt.axis('equal')
     # plt.gca().set_aspect('equal',adjustable='box')
 
     # Connect the event handler
@@ -261,6 +283,7 @@ def plot2D_interpolated(x, y, z, title, file_path, time, font_size, si_unit = Fa
     plt.xticks(fontsize=font_size)
     plt.yticks(fontsize=font_size)
     # plt.legend(fontsize=font_size)
+    plt.tight_layout()
 
 
 def read_reference(args, reader, variable):
@@ -472,7 +495,7 @@ if __name__ == "__main__":
                         help="Substract with the reference dataset, e.g., to plot deltaT = T - T0, input the path for jorek.00000.vtk.")
     # parser.add_argument('-it', "--interpolate", type=str_to_bool, nargs='?', choices=[True, False], default=False,
     #                     help="Interpolate unstructed data in to structed grids? Default is True.")
-    parser.add_argument("-fz", "--fontsize", type=int, default=15,
+    parser.add_argument("-fz", "--fontsize", type=int, default=18,
                         help="Define the fontsize of figure.")
     parser.add_argument('-xylim', nargs=4, type=float, metavar=('xmin', 'xmax', 'ymin', 'ymax'),
                         help='Specify xmin, xmax, ymin, ymax for the plot.')

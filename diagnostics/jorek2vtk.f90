@@ -112,12 +112,19 @@ real*8                :: T0_corr, r0_corr, rn0_corr, ne_JOREK, T_or_Te, T_or_Te_
 integer               :: i_imp, offset_bgimp, i_bg     ! Loop for more than one background impurity
 integer               :: i_proj
 integer               :: i_psin, i_test, iimp(6), i_ne, ineu(7), ibg_tot, i_pellet(2), i_flux(8), i_neo(10), i_boot(2)
-integer               :: i_full(23), i_vec_B, i_vec_V, i_vec_E, i_vec_Jpol
+integer               :: i_full(24), i_vec_B, i_vec_V, i_vec_E, i_vec_Jpol
 integer, allocatable  :: iibg(:), iproj(:)
 character*36          :: imp_label, proj_label
 
-real*8                :: A_radial, A_poloidal, U_radial, U_poloidal, B_radial, B_poloidal, current_source_phi, A300, psi_norm00
-real*8                :: A30_Z, AZ0_p, AR0_p, A30_R, BR0, BZ0, B_poloidal0, wR2r, wR2p, wZ2r, wZ2p
+real*8                :: A_radial, A_poloidal, U_radial, U_poloidal, B_radial, B_poloidal, current_source_phi, current_source_JR, current_source_JZ, A300, psi_norm00
+! real*8                :: A30_Z, AZ0_p, AR0_p, A30_R, BR0, BZ0, B_poloidal0
+real*8                :: wR2r, wR2p, wZ2r, wZ2p
+real*8                :: divE, VZ_p, VR_p
+real*8                :: dZ_eff_dT, dZ_eff_dr0, dZ_eff_drimp0, dr0_corr_dn, drimp0_corr_dn
+real*8                :: deta_dT, d2eta_d2T, deta_dr0, deta_drimp0
+real*8                :: T_or_Te_0_R, T_or_Te_0_Z, T_or_Te_0_p
+real*8                :: eta_R, eta_Z, eta_p, BR_Zp, BZ_Rp, J_phi_p
+real*8                :: A3_ZZp, AZ_Zpp, AR_Rpp, A3_RRp
 
 #ifdef WITH_Impurities
 ! See https://www.jorek.eu/wiki/doku.php?id=model500_501_555 for details
@@ -410,6 +417,7 @@ endif
   call add_vtk_entry('delta_Bphi  ', 'delta_Bphi  ',    i_full(21), n_scalars, si_units, scalar_names) 
   call add_vtk_entry('Pres        ', 'Pres        ',    i_full(22), n_scalars, si_units, scalar_names) 
   call add_vtk_entry('dBphidt     ', 'dBphidt     ',    i_full(23), n_scalars, si_units, scalar_names)
+  call add_vtk_entry('n_charge_SI ', 'n_charge_SI ',    i_full(24), n_scalars, si_units, scalar_names)
 #endif /*fullmhd*/
 ! --- end adding scalars
 
@@ -749,12 +757,17 @@ do i=1,element_list%n_elements
         A3_Rp = 0.d0  ;  AR_Rp = 0.d0  ;  AZ_Rp = 0.d0
         A3_Zp = 0.d0  ;  AR_Zp = 0.d0  ;  AZ_Zp = 0.d0
         A3_pp = 0.d0  ;  AR_pp = 0.d0  ;  AZ_pp = 0.d0
+        A3_ZZp = 0.d0 ;  AZ_Zpp = 0.d0 ;  AR_Rpp = 0.d0 ;  A3_RRp = 0.d0
 
         VR    = 0.d0  ;  VZ    = 0.d0  ;  Vp    = 0.d0
 
         VR_R  = 0.d0  ;  VR_Z  = 0.d0
         VZ_R  = 0.d0  ;  VZ_Z  = 0.d0
         Vp_R  = 0.d0  ;  Vp_Z  = 0.d0
+        VZ_p  = 0.d0  ;  VR_p  = 0.d0
+
+        T_or_Te     = 0.d0; T_or_Te_corr = 0.d0
+        T_or_Te_0_p = 0.d0; T_or_Te_0_R = 0.d0; T_or_Te_0_Z = 0.d0
 
         A_radial   = 0.d0
         A_poloidal = 0.d0
@@ -762,6 +775,9 @@ do i=1,element_list%n_elements
         U_poloidal = 0.d0
         B_radial   = 0.d0
         B_poloidal = 0.d0
+
+        dZ_eff_dT = 0.d0; dZ_eff_dr0 = 0.d0; dZ_eff_drimp0 = 0.d0; dr0_corr_dn = 0.d0; drimp0_corr_dn = 0.d0
+        deta_dT = 0.d0; d2eta_d2T = 0.d0; deta_dr0 = 0.d0; deta_drimp0 = 0.d0
 
         do i_tor = 1, n_tor
 
@@ -797,17 +813,25 @@ do i=1,element_list%n_elements
             T0   = Ti0   + Te0
             T0_s = Ti0_s + Te0_s
             T0_t = Ti0_t + Te0_t
-            T_or_Te      = Te0 
-            T_or_Te_corr = corr_neg_temp(Te0*2.d0)/2.d0
+            T_or_Te      = T_or_Te + Te0 * HZ(i_tor,i_plane)
             T_or_Te_0    = Te_0
+            T_or_Te_0_p  = T_or_Te_0_p  + Te0 * HZ_p(i_tor,i_plane)
+            if ((xjac .gt. 1.d-6)) then  ! avoid the axis
+              T_or_Te_0_R = T_or_Te_0_R + (   Z_t * Te0_s - Z_s * Te0_t ) / xjac * HZ(i_tor,i_plane)
+              T_or_Te_0_Z = T_or_Te_0_Z + ( - R_t * Te0_s + R_s * Te0_t ) / xjac * HZ(i_tor,i_plane)
+            endif
           else
             call interp(node_list,element_list,i,var_T,  i_tor,s,t,T0, T0_s, T0_t, T0_st, T0_ss, T0_tt)
             Te0    = T0  /2.d0;     Ti0    = T0  /2.d0
             Te0_s  = T0_s/2.d0;     Ti0_s  = T0_s/2.d0
             Te0_t  = T0_t/2.d0;     Ti0_t  = T0_t/2.d0
-            T_or_Te      = T0 
-            T_or_Te_corr = corr_neg_temp(T0)
+            T_or_Te      = T_or_Te + T0 * HZ(i_tor,i_plane)
             T_or_Te_0    = T_0
+            T_or_Te_0_p  = T_or_Te_0_p  + T0 * HZ_p(i_tor,i_plane)
+            if ((xjac .gt. 1.d-6)) then  ! avoid the axis
+              T_or_Te_0_R = T_or_Te_0_R + (   Z_t * T0_s - Z_s * T0_t ) / xjac * HZ(i_tor,i_plane)
+              T_or_Te_0_Z = T_or_Te_0_Z + ( - R_t * T0_s + R_s * T0_t ) / xjac * HZ(i_tor,i_plane)
+            endif
           endif
 
           if (i_tor == 1) then
@@ -832,6 +856,9 @@ do i=1,element_list%n_elements
           VR    = VR   + VR0 * HZ(i_tor,i_plane)
           VZ    = VZ   + VZ0 * HZ(i_tor,i_plane)
           Vp    = Vp   + Vp0 * HZ(i_tor,i_plane)
+
+          VR_p  = VR_p  + VR0 * HZ_p(i_tor,i_plane)
+          VZ_p  = VZ_p  + VZ0 * HZ_p(i_tor,i_plane)
 
           TT    = TT   + T0 * HZ(i_tor,i_plane)
           TT_p  = TT_p + T0 * HZ_p(i_tor,i_plane)
@@ -919,6 +946,19 @@ do i=1,element_list%n_elements
             A3_Rp = A3_Rp + (   Z_t * A30_s - Z_s * A30_t ) / xjac * HZ_p(i_tor,i_plane)
             A3_Zp = A3_Zp + ( - R_t * A30_s + R_s * A30_t ) / xjac * HZ_p(i_tor,i_plane)
 
+
+            A3_RRp = A3_RRp + ( (A30_ss * Z_t**2 - 2.d0*A30_st * Z_s*Z_t + A30_tt * Z_s**2  &
+                             + A30_s * (Z_st*Z_t - Z_tt*Z_s )                             &
+                             + A30_t * (Z_st*Z_s - Z_ss*Z_t ) )    / xjac**2              &
+                             - xjac_x * (A30_s* Z_t - A30_t * Z_s)  / xjac**2             ) * HZ_p(i_tor,i_plane)
+            A3_ZZp = A3_ZZp + ( (A30_ss * R_t**2 - 2.d0*A30_st * R_s*R_t + A30_tt * R_s**2  &
+                             + A30_s * (R_st*R_t - R_tt*R_s )                             &
+                             + A30_t * (R_st*R_s - R_ss*R_t ) )    / xjac**2              &
+                             - xjac_y * (- A30_s * R_t + A30_t * R_s )  / xjac**2         ) * HZ_p(i_tor,i_plane)
+            
+            AR_Rpp = AR_Rpp + (   Z_t * AR0_s - Z_s * AR0_t ) / xjac * HZ_pp(i_tor,i_plane)
+            AZ_Zpp = AZ_Zpp + ( - R_t * AZ0_s + R_s * AZ0_t ) / xjac * HZ_pp(i_tor,i_plane)
+
             TT_x  = TT_x + (   Z_t * T0_s - Z_s * T0_t )   / xjac * HZ(i_tor,i_plane)
             TT_y  = TT_y + ( - R_t * T0_s + R_s * T0_t )   / xjac * HZ(i_tor,i_plane)
 
@@ -952,9 +992,13 @@ do i=1,element_list%n_elements
         BP_Z = ( AZ_RZ - AR_ZZ ) + dF_dpsi*A3_Z/R
         BP_p = ( AZ_Rp - AR_Zp )
 
+        BR_Zp = ( A3_ZZp - AZ_Zpp )/R
+        BZ_Rp = -1/R**2 * ( AR_pp - A3_Rp ) + ( AR_Rpp - A3_RRp )/R
+
         J_R   = (R*BP_Z - BZ_p) / R
         J_Z   = (BR_p - R*BP_R - BP) / R
         J_phi = (BZ_R - BR_Z) ! defined as the physical component J_phi * e_phi, like Bp and Vp
+        J_phi_p = (BZ_Rp - BR_Zp)
 
         JxB_R      = J_Z  *BP - J_phi*BZ
         JxB_Z      = J_phi*BR - J_R  *BP
@@ -1004,7 +1048,14 @@ do i=1,element_list%n_elements
         D_prof  = get_dperp (psi_norm)
         ZK_prof = get_zkperp(psi_norm)
 
-        call resistivity(eta, T_or_Te, T_or_Te_corr, T_max_eta, T_or_Te_0, 1.d0, eta_T)  ! NEEDS TO BE ADAPTED FOR IMPURITIES (Z_eff)!! 
+        T_or_Te_corr = max(T_or_Te,1.d-12)!corr_neg_temp1(Te0) ! CAREFUL! FULL-MHD DOESN'T LIKE THE CORR FUNCTIONS AT ALL
+        call resistivity(eta, T_or_Te, T_or_Te_corr, T_max_eta, T_or_Te_0, 1.d0, eta_T,    &
+                        dZ_eff_dT, dZ_eff_dr0, dZ_eff_drimp0, dr0_corr_dn, drimp0_corr_dn, &
+                        deta_dT, d2eta_d2T, deta_dr0, deta_drimp0)  ! NEEDS TO BE ADAPTED FOR IMPURITIES (Z_eff)!! 
+        eta_R = deta_dT * T_or_Te_0_R
+        eta_Z = deta_dT * T_or_Te_0_Z
+        eta_p = deta_dT * T_or_Te_0_p
+        
         scalars(inode,i_full(18))= eta_T
 
         call current(ES%xpoint, ES%xcase, R, Z, ES%Z_xpoint, psi_norm00, 0.d0, 1.d0, current_source_phi)
@@ -1015,6 +1066,27 @@ do i=1,element_list%n_elements
         scalars(inode,i_full(22))= rho * TT
         scalars(inode,i_full(23))= - BP * (VR_R + VZ_Z) - VR * BP_R - VZ * BP_Z &
                                    + BR * Vp_R + BZ * Vp_Z + VP * (BR_R + BZ_Z)
+
+        divE = -(BR*(Vp_Z-VZ_p/R)+BZ*(VR_p/R-VP/R-Vp_R)+BP*(VZ_R-VR_Z)) + (VR*J_R+VZ*J_Z+VP*J_phi)
+        if(eta_ARAZ_on) then
+          ! --- Poloidal current sources
+          if (eta_ARAZ_simple) then
+            current_source_JR = 0.d0
+            current_source_JZ = 0.d0
+            divE = divE + (J_R - current_source_JR) * eta_R + (J_Z - current_source_JZ) * eta_Z + (J_phi - current_source_phi) * eta_p
+          else
+            ! current_source_JR = + (ES%psi_bnd_init - ES%psi_axis_init) / (psi_bnd - psi_axis) * psi_axisym_Z * dF_dpsi / R
+            ! current_source_JZ = - (ES%psi_bnd_init - ES%psi_axis_init) / (psi_bnd - psi_axis) * psi_axisym_R * dF_dpsi / R
+            ! divE = divE + (J_R - current_source_JR) * eta_R + (J_Z - current_source_JZ) * eta_Z + (J_phi - current_source_phi) * eta_p &
+            !             - eta_T * (current_source_JR_R + current_source_JR / R + current_source_JZ_Z)
+            write(*,*) 'divE for (eta_ARAZ_on = true & eta_ARAZ_simple = false) is undefined in jorek2vtk.f90'
+            call exit(-1)
+          endif
+          
+        else
+          divE = divE + (J_phi - current_source_phi)/R * eta_p + eta_T/R*J_phi_p
+        endif
+        scalars(inode,i_full(24))= divE * EPS_ZERO / (EL_CHG * dsqrt(MU_ZERO * central_mass * MASS_PROTON * central_density * 1.d20)) ! unit is in m^{-3}
 
         if (include_bootstrap) then
           call bootstrap_current(R, Z, ES%R_axis, ES%Z_axis, ES%psi_axis, ES%R_xpoint, ES%Z_xpoint, ES%psi_bnd, psi_norm,&

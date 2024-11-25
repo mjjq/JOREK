@@ -17,6 +17,7 @@ real*8, parameter  :: qmax = 11.d0
 real*8, parameter  :: qmin = 0.5d0
 integer, parameter :: polturns_stop = 100
 integer, parameter :: torturns_stop = 1000
+integer, parameter :: reference_n_mode_number = 1
 !-----------------------------------------!
 !-----------------------------------------!
 integer   :: npoints
@@ -35,6 +36,9 @@ integer   :: i_tor, i_harm
 integer   :: stepPhiMax, num_poinc_max
 real*8    :: psi_start, psi_start_norm, ratio_phi
 
+real*8 :: BR_ref, BZ_ref, Bp_ref, Bp_initial, BB_ref
+real*8 :: uR_all, uZ_all, up_all, VXB_para_all
+
 
 logical, allocatable :: responsible(:)
 integer, allocatable :: num_poinc_min(:)
@@ -48,6 +52,7 @@ real*8, allocatable :: q_arr_poinc(:,:,:)
 real*8, allocatable :: ne_arr_poinc(:,:,:) 
 real*8, allocatable :: Ti_arr_poinc(:,:,:) 
 real*8, allocatable :: Te_arr_poinc(:,:,:) 
+real*8, allocatable :: VxBpara_poinc(:,:,:) 
 
 contains
 
@@ -73,6 +78,7 @@ subroutine construct_all(num_points, nphi_out)
   allocate(ne_arr_poinc(num_poinc_max, num_points, nphi_out))
   allocate(Ti_arr_poinc(num_poinc_max, num_points, nphi_out))
   allocate(Te_arr_poinc(num_poinc_max, num_points, nphi_out))
+  allocate(VxBpara_poinc(num_poinc_max, num_points, nphi_out))
 
   responsible = .false.
   Rstart = 0.d0
@@ -101,6 +107,7 @@ subroutine deconstruct_all()
   deallocate(ne_arr_poinc)
   deallocate(Ti_arr_poinc)
   deallocate(Te_arr_poinc)
+  deallocate(VxBpara_poinc)
 
 end subroutine deconstruct_all
 
@@ -114,6 +121,7 @@ subroutine initia_arrs()
   ne_arr_poinc = 0.d0
   Ti_arr_poinc = 0.d0
   Te_arr_poinc = 0.d0
+  VxBpara_poinc = 0.d0
 end subroutine initia_arrs
 
 pure function cross_product3D(a, b)
@@ -208,6 +216,17 @@ subroutine trance_field_lines_fmhd_3D (node_list, element_list, phi_start, phi_p
             call interp_values(node_list, element_list, R_arr_poinc(torturns + 1, i, iphi_out), Z_arr_poinc(torturns + 1, i, iphi_out), phi_poinc_record(iphi_out), var_rho, ne_arr_poinc(torturns + 1, i, iphi_out))
             call interp_values(node_list, element_list, R_arr_poinc(torturns + 1, i, iphi_out), Z_arr_poinc(torturns + 1, i, iphi_out), phi_poinc_record(iphi_out), var_Te, Te_arr_poinc(torturns + 1, i, iphi_out))
             call interp_values(node_list, element_list, R_arr_poinc(torturns + 1, i, iphi_out), Z_arr_poinc(torturns + 1, i, iphi_out), phi_poinc_record(iphi_out), var_Ti, Ti_arr_poinc(torturns + 1, i, iphi_out))
+
+            call interp_values(node_list, element_list, R_arr_poinc(torturns + 1, i, iphi_out), Z_arr_poinc(torturns + 1, i, iphi_out), phi_poinc_record(iphi_out), var_uR, uR_all)
+            call interp_values(node_list, element_list, R_arr_poinc(torturns + 1, i, iphi_out), Z_arr_poinc(torturns + 1, i, iphi_out), phi_poinc_record(iphi_out), var_uZ, uZ_all)
+            call interp_values(node_list, element_list, R_arr_poinc(torturns + 1, i, iphi_out), Z_arr_poinc(torturns + 1, i, iphi_out), phi_poinc_record(iphi_out), var_up, up_all)
+
+            VXB_para_all = ((uZ_all * ( Bp - Bp_ref ) - up_all * ( BZ - BZ_ref )) * BR_ref + &
+                            (up_all * ( BR - BR_ref ) - uR_all * ( Bp - Bp_ref )) * BZ_ref + &
+                            (uR_all * ( BZ - BZ_ref ) - uZ_all * ( BR - BR_ref )) * Bp_ref) / BB_ref !Bp_initial
+
+            VxBpara_poinc(torturns + 1, i, iphi_out) = VXB_para_all
+
           else
             write(*,*) "Warning: torturns is larger than num_poinc_max"
             write(*,*) "torturns = ", torturns
@@ -443,6 +462,72 @@ subroutine trance_field_lines_fmhd_3D (node_list, element_list, phi_start, phi_p
     enddo
     
   end subroutine interp_values
+
+  subroutine interp_values_n_ne_ref_and_0(node_list,element_list,R0,Z0,phi0,ivar,result_ivar)
+
+    type (type_node_list),    intent(in)    :: node_list
+    type (type_element_list), intent(in)    :: element_list
+    real*8, intent(in)  :: R0, Z0, phi0
+    integer, intent(in) :: ivar
+    real*8, intent(out) :: result_ivar
+    real*8              :: Rtmp, Ztmp
+
+    call find_RZ(node_list,element_list,R0,Z0,Rtmp,Ztmp,ielm,s,t,ifail)
+
+    ! call interp(node_list, element_list, ielm, ivar, 1, s, t, result_ivar, dum01, dum02, dum03, dum04, dum05)
+
+    result_ivar = 0.d0
+    do i_tor = 1, (n_tor-1)/2
+      if (i_tor .ne. reference_n_mode_number) then
+        i_harm = 2*i_tor
+        call interp(node_list, element_list, ielm, ivar, i_harm, s, t, Pcos, dum01, dum02, dum03, dum04, dum05)
+        call interp(node_list, element_list, ielm, ivar, i_harm + 1, s, t, Psin, dum01, dum02, dum03, dum04, dum05)
+        result_ivar = result_ivar + Pcos * cos(mode(i_harm)*phi0) + Psin * sin(mode(i_harm + 1)*phi0)
+      endif
+    enddo
+    
+  end subroutine interp_values_n_ne_ref_and_0
+
+
+  subroutine interp_values_n_eq_ref_and_0(node_list,element_list,R0,Z0,phi0,ivar,result_ivar)
+
+    type (type_node_list),    intent(in)    :: node_list
+    type (type_element_list), intent(in)    :: element_list
+    real*8, intent(in)  :: R0, Z0, phi0
+    integer, intent(in) :: ivar
+    real*8, intent(out) :: result_ivar
+    real*8              :: Rtmp, Ztmp
+
+    call find_RZ(node_list,element_list,R0,Z0,Rtmp,Ztmp,ielm,s,t,ifail)
+
+    call interp(node_list, element_list, ielm, ivar, 1, s, t, result_ivar, dum01, dum02, dum03, dum04, dum05)
+
+    do i_tor = 1, (n_tor-1)/2
+      if (i_tor .eq. reference_n_mode_number) then
+        i_harm = 2*i_tor
+        call interp(node_list, element_list, ielm, ivar, i_harm, s, t, Pcos, dum01, dum02, dum03, dum04, dum05)
+        call interp(node_list, element_list, ielm, ivar, i_harm + 1, s, t, Psin, dum01, dum02, dum03, dum04, dum05)
+        result_ivar = result_ivar + Pcos * cos(mode(i_harm)*phi0) + Psin * sin(mode(i_harm + 1)*phi0)
+      endif
+    enddo
+    
+  end subroutine interp_values_n_eq_ref_and_0
+
+
+  subroutine interp_values_n_eq_0(node_list,element_list,R0,Z0,phi0,ivar,result_ivar)
+
+    type (type_node_list),    intent(in)    :: node_list
+    type (type_element_list), intent(in)    :: element_list
+    real*8, intent(in)  :: R0, Z0, phi0
+    integer, intent(in) :: ivar
+    real*8, intent(out) :: result_ivar
+    real*8              :: Rtmp, Ztmp
+
+    call find_RZ(node_list,element_list,R0,Z0,Rtmp,Ztmp,ielm,s,t,ifail)
+
+    call interp(node_list, element_list, ielm, ivar, 1, s, t, result_ivar, dum01, dum02, dum03, dum04, dum05)
+    
+  end subroutine interp_values_n_eq_0
  
  !> Determine magnetic field at given position
   subroutine determine_field_3D(node_list,element_list)
@@ -450,13 +535,26 @@ subroutine trance_field_lines_fmhd_3D (node_list, element_list, phi_start, phi_p
     type (type_node_list),    intent(in)    :: node_list
     type (type_element_list), intent(in)    :: element_list
 
+    real*8 :: A3_s_ref, A3_t_ref, A3_p_ref
+    real*8 :: AR_s_ref, AR_t_ref, AR_p_ref
+    real*8 :: AZ_s_ref, AZ_t_ref, AZ_p_ref
+    real*8 :: AR_R_ref, AR_Z_ref, AZ_R_ref, AZ_Z_ref, A3_R_ref, A3_Z_ref
+
     A3_p = 0.d0
     AR_p = 0.d0
     AZ_p = 0.d0
 
+    A3_s_ref = 0.d0; A3_t_ref = 0.d0; A3_p_ref = 0.d0
+    AR_s_ref = 0.d0; AR_t_ref = 0.d0; AR_p_ref = 0.d0
+    AZ_s_ref = 0.d0; AZ_t_ref = 0.d0; AZ_p_ref = 0.d0
+
     call interp(node_list, element_list, ielm, 1, 1, s, t, A3, A3_s, A3_t, dum01, dum02, dum03)
     call interp(node_list, element_list, ielm, 2, 1, s, t, AR, AR_s, AR_t, dum01, dum02, dum03)
     call interp(node_list, element_list, ielm, 3, 1, s, t, AZ, AZ_s, AZ_t, dum01, dum02, dum03)
+
+    A3_s_ref = A3_s; A3_t_ref = A3_t
+    AR_s_ref = AR_s; AR_t_ref = AR_t
+    AZ_s_ref = AZ_s; AZ_t_ref = AZ_t
 
     do i_tor = 1, (n_tor-1)/2
       i_harm = 2*i_tor
@@ -466,17 +564,36 @@ subroutine trance_field_lines_fmhd_3D (node_list, element_list, phi_start, phi_p
       A3_t = A3_t + Pcos_t * cos(mode(i_harm)*phi) + Psin_t * sin(mode(i_harm + 1)*phi)
       A3_p = A3_p - Pcos   * sin(mode(i_harm)*phi) * mode(i_harm) + Psin   * cos(mode(i_harm+1)*phi) * mode(i_harm+1)
 
+      if ((reference_n_mode_number > 0) .and. (i_tor == reference_n_mode_number)) then
+        A3_s_ref = A3_s_ref + Pcos_s * cos(mode(i_harm)*phi) + Psin_s * sin(mode(i_harm + 1)*phi)
+        A3_t_ref = A3_t_ref + Pcos_t * cos(mode(i_harm)*phi) + Psin_t * sin(mode(i_harm + 1)*phi)
+        A3_p_ref = A3_p_ref - Pcos   * sin(mode(i_harm)*phi) * mode(i_harm) + Psin   * cos(mode(i_harm+1)*phi) * mode(i_harm+1)
+      endif
+
       call interp(node_list, element_list, ielm, 2, i_harm, s, t, Pcos, Pcos_s, Pcos_t, Pcos_st, Pcos_ss, Pcos_tt)
       call interp(node_list, element_list, ielm, 2, i_harm + 1, s, t, Psin, Psin_s, Psin_t, Psin_st, Psin_ss, Psin_tt)
       AR_s = AR_s + Pcos_s * cos(mode(i_harm)*phi) + Psin_s * sin(mode(i_harm + 1)*phi)
       AR_t = AR_t + Pcos_t * cos(mode(i_harm)*phi) + Psin_t * sin(mode(i_harm + 1)*phi)
       AR_p = AR_p - Pcos   * sin(mode(i_harm)*phi) * mode(i_harm) + Psin   * cos(mode(i_harm+1)*phi) * mode(i_harm+1)
 
+      if ((reference_n_mode_number > 0) .and. (i_tor == reference_n_mode_number)) then
+        AR_s_ref = AR_s_ref + Pcos_s * cos(mode(i_harm)*phi) + Psin_s * sin(mode(i_harm + 1)*phi)
+        AR_t_ref = AR_t_ref + Pcos_t * cos(mode(i_harm)*phi) + Psin_t * sin(mode(i_harm + 1)*phi)
+        AR_p_ref = AR_p_ref - Pcos   * sin(mode(i_harm)*phi) * mode(i_harm) + Psin   * cos(mode(i_harm+1)*phi) * mode(i_harm+1)
+      endif
+
       call interp(node_list, element_list, ielm, 3, i_harm, s, t, Pcos, Pcos_s, Pcos_t, Pcos_st, Pcos_ss, Pcos_tt)
       call interp(node_list, element_list, ielm, 3, i_harm + 1, s, t, Psin, Psin_s, Psin_t, Psin_st, Psin_ss, Psin_tt)
       AZ_s = AZ_s + Pcos_s * cos(mode(i_harm)*phi) + Psin_s * sin(mode(i_harm + 1)*phi)
       AZ_t = AZ_t + Pcos_t * cos(mode(i_harm)*phi) + Psin_t * sin(mode(i_harm + 1)*phi)
       AZ_p = AZ_p - Pcos   * sin(mode(i_harm)*phi) * mode(i_harm) + Psin   * cos(mode(i_harm+1)*phi) * mode(i_harm+1)
+
+      if ((reference_n_mode_number > 0) .and. (i_tor == reference_n_mode_number)) then
+        AZ_s_ref = AZ_s_ref + Pcos_s * cos(mode(i_harm)*phi) + Psin_s * sin(mode(i_harm + 1)*phi)
+        AZ_t_ref = AZ_t_ref + Pcos_t * cos(mode(i_harm)*phi) + Psin_t * sin(mode(i_harm + 1)*phi)
+        AZ_p_ref = AZ_p_ref - Pcos   * sin(mode(i_harm)*phi) * mode(i_harm) + Psin   * cos(mode(i_harm+1)*phi) * mode(i_harm+1)
+      endif
+
     enddo
     call interp_RZ(node_list, element_list, ielm, s, t, R, R_s, R_t, Z, Z_s, Z_t)
     
@@ -488,6 +605,13 @@ subroutine trance_field_lines_fmhd_3D (node_list, element_list, phi_start, phi_p
     AZ_Z = ( - R_t * AZ_s + R_s * AZ_t ) / xjac
     A3_R = (   Z_t * A3_s - Z_s * A3_t ) / xjac
     A3_Z = ( - R_t * A3_s + R_s * A3_t ) / xjac
+
+    AR_R_ref = (   Z_t * AR_s_ref - Z_s * AR_t_ref ) / xjac
+    AR_Z_ref = ( - R_t * AR_s_ref + R_s * AR_t_ref ) / xjac
+    AZ_R_ref = (   Z_t * AZ_s_ref - Z_s * AZ_t_ref ) / xjac
+    AZ_Z_ref = ( - R_t * AZ_s_ref + R_s * AZ_t_ref ) / xjac
+    A3_R_ref = (   Z_t * A3_s_ref - Z_s * A3_t_ref ) / xjac
+    A3_Z_ref = ( - R_t * A3_s_ref + R_s * A3_t_ref ) / xjac
    
     !call interp(node_list, element_list, ielm, 1, 1, s, t, psieq, dum01, dum02, dum03, dum04, dum05) 
     !call F_profile(xpoint,xcase,Z,ES%Z_xpoint,psieq,ES%psi_axis,ES%psi_bnd,Fprof,dum01,dum02,dum03,dum04,dum05,&
@@ -499,6 +623,13 @@ subroutine trance_field_lines_fmhd_3D (node_list, element_list, phi_start, phi_p
     BZ = ( AR_p - A3_R )/ R
     Bp = ( AZ_R - AR_Z ) + Fprof / R
     BB = sqrt( Bp**2 + BR**2 + BZ**2 )
+
+    BR_ref = ( A3_Z_ref - AZ_p_ref )/ R
+    BZ_ref = ( AR_p_ref - A3_R_ref )/ R
+    Bp_ref = ( AZ_R_ref - AR_Z_ref ) + Fprof / R
+    BB_ref = sqrt( Bp_ref**2 + BR_ref**2 + BZ_ref**2 )
+
+    Bp_initial = Fprof / R
 
 
     if(Bp * Fprof <= 0) then

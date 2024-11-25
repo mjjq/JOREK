@@ -30,7 +30,7 @@ real*8 :: Rguess1D(NaxisR), Zguess1D(NaxisZ)
 real*8 :: Rguess3D(NaxisR, NaxisZ), Zguess3D(NaxisR, NaxisZ)
 real*8 :: distMissMatch3D(NaxisR, NaxisZ), distMissMatch3D_myid(NaxisR, NaxisZ)
 integer :: iR, iZ, iZ_myid, NaxisZ_myid, min_i, min_j, Niterations, iit
-real*8  :: fact_ne, fact_T
+real*8  :: fact_ne, fact_T, fact_V
 
 real(8), allocatable :: R_poinc(:), Z_poinc(:)
 integer :: count_poinc, count_poinc_stpts
@@ -42,6 +42,8 @@ integer :: iphi_out, jphi_start, i_local
 integer, parameter :: nphi_out = 32
 real*8, parameter  :: phi_start = 0.d0
 real*8  :: phi_poinc_record(nphi_out + 1) ! the last surface is the same as the first one
+
+real*8  :: avg_count, avg_sum, avg_val
 
 required = MPI_THREAD_FUNNELED
 call MPI_Init_thread(required, provided, StatInfo)
@@ -286,9 +288,11 @@ call trance_field_lines_fmhd_3D(node_list, element_list, phi_start, phi_poinc_re
 
 fact_ne      = central_density * 1.d20 !* central_mass*MASS_PROTON    ! factor for rho
 fact_T       = 1.d0 / ( MU_zero * central_density * 1.d20 * EL_CHG ) ! factor for T
+fact_V       = 1.d0 / sqrt(MU_ZERO * central_density * 1.d20 * MASS_PROTON * central_mass)
 ne_arr_poinc = ne_arr_poinc * fact_ne
 Ti_arr_poinc = Ti_arr_poinc * fact_T
 Te_arr_poinc = Te_arr_poinc * fact_T
+VxBpara_poinc= VxBpara_poinc* fact_V
 
 call MPI_Barrier(MPI_COMM_WORLD,ierr)
 
@@ -301,6 +305,7 @@ call MPI_AllReduce(MPI_IN_PLACE, q_arr_poinc,   num_poinc_max*npoints*nphi_out,M
 call MPI_AllReduce(MPI_IN_PLACE, ne_arr_poinc,  num_poinc_max*npoints*nphi_out,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 call MPI_AllReduce(MPI_IN_PLACE, Te_arr_poinc,  num_poinc_max*npoints*nphi_out,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 call MPI_AllReduce(MPI_IN_PLACE, Ti_arr_poinc,  num_poinc_max*npoints*nphi_out,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+call MPI_AllReduce(MPI_IN_PLACE, VxBpara_poinc, num_poinc_max*npoints*nphi_out,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 
 
 if(my_id == 0) then
@@ -316,6 +321,28 @@ if(my_id == 0) then
   enddo
 
   write(nphi_string, '(I0)') nphi_out
+
+  ! average the dynamo along the field line
+  do i = 1, npoints
+    avg_sum = 0.d0
+    avg_count = 0.d0
+    do iphi_out = 1, nphi_out
+      do j = 1, num_poinc_min(i)
+        avg_sum = avg_sum + VxBpara_poinc(j,i,iphi_out)
+        avg_count = avg_count + 1.d0
+      enddo
+    enddo
+
+    avg_val = avg_sum / avg_count
+    do iphi_out = 1, nphi_out
+      do j = 1, num_poinc_min(i)
+        VxBpara_poinc(j,i,iphi_out) = avg_val
+      enddo
+    enddo
+  enddo
+
+
+
   do iphi_out = 1, nphi_out
 
     write(*,*) 'Exporting No. ', iphi_out, ' plane of ', nphi_out
@@ -323,10 +350,10 @@ if(my_id == 0) then
     ! --- Write out result
     open(991, file='q_profile_3D_ip_'//trim(iphi_string)//'.dat', action='write', status='replace')
     write(991, *) '  Results @ phi = 2 * PI * ('//trim(iphi_string)//' - 1)/'//trim(nphi_string), ' = ', phi_poinc_record(iphi_out)
-    write(991,'(A5, 7A23)') 'id', 'Psi_N', 'R', 'Z', 'q', 'density (m-3)', 'Ti (eV)', 'Te(eV)'
+    write(991,'(A5, 8A23)') 'id', 'Psi_N', 'R', 'Z', 'q', 'density (m-3)', 'Ti (eV)', 'Te(eV)', 'VxBpara(V/m)'
     do i = 1, npoints
       do j = 1, num_poinc_min(i)
-        write(991,'(I5, 7es23.8)') i, psi_arr_poinc(j,i,iphi_out), R_arr_poinc(j,i,iphi_out), Z_arr_poinc(j,i,iphi_out), q_arr_poinc(j,i,iphi_out), ne_arr_poinc(j,i,iphi_out), Ti_arr_poinc(j,i,iphi_out), Te_arr_poinc(j,i,iphi_out)
+        write(991,'(I5, 8es23.8)') i, psi_arr_poinc(j,i,iphi_out), R_arr_poinc(j,i,iphi_out), Z_arr_poinc(j,i,iphi_out), q_arr_poinc(j,i,iphi_out), ne_arr_poinc(j,i,iphi_out), Ti_arr_poinc(j,i,iphi_out), Te_arr_poinc(j,i,iphi_out), VxBpara_poinc(j,i,iphi_out)
       end do
     end do
     close(991)

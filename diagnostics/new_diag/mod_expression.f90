@@ -644,7 +644,7 @@ module mod_expression
     real*8  :: VXB_tor_R2, VXB_tor_all_R2, VXB00_tor_R2, etaJtor_R2, etaSJtor_R2
     real*8  :: grad_psi_2, lap_psi
     real*8  :: rho_compress_term, rho_convect_term, rho_diffusive_term, rho_source_term
-    real*8  :: particle_source, heat_source_i, heat_source_e
+    real*8  :: particle_source, heat_source, heat_source_i, heat_source_e
     real*8  :: rho_GS,dd1,dd2,dd3,dd4,dd5,dd6,dd7,dd8
     real*8  :: r0_axisym
     real*8  :: UR0_R, UR0_Z, UR0_p, UR0_s, UR0_t, UR0_RR, UR0_ZZ, UR0_pp, UR0_ss, UR0_tt, UR0_st
@@ -1682,6 +1682,7 @@ module mod_expression
           rho_diffusive_term = 0.d0
           rho_source_term    = 0.d0
           particle_source    = 0.d0
+          heat_source        = 0.d0
           heat_source_i      = 0.d0
           heat_source_e      = 0.d0
           rho_GS             = 0.d0
@@ -1904,7 +1905,11 @@ module mod_expression
 #endif
 
 #ifdef fullmhd
+#ifdef WITH_TiTe
           call sources(eq%xpoint, eq%xcase, Z, eq%Z_xpoint, psi_norm,0.d0,1.d0,particle_source,heat_source_i,heat_source_e)
+#else
+          call sources(eq%xpoint, eq%xcase, Z, eq%Z_xpoint, psi_norm,0.d0,1.d0,particle_source,heat_source)
+#endif
           ! --- Adaptive source to make sure density/temperature stays exactly at input profiles
           if (particlesource_fix_profile) then
             if (psi_norm .lt. particlesource_fix_profile_psi_max) then

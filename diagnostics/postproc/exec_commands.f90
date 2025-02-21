@@ -206,6 +206,8 @@ module exec_commands
           call qprofile(command, first_step, ierr)
         case ( 'int3Dprofile' )
           call int3Dprofile(command, first_step, ierr)
+        case ( 'RZ_flux_surface' )
+          call RZ_flux_surface(command, first_step, ierr)
         case ( 'q_at_psin' )
           call q_at_given_psin(command, first_step, ierr)
         case ( 'find_q_surface' )
@@ -241,7 +243,7 @@ module exec_commands
           'jorek-units', 'jnorm_bnd_curr', 'si-units', 'grid', 'grid_diagnostics', 'rectangle',    &
           'rectangular_torus', 'energy_spectrum', 'average_h5', 'I_halo_TPF', 'spi-state',         &
           'shards', 'zeroD_quantities', 'boundary_quantities', 'find_q_surface', 'midplane2d',     &
-          'expressions_four', 'RHS_terms_vtk', 'int3Dprofile')
+          'expressions_four', 'RHS_terms_vtk', 'int3Dprofile', 'RZ_flux_surface')
           call add_to_command_queue(command, ierr)
         case ( 'help' )
           call help(command, ierr)
@@ -2333,7 +2335,7 @@ module exec_commands
   end subroutine qprofile
 
 
-  !> Output the q-profile as a function of Psi_N
+  !> Output the integral3D-profile as a function of Psi_N
   recursive subroutine int3Dprofile(command, first_step, ierr)
   
     use mod_integrals3D_nompi
@@ -2384,8 +2386,6 @@ module exec_commands
       call int3d_new(0, node_list, element_list, bnd_node_list, bnd_elm_list, expr_list, res, units, psin_value)
       res(1) = psin_value
       res1d(k, :) = res(:)
-      write(*,*) 'k = ', k
-      write(*,*) res(:)
     enddo
 
     call write_ascii_1d(ierr, ES, expr_list, res1d, FORM_TABLE, header=.true.,                 &
@@ -2395,10 +2395,165 @@ module exec_commands
     ! --- Clean up.
     if ( allocated(surface_list%psi_values)    ) deallocate(surface_list%psi_values)
     if ( allocated(surface_list%flux_surfaces) ) deallocate(surface_list%flux_surfaces)
+    if ( allocated(res)                        ) deallocate(res)
     
   end subroutine int3Dprofile
 
 
+    !> Output the Rmax/Rmin, Zmax/Zmin-profile as a function of Psi_N
+  recursive subroutine RZ_flux_surface(command, first_step, ierr)
+  
+    use mod_integrals3D_nompi
+    
+    ! --- Routine parameters
+    type(type_command), intent(in)  :: command     !< Command to be executed
+    logical,            intent(in)  :: first_step  !< First time step of a for loop?
+    integer,            intent(out) :: ierr        !< Error flag
+
+    ! --- Local variables
+    integer                  :: k, npts, nplot, i_elm, i ,j, ip, i_file
+    real*8, allocatable      :: res(:)
+    type (type_surface_list) :: surface_list
+    character(len=1024)      :: filename, comment, status, access
+    integer                  :: units
+    real*8                   :: psin_value
+    real*8                   :: ss1, dss1, ss2, dss2, tt1, dtt1, tt2, dtt2, u, si, dsi, ti, dti
+    real*8                   :: R, R_s, R_t, R_st, R_ss, R_tt, Z, Z_s, Z_t, Z_st, Z_ss, Z_tt
+    real*8                   :: Rmax, Rmin, Zmax, Zmin
+    type(t_expr_list)        :: tmp_expr_list
+
+    ierr = 0
+  
+! #define OUTPUT_ALL_FLUXSURFACES
+  
+    ! --- Some checks
+    call check_args(command%n_args,ierr,0);  if ( ierr /= 0 ) return
+    call check_step_imported(ierr);          if ( ierr /= 0 ) return
+    
+    npts  = get_int_setting('surfaces', ierr)
+        
+    ! --- Find flux surfaces and determine q-profile
+    surface_list%n_psi = npts
+    allocate( surface_list%psi_values(npts))
+    do k = 1, npts
+      surface_list%psi_values(k) = ES%psi_axis + (ES%psi_bnd - ES%psi_axis) * real(k-1)/real(npts-1)
+    end do
+    call find_flux_surfaces(0,xpoint, xcase, node_list, element_list, surface_list)
+
+
+    tmp_expr_list%n_expr = 4
+    tmp_expr_list%expr(1)%name = 'Psi_n'
+    tmp_expr_list%expr(2)%name = 'Rmax(m)'
+    tmp_expr_list%expr(3)%name = 'Rmin(m)'
+    tmp_expr_list%expr(4)%name = 'Zmax(m)'
+    tmp_expr_list%expr(5)%name = 'Zmin(m)'
+    
+    if ( allocated(res1d) ) deallocate(res1d)   
+    allocate(res1d(npts, tmp_expr_list%n_expr+1))
+    allocate(res(tmp_expr_list%n_expr+1))
+    res1d = 0.d0
+
+    ! --- Write out flux surfaces
+    nplot  = 5
+    do i = 1, npts
+
+      Rmax = -1.d5
+      Rmin =  1.d5
+      Zmax = -1.d5
+      Zmin =  1.d5
+
+      psin_value = get_psi_n(surface_list%psi_values(i))
+
+#ifdef OUTPUT_ALL_FLUXSURFACES
+      write(filename,'(5a)') trim(DIR), 'flux_surfaces_', trim(real2str(psin_value,'(f12.4)')), &
+      trim(step_range_string(index_start,index_start)), '.txt'
+      status = 'replace'
+      access = 'sequential'
+      i_file=133
+
+      open(i_file, file=trim(filename), form='formatted', status=trim(status), access=trim(access),  &
+        iostat=ierr)
+#endif      
+      ! --- Loop over all segments of this flux surface
+      do j=1,surface_list%flux_surfaces(i)%n_pieces
+        
+        ! --- Bezier element, in which the current flux surface segment is located
+        i_elm = surface_list%flux_surfaces(i)%elm(j)
+        ss1  = surface_list%flux_surfaces(i)%s(1,j)
+        dss1 = surface_list%flux_surfaces(i)%s(2,j)
+        ss2  = surface_list%flux_surfaces(i)%s(3,j)
+        dss2 = surface_list%flux_surfaces(i)%s(4,j)
+        
+        tt1  = surface_list%flux_surfaces(i)%t(1,j)
+        dtt1 = surface_list%flux_surfaces(i)%t(2,j)
+        tt2  = surface_list%flux_surfaces(i)%t(3,j)
+        dtt2 = surface_list%flux_surfaces(i)%t(4,j)
+        
+        ! --- Loop over nplot points in a flux surface segment
+        do ip = 1, nplot
+          u = -1. + 2.*float(ip-1)/float(nplot-1)
+          
+          ! --- Determine s and t values of the current point inside element i_elm
+          call CUB1D(ss1, dss1, ss2, dss2, u, si, dsi)
+          call CUB1D(tt1, dtt1, tt2, dtt2, u, ti, dti)
+          
+          ! --- Determine (R,Z)-coordinates of the current point on the current flux surface
+          call interp_RZ(node_list, element_list, i_elm, si, ti, R, R_s, R_t, R_st, R_ss, R_tt, &
+            Z, Z_s, Z_t, Z_st, Z_ss, Z_tt)
+            
+          ! --- Write out the (R,Z)-coordinates
+          if ( xpoint .and. ( xcase /= UPPER_XPOINT ) .and. (Z < ES%Z_xpoint(1) ) ) cycle
+          if ( xpoint .and. ( xcase /= LOWER_XPOINT ) .and. (Z > ES%Z_xpoint(2) ) ) cycle
+#ifdef OUTPUT_ALL_FLUXSURFACES
+          write(i_file,'(2ES16.7)') R, Z
+#endif
+
+          Rmax = max(Rmax, R)
+          Rmin = min(Rmin, R)
+          Zmax = max(Zmax, Z)
+          Zmin = min(Zmin, Z)
+        end do
+#ifdef OUTPUT_ALL_FLUXSURFACES
+        write(i_file,*)
+        write(i_file,*)
+#endif        
+      
+      end do
+#ifdef OUTPUT_ALL_FLUXSURFACES
+      close(i_file)
+#endif
+
+      ! if it is on the axis
+      if (psin_value .lt. 1.d-8) then
+        Rmax = ES%R_axis
+        Rmin = ES%R_axis
+        Zmax = ES%Z_axis
+        Zmin = ES%Z_axis
+      endif
+      
+      res(1) = psin_value
+      res(2) = Rmax
+      res(3) = Rmin
+      res(4) = Zmax
+      res(5) = Zmin
+      res1d(i, :) = res(:)      
+
+    end do
+
+    write(filename,'(4a)') trim(DIR), 'RZ_maxmin_profile', trim(step_range_string(loop_min_step,loop_max_step)),  &
+    '.dat'
+    write(comment,'(a,i6.6)') 'time step #', index_now
+
+    call write_ascii_1d(ierr, ES, tmp_expr_list, res1d, FORM_TABLE, header=.true.,                 &
+      filename=trim(filename), append=(.not.first_step), blanks=.true., comment=trim(comment))
+
+    
+    ! --- Clean up.
+    if ( allocated(surface_list%psi_values)    ) deallocate(surface_list%psi_values)
+    if ( allocated(surface_list%flux_surfaces) ) deallocate(surface_list%flux_surfaces)
+    if ( allocated(res)                        ) deallocate(res)
+
+  end subroutine RZ_flux_surface
 
 
   

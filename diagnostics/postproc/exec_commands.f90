@@ -204,6 +204,8 @@ module exec_commands
           call point(command, first_step, ierr)
         case ( 'qprofile' )
           call qprofile(command, first_step, ierr)
+        case ( 'int3Dprofile' )
+          call int3Dprofile(command, first_step, ierr)
         case ( 'q_at_psin' )
           call q_at_given_psin(command, first_step, ierr)
         case ( 'find_q_surface' )
@@ -239,7 +241,7 @@ module exec_commands
           'jorek-units', 'jnorm_bnd_curr', 'si-units', 'grid', 'grid_diagnostics', 'rectangle',    &
           'rectangular_torus', 'energy_spectrum', 'average_h5', 'I_halo_TPF', 'spi-state',         &
           'shards', 'zeroD_quantities', 'boundary_quantities', 'find_q_surface', 'midplane2d',     &
-          'expressions_four', 'RHS_terms_vtk')
+          'expressions_four', 'RHS_terms_vtk', 'int3Dprofile')
           call add_to_command_queue(command, ierr)
         case ( 'help' )
           call help(command, ierr)
@@ -2261,7 +2263,7 @@ module exec_commands
  
   !> Output the q-profile as a function of Psi_N
   recursive subroutine qprofile(command, first_step, ierr)
-  
+      
     ! --- Routine parameters
     type(type_command), intent(in)  :: command     !< Command to be executed
     logical,            intent(in)  :: first_step  !< First time step of a for loop?
@@ -2329,6 +2331,72 @@ module exec_commands
     if ( allocated(rad)                        ) deallocate(rad)
     
   end subroutine qprofile
+
+
+  !> Output the q-profile as a function of Psi_N
+  recursive subroutine int3Dprofile(command, first_step, ierr)
+  
+    use mod_integrals3D_nompi
+    
+    ! --- Routine parameters
+    type(type_command), intent(in)  :: command     !< Command to be executed
+    logical,            intent(in)  :: first_step  !< First time step of a for loop?
+    integer,            intent(out) :: ierr        !< Error flag
+
+    ! --- Local variables
+    integer                  :: k, npts
+    real*8, allocatable      :: res(:)
+    type (type_surface_list) :: surface_list
+    character(len=1024)      :: filename, comment
+    integer                  :: units
+    real*8                   :: psin_value
+    
+    ierr = 0
+    
+    ! --- Some checks
+    call check_args(command%n_args,ierr,0);  if ( ierr /= 0 ) return
+    call check_step_imported(ierr);          if ( ierr /= 0 ) return
+    
+    npts  = get_int_setting('surfaces', ierr)
+        
+    ! --- Find flux surfaces and determine q-profile
+    surface_list%n_psi = npts
+    allocate( surface_list%psi_values(npts))
+    do k = 1, npts
+      surface_list%psi_values(k) = ES%psi_axis + (ES%psi_bnd - ES%psi_axis) * real(k-1)/real(npts-1)
+    end do
+    call find_flux_surfaces(0,xpoint, xcase, node_list, element_list, surface_list)
+    
+
+    ! calculate the integrals of volume and area for each magnetic flux surface
+    write(filename,'(4a)') trim(DIR), 'int3Dprofile', trim(step_range_string(loop_min_step,loop_max_step)),  &
+      '.dat'
+    write(comment,'(a,i6.6)') 'time step #', index_now
+    if ( allocated(res1d) ) deallocate(res1d)   
+    allocate(res1d(npts, expr_list%n_expr+1))
+    allocate(res(expr_list%n_expr+1))
+    res1d = 0.d0
+    res   = 0.d0
+
+    units = get_int_setting('units', ierr)
+    do k = 1, npts
+      psin_value = get_psi_n(surface_list%psi_values(k))
+      call int3d_new(0, node_list, element_list, bnd_node_list, bnd_elm_list, expr_list, res, units, psin_value)
+      res(1) = psin_value
+      res1d(k, :) = res(:)
+      write(*,*) 'k = ', k
+      write(*,*) res(:)
+    enddo
+
+    call write_ascii_1d(ierr, ES, expr_list, res1d, FORM_TABLE, header=.true.,                 &
+      filename=trim(filename), append=(.not.first_step), blanks=.true., comment=trim(comment))
+
+    
+    ! --- Clean up.
+    if ( allocated(surface_list%psi_values)    ) deallocate(surface_list%psi_values)
+    if ( allocated(surface_list%flux_surfaces) ) deallocate(surface_list%flux_surfaces)
+    
+  end subroutine int3Dprofile
 
 
 

@@ -41,7 +41,7 @@ module mod_integrals3D
   contains
 
 
-subroutine int3d_new(my_id, node_list, element_list, bnd_node_list, bnd_elm_list, expr_list, res, units)
+subroutine int3d_new(my_id, node_list, element_list, bnd_node_list, bnd_elm_list, expr_list, res, units, psi_limit_in)
 
 !$ use omp_lib
  
@@ -54,6 +54,8 @@ type (type_bnd_element_list), intent(in)    :: bnd_elm_list
 type (t_expr_list),           intent(in)    :: expr_list
 real*8,                    intent(inout)    :: res(:)
 integer,                      intent(in)    :: units
+real*8,          intent(inout), optional    :: psi_limit_in
+real*8                                      :: psi_limit
 
 ! --- Local variables
 type (type_element)      :: element, elm_k
@@ -243,6 +245,16 @@ if (my_id .eq. 0) then
   !write(*,*) ' n_cpu   : ',n_cpu
 endif
 
+psi_limit = 1.0
+if(present(psi_limit_in)) then
+  if(psi_limit_in < 0.d0 .or. psi_limit_in > 1.d0) then
+    write(*,*) '!!! Warning, out of limitation of [0,1], psi_limit_in = ', psi_limit_in
+    write(*,*) '!!! Warning, reset psi_limit_in with in [0,1]'
+    psi_limit_in = max(0.0, min(1.0, psi_limit_in))
+  endif
+  psi_limit = psi_limit_in  
+endif
+
 density_tot  = 0.d0
 pressure = 0.d0
 pressure_i = 0.d0
@@ -373,7 +385,7 @@ Tie_min_neg = 0.5*T_min_neg
 !$omp          heli_tot,  keep_current_prof, psi_off, visco_par, visco_par_heating, thm_wk_tot,&
 !$omp          visco, visco_T_dependent, visco_old_setup,                                      &
 !$omp          mag_wk_tot, vpar_disp_tot, vprp_disp_tot, fric_disp_tot, area1, mag_src_tot,                   &
-!$omp          eta_ohmic, central_mass, R2curr_tmp, Zcurr_tmp,                                 &
+!$omp          eta_ohmic, central_mass, R2curr_tmp, Zcurr_tmp, psi_limit,                      &
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
 !$omp          spi_num_vol, local_source_volume, local_source_volume_drift, drift_distance,    &
 !$omp          using_spi, n_spi_tot, n_inj, n_spi,                                             &
@@ -1241,7 +1253,7 @@ do ife = ife_min, ife_max
         ! Total neutrals in particles
         local_n_particles     = local_n_particles + central_density * 1.d20 * rimp0 * m_i_over_m_imp * bigR * xjac * wst * delta_phi
 #endif
-        if ( get_psi_n(psi_as_coord, y_g(ms,mt)) <= 1.d0 ) then   !inside LCFS
+        if ( get_psi_n(psi_as_coord, y_g(ms,mt)) <= psi_limit ) then   !inside LCFS
 #ifdef WITH_Impurities
           D_int = D_int + (r0-rimp0) * xjac * BigR * wst * delta_phi
 #ifdef WITH_TiTe
@@ -2041,7 +2053,7 @@ if (my_id .eq. 0) then
   ! --- Export or save quantities
   res(1)  =  xt*t_norm2
   loop_expr: do iexpr = 1, expr_list%n_expr
-            
+  
     select case ( trim(expr_list%expr(iexpr)%name) )
 
       case ( 'index_now' )

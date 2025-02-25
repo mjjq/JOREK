@@ -50,7 +50,7 @@ if ( (my_id .eq. 0) .and. (n_order .le. 3) ) then
 
   do i=1,node_list%n_nodes
 
-    if(fix_irregular_nodes .and. node_list%node(i)%irregular_node) then
+    if(fix_irregular_nodes .and. (node_list%node(i)%irregular_node .ne. 0)) then
       node_list%node(i)%values(1,4,var_A3) = 0.d0
     endif
 
@@ -139,7 +139,7 @@ if ( (my_id .eq. 0) .and. (n_order .le. 3) ) then
                                   + dF_dpsi_dz * node_list%node(i)%values(1,3,var_A3) * node_list%node(i)%x(1,2,2)         &
                                   + dF_dpsi_dz * node_list%node(i)%values(1,2,var_A3) * node_list%node(i)%x(1,3,2)      
 
-    if(fix_irregular_nodes .and. node_list%node(i)%irregular_node) then
+    if(fix_irregular_nodes .and. (node_list%node(i)%irregular_node .ne. 0)) then
       node_list%node(i)%values(1,4,:) = 0.d0
       node_list%node(i)%Fprof_eq(4)   = 0.d0
     endif
@@ -192,7 +192,7 @@ do in=2,n_tor
       node_list%node(i)%values(in,1,var_A3) = amplitude * psi_n * (1.d0 -psi_n)
       node_list%node(i)%values(in,2,var_A3) = amplitude * (1. - 2.d0 * psi_n)/(ES%psi_bnd - ES%psi_axis) * node_list%node(i)%values(1,2,var_A3)
       node_list%node(i)%values(in,3,var_A3) = amplitude * (1. - 2.d0 * psi_n)/(ES%psi_bnd - ES%psi_axis) * node_list%node(i)%values(1,3,var_A3)
-      if(fix_irregular_nodes .and. node_list%node(i)%irregular_node) then
+      if(fix_irregular_nodes .and. (node_list%node(i)%irregular_node .ne. 0)) then
         node_list%node(i)%values(in,4,var_A3) = 0.d0
       else
         node_list%node(i)%values(in,4,var_A3) = amplitude * (1. - 2.d0 * psi_n)/(ES%psi_bnd - ES%psi_axis) * node_list%node(i)%values(1,4,var_A3)

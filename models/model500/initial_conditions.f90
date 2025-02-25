@@ -162,7 +162,7 @@ if ( (my_id .eq. 0) .and. (n_order .le. 3) ) then
     endif
       
     node_list%node(i)%deltas = 0.d0
-    if(fix_irregular_nodes .and. node_list%node(i)%irregular_node) then
+    if(fix_irregular_nodes .and. (node_list%node(i)%irregular_node .ne. 0)) then
       node_list%node(i)%values(1,4,:) = 0.d0
     endif
 
@@ -211,7 +211,7 @@ do in=2,n_tor
       node_list%node(i)%values(in,1,var_w) = amplitude * psi_n * (1.d0 -psi_n)
       node_list%node(i)%values(in,2,var_w) = amplitude * (1. - 2.d0 * psi_n)/(ES%psi_bnd - ES%psi_axis) * node_list%node(i)%values(1,2,var_psi)
       node_list%node(i)%values(in,3,var_w) = amplitude * (1. - 2.d0 * psi_n)/(ES%psi_bnd - ES%psi_axis) * node_list%node(i)%values(1,3,var_psi)
-      if(fix_irregular_nodes .and. node_list%node(i)%irregular_node) then
+      if(fix_irregular_nodes .and. (node_list%node(i)%irregular_node .ne. 0)) then
         node_list%node(i)%values(in,4,var_w) = 0.d0
       else
         node_list%node(i)%values(in,4,var_w) = amplitude * (1. - 2.d0 * psi_n)/(ES%psi_bnd - ES%psi_axis) * node_list%node(i)%values(1,4,var_psi)

@@ -1475,7 +1475,7 @@ if (fix_irregular_nodes) then
   do k=1, newelement_list%n_elements
     do iv=1,4
       j = newelement_list%element(k)%vertex(iv)
-      if (newnode_list%node(j)%irregular_node) then
+      if (newnode_list%node(j)%irregular_node .ne. 0) then
         newelement_list%element(k)%size(iv,4) = 0.d0
       endif
     enddo

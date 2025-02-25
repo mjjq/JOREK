@@ -112,7 +112,7 @@ subroutine fix_nodes_on_irregular_nodes(node_list, element_list, local_elms, n_l
 
       inode = element_list%element(ielm)%vertex(iv)
 
-      if (node_list%node(inode)%irregular_node) then
+      if (node_list%node(inode)%irregular_node .ne. 0) then
 
         do in=a_mat%i_tor_min, a_mat%i_tor_max
           do k=1, n_var

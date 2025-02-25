@@ -105,7 +105,7 @@ if ( (my_id .eq. 0) .and. (n_order .le. 3) ) then
     node_list%node(i)%values(1,:,var_w) = 0.d0 
 
     node_list%node(i)%deltas = 0.d0
-    if(fix_irregular_nodes .and. node_list%node(i)%irregular_node) then
+    if(fix_irregular_nodes .and. (node_list%node(i)%irregular_node .ne. 0)) then
       node_list%node(i)%values(1,4,:) = 0.d0
     endif
 

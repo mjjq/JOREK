@@ -40,6 +40,14 @@ write(*,*) '***************************************'
 write(*,*) '* JOREK2_poincare                     *'
 write(*,*) '***************************************'
 
+#define TRACE_UNIFORM_STEPS
+
+#if defined(TRACE_UNIFORM_STEPS) && defined(fullmhd)
+  write(*,*) 'Trace with uniform steps (the new method)'
+#else
+  write(*,*) 'Trace with nonuniform steps (the original method)'
+#endif
+
 my_id=0
 
 ! --- Initialize mode and mode_type arrays
@@ -48,7 +56,7 @@ call det_modes()
 call initialise_parameters(my_id,  "__NO_FILENAME__")
 call log_parameters(my_id)
 
-iplot_type = 2 ! 1: Poincare plot in (R,Z) coordinates, 2: in (R,theta) coordinates
+iplot_type = 1 ! 1: Poincare plot in (R,Z) coordinates, 2: in (R,theta) coordinates
 
 call import_restart(node_list,element_list, 'jorek_poincare', rst_format, ierr, .true.)
 
@@ -236,8 +244,10 @@ L_IL: do i_lines=1,n_lines
 
   call find_RZ(node_list,element_list,R_start(i_lines),Z_start(i_lines),R_out,Z_out,i_elm,s_out,t_out,ifail)
  
-  if (ifail .ne. 0) write(*,*) "Can not find RZ,", ifail, ' for line: ', i_lines
-  if (ifail .ne. 0) continue
+  if (ifail .ne. 0) then
+    write(*,*) "Out of boundary, ifail: ", ifail, ', line: ', i_lines, ', skip.'
+    cycle
+  endif 
 
   R_line = R_start(i_lines)
   Z_line = Z_start(i_lines)
@@ -252,21 +262,22 @@ L_IL: do i_lines=1,n_lines
 
     do i_phi=1,n_phi
 
-#if FALSE
+#if defined(TRACE_UNIFORM_STEPS) && defined(fullmhd)
       ! a simplier logic, but the performance is the same as the next one
+      ! the step() is used to update only the B field.
       call step(i_elm,s_line,t_line,p_line,delta_phi_step,delta_s,delta_t, BR, BZ, Bp)
-      Rnew   = R_line  + 0.5d0 * delta_phi * R * BR / Bp
-      Znew   = Z_line  + 0.5d0 * delta_phi * R * BZ / Bp
+      Rnew   = R_line  + 0.5d0 * delta_phi * R_line * BR / Bp
+      Znew   = Z_line  + 0.5d0 * delta_phi * R_line * BZ / Bp
       phinew = p_line  + 0.5d0 * delta_phi
       call find_RZ(node_list,element_list,Rnew,Znew,R_out,Z_out,i_elm,s_line,t_line,ifail)
       if (ifail .ne. 0) then 
         write(*,*) "Can not find RZ,", ifail, ' for line: ', i_lines, ' after step 1'
       endif
+      ! the step() is used to update only the B field.
       call step(i_elm,s_line,t_line,phinew,delta_phi_step,delta_s,delta_t, BR, BZ, Bp)
-      Rnew   = R_line  + delta_phi * R * BR / Bp
-      Znew   = Z_line  + delta_phi * R * BZ / Bp
-      phinew = p_line  + delta_phi
-      p_line = phinew
+      Rnew   = R_line  + delta_phi * R_out * BR / Bp
+      Znew   = Z_line  + delta_phi * R_out * BZ / Bp
+      p_line = p_line  + delta_phi
       call find_RZ(node_list,element_list,Rnew,Znew,R_line,Z_line,i_elm,s_line,t_line,ifail)
       if (ifail .ne. 0) then 
         write(*,*) "Can not find RZ,", ifail, ' for line: ', i_lines, ' after step 2'
@@ -452,10 +463,8 @@ L_IL: do i_lines=1,n_lines
             
     enddo ! end of a 2Pi turn
 
-    call interp_RZ(node_list,element_list,i_elm,s_line,t_line,R,Z)
-
-    R_line = R
-    Z_line = Z
+    call interp_RZ(node_list,element_list,i_elm,s_line,t_line,R_line,Z_line)
+    ! write(*,*) 'Debug,ip=', ip, ',R=', R_line, ',Z=', Z_line, 'i_elm=', i_elm, ',p_line=',p_line
             
     ip = ip+1
 

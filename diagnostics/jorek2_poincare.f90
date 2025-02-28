@@ -18,12 +18,12 @@ real*8,allocatable  :: rp(:), zp(:), tp(:), pp(:)
 real*8,allocatable  :: rp_all(:), zp_all(:), tp_all(:), pp_all(:)
 integer,allocatable :: ip_all(:)
 integer, allocatable :: n_turn(:), n_phis(:)
+real*8, allocatable :: R_start(:), Z_start(:), P_start(:)
 integer :: my_id, nr, ntour, curr, nphi
 real*8  :: rr, zz, psi
 integer :: i, j, iside_i, iside_j, ip, i_lines, n_lines, i_tor, i_harm, i_var_psi, iplot_type
 integer :: i_elm, ifail, i_phi, n_phi, i_turn, i_elm_out, i_elm_prev, i_elm_tmp,i_steps
 real*8  :: R_line, Z_line, s_line, t_line, p_line, R_mid, Z_mid, s_mid, t_mid, p_mid, s_out, t_out
-real*8, allocatable :: R_start(:), Z_start(:), P_start(:)
 real*8  :: R, Z, P, P_s, P_t, P_st, P_ss, P_tt
 real*8  :: tol, delta_phi, Zjac, psi_s, psi_t, R_in, Z_in, R_out, Z_out, Rmin, Rmax, Zmin, Zmax, delta_s, delta_t, R_keep, Z_keep
 real*8  :: small_delta, small_delta_s, small_delta_t, delta_phi_local, delta_phi_step
@@ -42,7 +42,7 @@ write(*,*) '***************************************'
 
 #define TRACE_UNIFORM_STEPS
 
-#if defined(TRACE_UNIFORM_STEPS) && defined(fullmhd)
+#ifdef TRACE_UNIFORM_STEPS
   write(*,*) 'Trace with uniform steps (the new method)'
 #else
   write(*,*) 'Trace with nonuniform steps (the original method)'
@@ -262,27 +262,23 @@ L_IL: do i_lines=1,n_lines
 
     do i_phi=1,n_phi
 
-#if defined(TRACE_UNIFORM_STEPS) && defined(fullmhd)
-      ! a simplier logic, but the performance is the same as the next one
-      ! the step() is used to update only the B field.
+#ifdef TRACE_UNIFORM_STEPS
+      ! This method adopt uniform step in phi direction.
+      ! The convergence is much better in full MHD with this method.
+      ! The step calls are used to update only the B field.
       call step(i_elm,s_line,t_line,p_line,delta_phi_step,delta_s,delta_t, BR, BZ, Bp)
       Rnew   = R_line  + 0.5d0 * delta_phi * R_line * BR / Bp
       Znew   = Z_line  + 0.5d0 * delta_phi * R_line * BZ / Bp
       phinew = p_line  + 0.5d0 * delta_phi
       call find_RZ(node_list,element_list,Rnew,Znew,R_out,Z_out,i_elm,s_line,t_line,ifail)
-      if (ifail .ne. 0) then 
-        write(*,*) "Can not find RZ,", ifail, ' for line: ', i_lines, ' after step 1'
-      endif
-      ! the step() is used to update only the B field.
+      if (ifail .ne. 0) write(*,*) "WARNING: can not find RZ, error: ", ifail, ', line: ', i_lines, ', step 1.'
+      
       call step(i_elm,s_line,t_line,phinew,delta_phi_step,delta_s,delta_t, BR, BZ, Bp)
       Rnew   = R_line  + delta_phi * R_out * BR / Bp
       Znew   = Z_line  + delta_phi * R_out * BZ / Bp
       p_line = p_line  + delta_phi
       call find_RZ(node_list,element_list,Rnew,Znew,R_line,Z_line,i_elm,s_line,t_line,ifail)
-      if (ifail .ne. 0) then 
-        write(*,*) "Can not find RZ,", ifail, ' for line: ', i_lines, ' after step 2'
-      endif
-      
+      if (ifail .ne. 0) write(*,*) "WARNING: can not find RZ, error: ", ifail, ', line: ', i_lines, ', step 2.'      
 #else
       delta_phi_local = 0.d0
       
@@ -464,7 +460,6 @@ L_IL: do i_lines=1,n_lines
     enddo ! end of a 2Pi turn
 
     call interp_RZ(node_list,element_list,i_elm,s_line,t_line,R_line,Z_line)
-    ! write(*,*) 'Debug,ip=', ip, ',R=', R_line, ',Z=', Z_line, 'i_elm=', i_elm, ',p_line=',p_line
             
     ip = ip+1
 
@@ -628,6 +623,14 @@ delta_t =  (-Z_s*BR0 + R_s*BZ0) / ( Bp0 * Zjac ) * R * delta_p
 #else
 delta_s =   psi_t * R / (Zjac * F0) * delta_p
 delta_t = - psi_s * R / (Zjac * F0) * delta_p
+
+A30_R = (   Z_t * psi_s  - Z_s * psi_t ) / Zjac
+A30_Z = ( - R_t * psi_s  + R_s * psi_t ) / Zjac
+
+BR0 = A30_Z / R
+BZ0 = - A30_R / R
+Bp0 = F0 / R
+
 #endif
 
 return

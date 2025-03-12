@@ -264,6 +264,7 @@ module mod_expression
     call add(exprs_all, 'gradP_norm  ', 'Total pressure gradient normal to the boundary        ', 'boundary    ')
     call add(exprs_all, 'area        ', 'Poloidal cross section area inside psi_limit          ')
     call add(exprs_all, 'volume      ', 'Plasma volume, inside psi_limit                       ')
+    call add(exprs_all, 'Ip_in       ', 'Plasma current, inside psi_limit                      ')
 #if JOREK_MODEL >= 303
     call add(exprs_all, 'J_bootstrap ', 'Bootstrap Current                                     ')
 #endif

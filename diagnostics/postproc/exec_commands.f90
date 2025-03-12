@@ -2352,6 +2352,7 @@ module exec_commands
     character(len=1024)      :: filename, comment
     integer                  :: units
     real*8                   :: psin_value
+    type(t_expr_list)        :: tmp_expr_list
     
     ierr = 0
     
@@ -2388,7 +2389,13 @@ module exec_commands
       res1d(k, :) = res(:)
     enddo
 
-    call write_ascii_1d(ierr, ES, expr_list, res1d, FORM_TABLE, header=.true.,                 &
+    tmp_expr_list%n_expr = expr_list%n_expr + 1
+    tmp_expr_list%expr(1)%name = 'Psi_n'
+    do k = 1, expr_list%n_expr
+      tmp_expr_list%expr(k+1)%name = expr_list%expr(k)%name
+    enddo
+
+    call write_ascii_1d(ierr, ES, tmp_expr_list, res1d, FORM_TABLE, header=.true.,                 &
       filename=trim(filename), append=(.not.first_step), blanks=.true., comment=trim(comment))
 
     

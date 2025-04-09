@@ -634,6 +634,8 @@ module equil_info
     endif
     
     get_psi_n = ( psi - ES%psi_axis ) / ( ES%psi_bnd - ES%psi_axis )
+
+    get_psi_n = MAX(0.0, MIN(get_psi_n, 1.0))
     
     if (ES%xpoint .and. correct_private) then
 

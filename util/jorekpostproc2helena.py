@@ -7,19 +7,66 @@ import matplotlib.pyplot as plt
 import plot_multiple_files as pltm
 from scipy.interpolate import interp1d
 
+numstep = 90000
+str_num = f"{numstep:06d}"
 postproc_folder = 'postproc/'
-postproc_qfile = 'qprofile_s000300.dat'
-postproc_exprsfile = 'exprs_averaged_s000300.dat'
-postproc_intg3Dfile = 'int3Dprofile_s000300.dat'
-postproc_RZfile = 'RZ_maxmin_profile_s000300.dat'
+postproc_qfile = 'qprofile_s' + str_num + '.dat'
+postproc_exprsfile = 'exprs_averaged_s' + str_num + '.dat'
+postproc_intg3Dfile = 'int3Dprofile_s' + str_num + '.dat'
+postproc_RZfile = 'RZ_maxmin_profile_s' + str_num + '.dat'
 e_charge = 1.602176634e-19 #C
-Iptot =  8.129874792E+05 # A
-psi_boundary = 0.00004
-psi_axis = 0.20921
-R_axis = 1.713934595E+00
-Z_axis = 7.092228919E-02
+# Iptot =  8.129874792E+05 # A
+# psi_boundary = 0.00004 # 000300
+psi_boundary = -0.00192 # 090000
+# psi_axis = 0.20921
+# R_axis = 1.713934595E+00
+# Z_axis = 7.092228919E-02
+
+psi_n_boundary = [
+    1.005025125628141E-01,
+    2.010050251256282E-01,
+    3.015075376884422E-01,
+    4.020100502512563E-01,
+    4.974874371859297E-01,
+    5.979899497487436E-01,
+    6.984924623115578E-01,
+    7.989949748743720E-01,
+    8.994974874371859E-01,
+    9.949748743718594E-01]
+
+# q_boundary = [ # 000300
+#     -1.026065640528196E+00,
+#     -1.068303009933490E+00,
+#     -1.189020649092972E+00,
+#     -1.406867805108305E+00,
+#     -1.699059254213150E+00,
+#     -2.118441230950786E+00,
+#     -2.700298699012887E+00,
+#     -3.523405034536250E+00,
+#     -4.665270925583930E+00,
+#     -6.309133434135009E+00]
+
+q_boundary = [  # 090000
+    -1.009989030708960E+00,
+    -1.068700182437862E+00,
+    -1.199657552771730E+00,
+    -1.425876174337616E+00,
+    -1.721632483593031E+00,
+    -2.143848085704047E+00,
+    -2.737888838171731E+00,
+    -3.488829465250061E+00,
+    -4.340120016263127E+00,
+    -7.033335088784463E+00]
 
 if __name__ == "__main__":
+
+    column_names, axis_data = pltm.read_ascii_file('axis.dat', 1, droprows = -1) # obtained by plot_live_data -q axis
+    R_axis   = axis_data[numstep - 1, 1]
+    Z_axis   = axis_data[numstep - 1, 2]
+    psi_axis = axis_data[numstep - 1, 3]
+
+    column_names, Ip_data = pltm.read_ascii_file('current.dat', 1, droprows = -1) # obtained by plot_live_data -q cur
+    Iptot = axis_data[numstep - 1, 1]
 
     column_names, data_q = pltm.read_ascii_file(postproc_folder + postproc_qfile, 0, droprows = -1)
     psin_q = data_q[:, 0]
@@ -184,7 +231,7 @@ if __name__ == "__main__":
 
 
     # Read the file
-    with open(postproc_folder + 'jorek_36663_3.75-3.95_RZ_Boundary_ed22.txt', 'r') as file:
+    with open('jorek_36663_3.75-3.95_RZ_Boundary_ed22.txt', 'r') as file:
         lines = file.readlines()
 
     # Extract numerical values from lines
@@ -192,7 +239,10 @@ if __name__ == "__main__":
     Z_boundary = np.array([float(val) for val in lines[1].split('=')[1].split(',')])
 
     # Read the file
-    column_names, data_flux = pltm.read_ascii_file(postproc_folder + 'q_surface_-3.5234_s000300.txt', 0, droprows = -1)
+    iq = 8
+    formatted_qnum = f"{q_boundary[iq]:.4f}" 
+    formatted_psinum = f"{psi_n_boundary[iq]:.5f}" 
+    column_names, data_flux = pltm.read_ascii_file(postproc_folder + 'q_surface_' + formatted_qnum + '_s' + str_num + '.txt', 0, droprows = -1)
     R_flux = data_flux[:, 0]
     Z_flux = data_flux[:, 1]
     # theta = math.atan2(R_flux - R_axis, Z_flux - Z_axis)
@@ -222,7 +272,7 @@ if __name__ == "__main__":
     np.savetxt(output_file, data_boundary, header="R_boundary(m)            Z_boundary(m)", delimiter=" ", comments='', )
 
     data_flux = np.column_stack((R_flux_target, Z_flux_target))
-    output_file = postproc_folder + 'JOREK2HELENA_flux_psin_eq_0.79899.txt'
+    output_file = postproc_folder + 'JOREK2HELENA_flux_psin_eq_' + formatted_psinum + ' .txt'
     np.savetxt(output_file, data_flux, header="R_flux(m)                Z_flux(m)", delimiter=" ", comments='', )
 
     data0D = np.column_stack((Iptot, psi_axis, psi_boundary))

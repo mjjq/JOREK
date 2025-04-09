@@ -1,7 +1,7 @@
 #! /usr/bin/env python3
 
 #
-# Purpose: Perform mode structures with given m, n, step, and variable name
+# Purpose: Plot mode structures with given m, n, step, and variable name
 #
 # Date: 2023-04-16
 # Author: Haowei Zhang, IPP Garching
@@ -16,6 +16,23 @@ import re
 from scipy import interpolate
 from tqdm import tqdm
 import random
+
+# Set global font properties using rcParams
+plt.rcParams.update({
+    'axes.formatter.limits': (-3, 3),
+    'axes.formatter.useoffset': True,  # Use scientific notation
+    'font.size': 18,                # Global font size
+    'lines.linewidth': 3.0,         # Global line width
+    'axes.linewidth': 3.0           # Set line width for both x and y axes
+    # 'font.family': 'serif',         # Use serif fonts, which includes Times New Roman
+    # 'font.serif': ['Times New Roman'],  # Specifically set Times New Roman
+    # 'font.weight': 'bold'           # Font weight for all text elements
+    # 'legend.fontsize': 18,          # Font size for the legend
+    # 'axes.labelsize': 18,           # Font size for axis labels
+    # 'axes.titlesize': 16,           # Font size for title
+    # 'xtick.labelsize': 12,          # Font size for x-tick labels
+    # 'ytick.labelsize': 12,          # Font size for y-tick labels
+})
 
 def generate_unique_colors(length):
   """
@@ -53,7 +70,11 @@ def extract_number(filename):
         return -1
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Plot lines from multiple ASCII files.")
+    parser = argparse.ArgumentParser(
+        description="Plot lines from multiple ASCII files.",
+        epilog="Example usage: plot_mn_mode_structures.py four_results -va U_radial -nl 1 2 -ml 0 1 2 3 4 -st 000900 -tm $time2si",
+        formatter_class=argparse.RawTextHelpFormatter)
+    
     parser.add_argument("folder_path", default="four_results/", help="Path to the ASCII files.")
     parser.add_argument("-ti", "--title", default="", help="Manually define the title.")
     parser.add_argument("-xl", "--xlabel", default="$\sqrt{\psi_n}$", help="Manually define the xlabel.")
@@ -62,7 +83,7 @@ if __name__ == "__main__":
     parser.add_argument("-va", "--variable_list", nargs="+", default={
                         "rho"}, help="Plot the specified variable(s), such as [A3, AR, AZ, UR, UZ, Uphi, rho, T, B_R, B_Z, B_phi, etc.].")
     parser.add_argument("-st", "--step_list", nargs="+", default={
-                        "00000"}, help="Plot the specified timesteps.")
+                        "000000"}, help="Plot the specified timesteps.")
     parser.add_argument("-ml", "--list_of_m", type=int, nargs="+", default=1,
                         help="List of m to be plotted (default is 1 for plotting m = 1)")
     parser.add_argument("-nl", "--list_of_n", type=int, nargs="+", default=1,
@@ -83,6 +104,8 @@ if __name__ == "__main__":
                         help="Multiple the time-data with the specified value.")
     parser.add_argument("-ex", "--extract_time_series", type=lambda x: (str(x).lower() in ['true', '1', 'yes']), default=False,
                         help="Extract the time series.")
+    parser.add_argument("-norm", "--normalize", type=lambda x: (str(x).lower() in ['true', '1', 'yes']), default=False,
+                        help="Normalize the eigenfunctions with the absolute amplitude.")
     parser.add_argument("-er", "--radial_location_for_extract_time_series", type=float, default=0.5,
                         help="Radial location for extracting the time series.")
     args = parser.parse_args()
@@ -231,7 +254,7 @@ if __name__ == "__main__":
                 if args.title:
                     title = args.title
                 else:
-                    title = "time = " + "{:.3f}".format(time) + ", "
+                    title = "time = " + "{:.2f}".format(time) + ", "
                 if args.method == "am" or args.method == "al":
                     plt.figure(3*ivar_st + 1)
                     legend = plt.legend()
@@ -241,7 +264,7 @@ if __name__ == "__main__":
                     plt.grid(True)
                     plt.xlabel(args.xlabel, fontsize=args.fontsize)
                     plt.ylabel(args.ylabel, fontsize=args.fontsize)
-                    plt.title(title + " amplitude of " + variable, fontsize=args.fontsize)
+                    plt.title(title + " Abs: " + variable, fontsize=args.fontsize)
                     if args.xlim:
                         xmin, xmax = args.xlim
                         plt.xlim(xmin, xmax)
@@ -261,7 +284,7 @@ if __name__ == "__main__":
                     plt.grid(True)
                     plt.xlabel(args.xlabel, fontsize=args.fontsize)
                     plt.ylabel(args.ylabel, fontsize=args.fontsize)
-                    plt.title(title + " real/imag of " + variable, fontsize=args.fontsize)
+                    plt.title(title + " Re/Im: " + variable, fontsize=args.fontsize)
                     if args.xlim:
                         xmin, xmax = args.xlim
                         plt.xlim(xmin, xmax)
@@ -281,7 +304,7 @@ if __name__ == "__main__":
                     plt.grid(True)
                     plt.xlabel(args.xlabel, fontsize=args.fontsize)
                     plt.ylabel(args.ylabel, fontsize=args.fontsize)
-                    plt.title(title + " phase of " + variable, fontsize=args.fontsize)
+                    plt.title(title + " phase: " + variable, fontsize=args.fontsize)
                     if args.xlim:
                         xmin, xmax = args.xlim
                         plt.xlim(xmin, xmax)

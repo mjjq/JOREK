@@ -16,6 +16,7 @@ import plot_vtk as pltvtk
 import plot_multiple_files as pltmpf
 import plot_q_versus_time as pltqvst
 from tqdm import tqdm
+import matplotlib.ticker as ticker
 
 def find_nearest(array, target):
     idx = (np.abs(array - target)).argmin()
@@ -51,6 +52,8 @@ if __name__ == "__main__":
                         help="Plot the lines where q equals the specified value.")
     parser.add_argument("-xm", "--multiplier_for_X", type=float, default=1.0,
                         help="Multiple the X-data with the specified value.")
+    parser.add_argument("-cm", "--multiplier_for_colored_data", type=float, default=1.0,
+                        help="Multiple the colored-data with the specified value.")
     parser.add_argument("-tslc", "--time_slice", type=float, default=-1.e9,
                         help="Specify the time point to plot and save 1D profile vs radial coordinate.")
     parser.add_argument("-rslc", "--radial_slice", type=float, default=-1.e9,
@@ -129,6 +132,7 @@ if __name__ == "__main__":
         coord_name = coord_name + '^' + "{:.1f}".format(args.pow_for_r)
 
     times_1d = times_1d * args.multiplier_for_X
+    data_2d = data_2d * args.multiplier_for_colored_data
     
     radial_2d, times_2d = np.meshgrid(radial_1d, times_1d)
     data_2d_plt = copy.deepcopy(data_2d)
@@ -143,13 +147,18 @@ if __name__ == "__main__":
         data_2d_plt[np.where(radial_2d > ymax)] = math.nan
 
     plt.figure(figsize=(10, 5)) 
-    n_level = 100
+    n_level = 40
     if args.clim:
-        plt.contourf(times_2d, radial_2d, data_2d_plt, n_level, levels = np.linspace(args.clim[0], args.clim[1], n_level), cmap='jet', extend = 'both')
+        contour = plt.contourf(times_2d, radial_2d, data_2d_plt, n_level, levels = np.linspace(args.clim[0], args.clim[1], n_level), cmap='PiYG_r')#, extend = 'both')
     else:
-        plt.contourf(times_2d, radial_2d, data_2d_plt, n_level, cmap='jet')
+        contour = plt.contourf(times_2d, radial_2d, data_2d_plt, n_level, cmap='PiYG_r')
 
-    plt.colorbar()
+    cbar = plt.colorbar(contour)
+    # formatter = ticker.FormatStrFormatter('%.2e')  # 保留2位小数并使用科学计数法
+    # cbar.ax.yaxis.set_major_formatter(formatter)
+    # cbar.set_label(r'$\varepsilon_\parallel$ [V/m]')  # 添加单位
+    # cbar.locator = ticker.MaxNLocator(nbins=5)  # 设置最多5个刻度
+
     plt.title(r'radial distribution of ' + variable_name + ' versus time' if args.title == "" else args.title, fontsize=font_size)
     plt.xlabel(r'normalized time' if args.xlabel == "" else args.xlabel, fontsize=font_size)        
     plt.ylabel(coord_name if args.ylabel == "" else args.ylabel, fontsize=font_size)

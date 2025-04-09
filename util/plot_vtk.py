@@ -194,7 +194,7 @@ def plot2D_flow_field(x, y, vx, vy, title, file_path, time, font_size, si_unit =
     V_X = sci_intp.griddata((x, y), vx, (X, Y), method='cubic')
     # You can choose a different interpolation method if needed
     V_Y = sci_intp.griddata((x, y), vy, (X, Y), method='cubic')
-    V = pow(V_X * V_X + V_Y * V_Y, 0.5)
+    V = pow(V_X * V_X + V_Y * V_Y, 0.5) # * 2170378.643194606 # to m/s = 1 / $time2si
     V_max = max((vx ** 2 + vy ** 2)**0.5)
 
 

@@ -20,7 +20,7 @@ from scipy.ndimage import gaussian_filter1d
 plt.rcParams.update({
     'axes.formatter.limits': (-3, 3),
     'axes.formatter.useoffset': True,  # Use scientific notation
-    'font.size': 20,                # Global font size
+    'font.size': 18,                # Global font size
     'lines.linewidth': 3.0,         # Global line width
     'axes.linewidth': 3.0           # Set line width for both x and y axes
     # 'font.family': 'serif',         # Use serif fonts, which includes Times New Roman
@@ -35,9 +35,9 @@ plt.rcParams.update({
 
 # load the 3D data
 folder = 'postproc/'
-filenamerule0 = 'exprs_averaged_s00000.dat' # initial
-filenamerule1 = 'exprs_averaged_s[3][6-9]???.dat'
-filenamerule2 = 'exprs_averaged_s[4][0-2]???.dat'
+filenamerule0 = 'exprs_averaged_s000000.dat' # initial
+filenamerule1 = 'exprs_averaged_s219300.dat'
+filenamerule2 = 'exprs_averaged_sx[4][0-2]???.dat'
 
 # initial stage, dynamo >> resistive, Jphi decreases
 # filenamerule1 = 'exprs_averaged_s[0][3-5]???.dat'
@@ -55,8 +55,8 @@ min_time = pltpoinc.get_time(int(file_list[0].split('_s')[-1].split('.dat')[0]))
 max_time = pltpoinc.get_time(int(file_list[-1].split('_s')[-1].split('.dat')[0]))
 
 # load the 2D data
-folder2D = '../Base_case2D/postproc/'
-filenamerule2D = 'exprs_averaged_s[3][3]????.dat'
+folder2D = '../../Base_case2D/postproc/'
+filenamerule2D = 'exprs_averaged_s[3][3]3300.dat'
 pattern2D = os.path.join(folder2D, filenamerule2D)
 matched_file_list2D = [os.path.basename(file) for file in glob.glob(pattern2D)]
 file_list2D = sorted(matched_file_list2D, key=lambda x: int(x.split('_s')[-1].split('.dat')[0]))
@@ -76,6 +76,12 @@ fact_J_mu_zero  = MU_zero
 fact_time       = 1/time2si
 fact_eta        = 1.0 / math.sqrt ( MU_zero / rho_norm )
 fact_VXB        = math.sqrt( MU_zero * central_mass * central_density * 1.e20 * mass_proton )
+
+file_current_source_original = 'jorek_36663_3.75-3.95__current_source_original.txt'
+data_current_source_original = np.loadtxt(file_current_source_original)
+psin_current_source_original = data_current_source_original[:, 0]
+rhop_current_source_original = np.sqrt(psin_current_source_original)
+current_source_original = data_current_source_original[:, 1]
 
 if __name__ == "__main__":
 
@@ -209,17 +215,20 @@ if __name__ == "__main__":
     plt.tight_layout()
 
     plt.figure()
-    plt.plot(rhop, Jtor0/fact_J_mu_zero, label = r'$J_\varphi^{initial}\ [Am^{-2}]$')
-    plt.plot(rhop, Jtor/fact_J_mu_zero, label = r'$J_\varphi\ [Am^{-2}]$')
-    plt.plot(rhop, Jtor2D/fact_J_mu_zero, label = r'$J_{\varphi, 2D}\ [Am^{-2}]$')
-    plt.plot(rhop, SJtor/fact_J_mu_zero, label = r'$S_{j,\varphi}\ [Am^{-2}]$')
+    plt.plot(rhop, Jtor0/fact_J_mu_zero, linestyle = '-', label = r'equilibrium')
+    # plt.plot(rhop, Jtor/fact_J_mu_zero, label = r'$J_\varphi\ [Am^{-2}]$')
+    # plt.plot(rhop, Jtor2D/fact_J_mu_zero, label = r'$J_{\varphi, 2D}\ [Am^{-2}]$')
+    plt.plot(rhop, SJtor/fact_J_mu_zero, linestyle = '--', label = r'source (sim)')
+    plt.plot(rhop_current_source_original, current_source_original, linestyle = ':', label = r'source (exp)')
     plt.xlabel(r'$\sqrt{\psi_n}$')
-    plt.ylabel(r'different terms')
+    plt.ylabel(r'current profiles [$Am^{-2}$]')
     legend = plt.legend()
     legend.set_draggable(True)
     # plt.gca().ticklabel_format(style='sci', axis='both', scilimits=(0,0))
     plt.grid()
-    plt.title(f'Average: 3D {"{:.0f}".format(min_time * time2si)}~{"{:.0f}".format(max_time * time2si)}; 2D {"{:.0f}".format(min_time2D * time2si)}~{"{:.0f}".format(max_time2D * time2si)} [ms]')
+    plt.xlim([0, 1])
+    plt.ylim([0, 3e6])
+    # plt.title(f'Average: 3D {"{:.0f}".format(min_time * time2si)}~{"{:.0f}".format(max_time * time2si)}; 2D {"{:.0f}".format(min_time2D * time2si)}~{"{:.0f}".format(max_time2D * time2si)} [ms]')
     plt.tight_layout()
 
     if plot_R2:
@@ -261,17 +270,20 @@ if __name__ == "__main__":
     # plt.plot(rhop, -d2drho2_VxBt_n_ge_one, label = r'$-\partial_\rho^2 (VxB)_{n>0}$')
     # plt.plot(rhop, -d2drho2_VxBt_n_eq_zero, label = r'$-\partial_\rho^2 (VxB)_{n=0}$')
     print(f'fact_eta = {fact_eta}')
-    plt.plot(rhop, -d2drho2_VxBt_n_all / fact_VXB / MU_zero, label = r'$-\langle\nabla^2 (VxB)_{\varphi,all}\rangle/\mu_0\ [Am^{-2}s^{-1}]$')
-    plt.plot(rhop, (d2drho2_etaJtor - d2drho2_etaSJtor) / fact_eta / fact_J_mu_zero / MU_zero, label = r'$\langle\nabla^2[\eta (J_{\varphi} - S_{j,\varphi})]\rangle/\mu_0\ [Am^{-2}s^{-1}]$')
+    plt.plot(rhop, -d2drho2_VxBt_n_all / fact_VXB / MU_zero, linestyle = '-', label = r'$-\langle\nabla^2 \left(\mathbf{v}\times\mathbf{B}\right)_{\varphi}\rangle/\mu_0$')
+    plt.plot(rhop, (d2drho2_etaJtor - d2drho2_etaSJtor) / fact_eta / fact_J_mu_zero / MU_zero, linestyle = '--', label = r'$\langle\nabla^2\left[\eta (J_{\varphi} - S_{j})\right]\rangle/\mu_0$')
+    plt.plot(rhop, -d2drho2_VxBt_n_all / fact_VXB / MU_zero + (d2drho2_etaJtor - d2drho2_etaSJtor) / fact_eta / fact_J_mu_zero / MU_zero, linestyle = '-.', label = r'sum') # $\left[\partial_t\langle J_\varphi\rangle\right]$
     # plt.plot(rhop, VxBt_n_all)
     # plt.plot(rhop, gaussian_filter1d(VxBt_n_all,3), '.')
 
     plt.xlabel(r'$\sqrt{\psi_n}$')
-    plt.ylabel(r'Different terms')
-    legend = plt.legend()
+    plt.ylabel(r'Current diffusion rate [A/m$^2$s]')
+    legend = plt.legend(fontsize=16)
     legend.set_draggable(True)
     plt.grid()
-    plt.title(f'Average: 3D {"{:.0f}".format(min_time * time2si)}~{"{:.0f}".format(max_time * time2si)} [ms]')
+    plt.title(f'3D: Time = {"{:.0f}".format(min_time * time2si)} [ms]')
+    plt.xlim([0, 0.9])
+    plt.ylim([-3e6, 3e6])
     plt.tight_layout()
 
     plt.show()

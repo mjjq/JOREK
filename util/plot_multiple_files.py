@@ -114,11 +114,11 @@ def plot_ascii_files(file_paths, xscaleType, yscaleType, title, xlabel, ylabel, 
         file_paths (list): List of file paths to the ASCII files.
     """
     # Define line styles (you can customize this list with different line styles)
-    linestyles = ['-', '--', '-.', ':']
+    linestyle_list = ['-', '--', '-.', ':']
     # Set the default linewidth for all lines
     mpl.rcParams['lines.linewidth'] = line_width
 
-    plt.figure(figsize=(10, 6))  # Set the figure size
+    # plt.figure(figsize=(10, 6))  # Set the figure size
 
     ilegend = 0
     for i, file_path in enumerate(file_paths):
@@ -144,16 +144,19 @@ def plot_ascii_files(file_paths, xscaleType, yscaleType, title, xlabel, ylabel, 
         if i == 0:
             x = x + float(shift_first_file)
 
-        linestyle = linestyles[i % len(linestyles)]  # Cycle through linestyles
+        linestyle_plot = linestyle_list[i % len(linestyle_list)]  # Cycle through linestyle_list
         if noline:
-            linestyle = 'none'
+            linestyle_plot = 'none'
 
         if columns_plot_for_Y == -1:
             columns_plot_for_Y_mdf = range(y.shape[1])  # Plot all columns
         elif i == 0:
             columns_plot_for_Y_mdf = [j - 1 for j in columns_plot_for_Y]
 
-        for j in columns_plot_for_Y_mdf:
+        colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
+        # color_plot = colors[i % len(colors)]
+        for rankj, j in enumerate(columns_plot_for_Y_mdf):
+            color_plot = colors[rankj % len(colors)]
             if j < y.shape[1]:
                 if mylegends == "":
                     mylegend = f'{column_names[j + 1]} ({file_path})'
@@ -161,9 +164,8 @@ def plot_ascii_files(file_paths, xscaleType, yscaleType, title, xlabel, ylabel, 
                     mylegend = mylegends[ilegend]
                     ilegend += 1
                 if (i == 0) and (color_first_file != ""):
-                    plt.plot(x, y[:, j], data_marker, label=mylegend, linestyle=linestyle, color=color_first_file, markersize=1)
-                else:
-                    plt.plot(x, y[:, j], data_marker, label=mylegend, linestyle=linestyle, markersize=1)
+                    color_plot = color_first_file
+                plt.plot(x, y[:, j], data_marker, label=mylegend, linestyle=linestyle_plot, color=color_plot, markersize=1)
             else:
                 print("Error: Value of -yc is out of range!!!")
                 print("file_path: ", file_path)
@@ -171,6 +173,7 @@ def plot_ascii_files(file_paths, xscaleType, yscaleType, title, xlabel, ylabel, 
 
     plt.xlabel(column_names[column_plot_for_X] if xlabel == "" else xlabel, fontsize=font_size)  # Set the x-axis label based on the first file
     plt.ylabel('Y-axis Label' if ylabel == "" else ylabel, fontsize=font_size)  # Set the y-axis label (customize as needed)
+    # legend = plt.legend(loc="upper left", bbox_to_anchor=(1, 1))  # Show legends for each line
     legend = plt.legend()  # Show legends for each line
     legend.set_draggable(True)
     for label in legend.get_texts():

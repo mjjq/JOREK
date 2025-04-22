@@ -204,6 +204,9 @@ module mod_expression
     call add(exprs_all, 'etaJSJ_para ', 'eta (J - Jsource), parallel to B0                     ')
     call add(exprs_all, 'VXBt        ', 'Dynamo loop voltage term (n=1)                        ')
     call add(exprs_all, 'VXBt_all    ', 'Dynamo loop voltage term (n>=1)                       ')
+    call add(exprs_all, 'enflux_dyna ', 'energy/pressure flux due to the dynamo induced EXB drift')
+    call add(exprs_all, 'enflux_inst ', 'energy/pressure flux due to the instability induced flow')
+    call add(exprs_all, 'enflux_equi ', 'energy/pressure flux due to the equilibrium flow      ')
     call add(exprs_all, 'VXBt00      ', 'Dynamo loop voltage term (n=0)                        ')
     call add(exprs_all, 'etaJt       ', 'eta J toroidal                                        ')
     call add(exprs_all, 'etaSJt      ', 'eta Jsource toroidal                                  ')
@@ -624,12 +627,12 @@ module mod_expression
       Btor_all, uPhi_all, UR0, UZ0, Up0
     real*8  :: AR0_1_s, AR0_1_t, AZ0_1_s, AZ0_1_t
     real*8  :: AR0_1_Z, AZ0_1_R
-    real*8  :: ps00, A300
-    real*8  :: uR_0, uZ_0, BR_0, BZ_0, Btor_0
-    real*8  :: A30_0_Z, A30_0_R, AZ0_0_R, AZ0_0_Z, AR0_0_R, AR0_0_Z
-    real*8  :: AR0_0_p, AZ0_0_p, A30_0_p
-    real*8  :: AR0_0_s, AZ0_0_s, A30_0_s
-    real*8  :: AR0_0_t, AZ0_0_t, A30_0_t
+    real*8  :: ps_axisym, A3_axisym
+    real*8  :: uR_axisym, uZ_axisym, uPhi_axisym, BR_axisym, BZ_axisym, Btor_axisym
+    real*8  :: A3_axisym_Z, A3_axisym_R, AZ_axisym_R, AZ_axisym_Z, AR_axisym_R, AR_axisym_Z
+    real*8  :: AR_axisym_p, AZ_axisym_p, A3_axisym_p
+    real*8  :: AR_axisym_s, AZ_axisym_s, A3_axisym_s
+    real*8  :: AR_axisym_t, AZ_axisym_t, A3_axisym_t
     real*8  :: ps0_R, ps0_Z, ps0_RR, ps0_ZZ, ps0_RZ, u0_R, u0_Z, u0_RR, u0_ZZ, u0_RZ, vv2, zj0_R,  &
       zj0_Z, zj0_RR, zj0_ZZ, zj0_RZ, w0_R, w0_Z, w0_RR, w0_ZZ, w0_RZ, r0_R, r0_Z, r0_RR, r0_ZZ,    &
       r0_RZ, r0_hat, r0_R_hat, r0_Z_hat, T0_R, T0_Z, T0_RR, T0_ZZ, T0_RZ, T0_ps0_R, T0_ps0_Z,      &
@@ -638,22 +641,31 @@ module mod_expression
       BB2, Btor, BR, BZ, BR_Z, BZ_R, Btheta, psi_abs, E_par, E_crit,                               &
       E_dreicer, AR0_R, AR0_Z, AZ0_R, AZ0_Z, A30_R, A30_Z, AR0_Rp, AZ0_Zp, A30_RR, A30_ZZ, AR0_ZZ, &
       AR0_RR, AZ0_RR, AZ0_ZZ, A30_Rp, A30_Zp, AR0_RZ, AZ0_RZ, AR0_Zp, AZ0_Rp, A30_RZ, BR_p, BZ_p,  &
-      BP_Z, BP_R, BR_R, BZ_Z, B_R, B_Z, Kappa_R, Kappa_Z, Kappa_phi, Bp_p
+      BP_Z, BP_R, BR_R, BZ_Z, B_R, B_Z, Kappa_R, Kappa_Z, Kappa_Phi, Bp_p
     real*8  :: eta_T, deta_dT, d2eta_d2T, visco_T, dvisco_dT, D_prof, ZK_prof, ZKi_prof, ZKe_prof, &
       ZKpar_T, dZKpar_dT, ZKi_par_T, dZKi_par_dT, ZKe_par_T, dZKe_par_dT, eta_num_T, visco_num_T
-    real*8  :: VXB_tor, VXB_tor_all, VXB00_tor
+    real*8  :: VXB_tor, VXB_tor_all, VXB_axisym_tor
     real*8  :: VXB_para, VXB_para_all, etaJSJ_para
     real*8  :: etaJtor, etaSJtor, current_source_Jp
-    real*8  :: VXB_tor_R2, VXB_tor_all_R2, VXB00_tor_R2, etaJtor_R2, etaSJtor_R2
+    real*8  :: VXB_tor_R2, VXB_tor_all_R2, VXB_axisym_tor_R2, etaJtor_R2, etaSJtor_R2
+    real*8  :: V_allXB_all_R, V_allXB_all_Z, V_allXB_all_Phi
+    real*8  :: V_allXB_allXB_axisym_over_B_axisym2_R, V_allXB_allXB_axisym_over_B_axisym2_Z,        &
+      V_allXB_allXB_axisym_over_B_axisym2_Phi
+    real*8  :: P_axisym_V_allXB_allXB_axisym_over_B_axisym2_R,                                      &
+      P_axisym_V_allXB_allXB_axisym_over_B_axisym2_Z,                                               &
+      P_axisym_V_allXB_allXB_axisym_over_B_axisym2_Phi,                                             &
+      P_axisym_V_allXB_allXB_axisym_over_B_axisym2_radial
+    real*8  :: P_all_v_all_R, P_all_v_all_Z, P_all_v_all_Phi, P_all_v_all_radial
+    real*8  :: P_axisym_v_axisym_R, P_axisym_v_axisym_Z, P_axisym_v_axisym_Phi, P_axisym_v_axisym_radial
     real*8  :: grad_psi_2, lap_psi
     real*8  :: rho_compress_term, rho_convect_term, rho_diffusive_term, rho_source_term
     real*8  :: particle_source, heat_source, heat_source_i, heat_source_e
     real*8  :: rho_GS,dd1,dd2,dd3,dd4,dd5,dd6,dd7,dd8
-    real*8  :: r0_axisym
+    real*8  :: ne_axisym, T_axisym, P_axisym, B_axisym2, P_all
     real*8  :: UR0_R, UR0_Z, UR0_p, UR0_s, UR0_t, UR0_RR, UR0_ZZ, UR0_pp, UR0_ss, UR0_tt, UR0_st
     real*8  :: UZ0_R, UZ0_Z, UZ0_p, UZ0_s, UZ0_t, UZ0_RR, UZ0_ZZ, UZ0_pp, UZ0_ss, UZ0_tt, UZ0_st
     real*8  :: Up0_R, Up0_Z, Up0_p, Up0_s, Up0_t, Up0_RR, Up0_ZZ, Up0_pp, Up0_ss, Up0_tt, Up0_st
-    real*8  :: A30_0_ss, A30_0_tt, A30_0_st, A30_0_RR, A30_0_ZZ
+    real*8  :: A3_axisym_ss, A3_axisym_tt, A3_axisym_st, A3_axisym_RR, A3_axisym_ZZ
     real*8 :: Ti0, Ti0_s, Ti0_t, Ti0_st, Ti0_ss, Ti0_tt, Ti0_p, Ti0_pp, Te0, Te0_s, Te0_t, Te0_st, &
       Te0_ss, Te0_tt, Te0_p, Te0_pp, Ti0_R, Ti0_Z, Te0_R, Te0_Z, Er, Vtheta, Mach_par, Mach_pol,   &
       Vsound, Vneo, Vperp_e, Vperp_i, V_ExB, Vstar_e, Vstar_i, mu_neo, ki_neo, J_boot, Te0_eV,     &
@@ -662,7 +674,7 @@ module mod_expression
     real*8 :: T0_corr, Ti0_corr, Te0_corr, r0_corr, rn0_corr
     real*8 :: T_or_Te, T_or_Te_corr, T_or_Te_0 
     real*8 :: FFprime_loc, Jpol, JpolR, JpolZ, Btot, Jpar, Jpar_ionsat, fact_jsat, Bnorm, Btan, Jtor
-    real*8 :: nmlR, nmlZ, theta_geo, VR, VZ, V_phi, Vpar_tot, VperpR, VperpZ
+    real*8 :: nmlR, nmlZ, theta_geo, VR, VZ, V_Phi, Vpar_tot, VperpR, VperpZ
     real*8 :: hh, hh_s, hh_t, hh_ss, hh_tt, hh_st, hhz, hhz_p, hhz_pp, sz, vv(0:n_var)
     real*8 :: delta_g(n_var), delta_s(n_var), delta_t(n_var)
     ! --- Fluxes
@@ -676,11 +688,11 @@ module mod_expression
     real*8  :: rimp0, rimp0_s, rimp0_t, rimp0_ss, rimp0_tt, rimp0_st, rimp0_p, rimp0_pp, rimp0_R, rimp0_Z
 
     real*8  :: visco_R, visco_Z, visco_p
-    real*8  :: rho_v_nabla_v_R, rho_v_nabla_v_Z, rho_v_nabla_v_phi
-    real*8  :: div_BB_R, div_BB_Z, div_BB_phi
-    real*8  :: nabla_B2_R, nabla_B2_Z, nabla_B2_phi
-    real*8  :: grad_P_R, grad_P_Z, grad_P_phi
-    real*8  :: visc_term_R, visc_term_Z, visc_term_phi
+    real*8  :: rho_v_nabla_v_R, rho_v_nabla_v_Z, rho_v_nabla_v_Phi
+    real*8  :: div_BB_R, div_BB_Z, div_BB_Phi
+    real*8  :: nabla_B2_R, nabla_B2_Z, nabla_B2_Phi
+    real*8  :: grad_P_R, grad_P_Z, grad_P_Phi
+    real*8  :: visc_term_R, visc_term_Z, visc_term_Phi
 
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
     real*8  :: Te_corr_eV, Te_eV
@@ -848,7 +860,7 @@ module mod_expression
           rn0   = 0.d0; rn0_s   = 0.d0; rn0_t   = 0.d0; rn0_ss   = 0.d0; rn0_tt   = 0.d0; rn0_st   = 0.d0; rn0_p   = 0.d0; rn0_pp   = 0.d0
           rimp0 = 0.d0; rimp0_s = 0.d0; rimp0_t = 0.d0; rimp0_ss = 0.d0; rimp0_tt = 0.d0; rimp0_st = 0.d0; rimp0_p = 0.d0; rimp0_pp = 0.d0
           UR0   = 0.d0; UZ0     = 0.d0; Up0     = 0.d0
-          ps00  = 0.d0; A300    = 0.d0
+          ps_axisym  = 0.d0; A3_axisym    = 0.d0
           UR0_R = 0.d0; UR0_Z = 0.d0; UR0_p = 0.d0; UR0_s = 0.d0; UR0_t = 0.d0
           UZ0_R = 0.d0; UZ0_Z = 0.d0; UZ0_p = 0.d0; UZ0_s = 0.d0; UZ0_t = 0.d0
           Up0_R = 0.d0; Up0_Z = 0.d0; Up0_p = 0.d0; Up0_s = 0.d0; Up0_t = 0.d0
@@ -869,20 +881,21 @@ module mod_expression
           AR0_1_s  = 0.d0; AR0_1_t  = 0.d0
           AZ0_1_s  = 0.d0; AZ0_1_t  = 0.d0
           uR_1     = 0.d0; uZ_1     = 0.d0; uPhi_1     = 0.d0
-          uR_0     = 0.d0; uZ_0     = 0.d0
+          uR_axisym     = 0.d0; uZ_axisym     = 0.d0; uPhi_axisym     = 0.d0
           AR0_all_p  = 0.d0; AZ0_all_p   = 0.d0
           A30_all_s  = 0.d0; A30_all_t  = 0.d0
           uR_all     = 0.d0; uZ_all     = 0.d0; uPhi_all = 0.d0
 
-          AR0_0_p = 0.d0; AR0_0_s = 0.d0; AR0_0_t = 0.d0
-          AZ0_0_p = 0.d0; AZ0_0_s = 0.d0; AZ0_0_t = 0.d0
-          A30_0_p = 0.d0; A30_0_s = 0.d0; A30_0_t = 0.d0
+          AR_axisym_p = 0.d0; AR_axisym_s = 0.d0; AR_axisym_t = 0.d0
+          AZ_axisym_p = 0.d0; AZ_axisym_s = 0.d0; AZ_axisym_t = 0.d0
+          A3_axisym_p = 0.d0; A3_axisym_s = 0.d0; A3_axisym_t = 0.d0
 
-          A30_0_ss = 0.d0; A30_0_tt = 0.d0; A30_0_st = 0.d0
+          A3_axisym_ss = 0.d0; A3_axisym_tt = 0.d0; A3_axisym_st = 0.d0
 
           delta_g(:) = 0.d0; delta_s(:) = 0.d0; delta_t(:) = 0.d0
           Fprofile = 0.d0;  Fprofile_s = 0.d0;  Fprofile_t = 0.d0
-          r0_axisym = 0.d0
+          ne_axisym = 0.d0
+          T_axisym = 0.d0
           
           ! --- Reconstruct variables
           do i = 1, n_vertex_max
@@ -1109,29 +1122,31 @@ module mod_expression
                 end if
 
                 if ( i_tor == 1 ) then
-                  ps00      = ps00      + vv(var_psi) * sz * hh    * hhz
-                  A300      = A300      + vv(var_A3) * sz * hh    * hhz
+                  ps_axisym      = ps_axisym      + vv(var_psi) * sz * hh    * hhz
+                  A3_axisym      = A3_axisym      + vv(var_A3) * sz * hh    * hhz
 
-                  ! AR0_0_p    = AR0_0_p    + vv(var_AR) * sz * hh    * hhz_p
-                  AR0_0_p    = 0.d0
-                  AR0_0_s    = AR0_0_s    + vv(var_AR) * sz * hh_s  * hhz
-                  AR0_0_t    = AR0_0_t    + vv(var_AR) * sz * hh_t  * hhz
+                  ! AR_axisym_p    = AR_axisym_p    + vv(var_AR) * sz * hh    * hhz_p
+                  AR_axisym_p    = 0.d0
+                  AR_axisym_s    = AR_axisym_s    + vv(var_AR) * sz * hh_s  * hhz
+                  AR_axisym_t    = AR_axisym_t    + vv(var_AR) * sz * hh_t  * hhz
                   
-                  ! AZ0_0_p    = AZ0_0_p    + vv(var_AZ) * sz * hh    * hhz_p
-                  AZ0_0_p    = 0.d0
-                  AZ0_0_s    = AZ0_0_s    + vv(var_AZ) * sz * hh_s  * hhz
-                  AZ0_0_t    = AZ0_0_t    + vv(var_AZ) * sz * hh_t  * hhz
+                  ! AZ_axisym_p    = AZ_axisym_p    + vv(var_AZ) * sz * hh    * hhz_p
+                  AZ_axisym_p    = 0.d0
+                  AZ_axisym_s    = AZ_axisym_s    + vv(var_AZ) * sz * hh_s  * hhz
+                  AZ_axisym_t    = AZ_axisym_t    + vv(var_AZ) * sz * hh_t  * hhz
 
-                  A30_0_p    = 0.d0
-                  A30_0_s    = A30_0_s    + vv(var_A3) * sz * hh_s  * hhz
-                  A30_0_t    = A30_0_t    + vv(var_A3) * sz * hh_t  * hhz    
+                  A3_axisym_p    = 0.d0
+                  A3_axisym_s    = A3_axisym_s    + vv(var_A3) * sz * hh_s  * hhz
+                  A3_axisym_t    = A3_axisym_t    + vv(var_A3) * sz * hh_t  * hhz    
 
-                  A30_0_ss   = A30_0_ss   + vv(var_A3) * sz * hh_ss  * hhz
-                  A30_0_tt   = A30_0_tt   + vv(var_A3) * sz * hh_tt  * hhz 
-                  A30_0_st   = A30_0_st   + vv(var_A3) * sz * hh_st  * hhz    
-                  uR_0       = uR_0       + vv(var_uR) * sz * hh    * hhz
-                  uZ_0       = uZ_0       + vv(var_uZ) * sz * hh    * hhz
-                  r0_axisym  = r0_axisym  + vv(var_rho) * sz * hh    * hhz
+                  A3_axisym_ss   = A3_axisym_ss   + vv(var_A3) * sz * hh_ss  * hhz
+                  A3_axisym_tt   = A3_axisym_tt   + vv(var_A3) * sz * hh_tt  * hhz 
+                  A3_axisym_st   = A3_axisym_st   + vv(var_A3) * sz * hh_st  * hhz    
+                  uR_axisym       = uR_axisym       + vv(var_uR) * sz * hh    * hhz
+                  uZ_axisym       = uZ_axisym       + vv(var_uZ) * sz * hh    * hhz
+                  uPhi_axisym     = uPhi_axisym     + vv(var_up) * sz * hh    * hhz
+                  ne_axisym  = ne_axisym  + vv(var_rho) * sz * hh    * hhz
+                  T_axisym  = T_axisym  + ( vv(var_T) + vv(var_Ti) + vv(var_Te) ) * sz * hh    * hhz
                 endif
 
                 if ( i_tor .ge. 2 ) then
@@ -1359,14 +1374,14 @@ module mod_expression
           AR0_1_Z = ( - R_t * AR0_1_s  + R_s * AR0_1_t ) / xjac
           AZ0_1_R = (   Z_t * AZ0_1_s  - Z_s * AZ0_1_t ) / xjac
 
-          A30_0_R = (   Z_t * A30_0_s  - Z_s * A30_0_t ) / xjac
-          A30_0_Z = ( - R_t * A30_0_s  + R_s * A30_0_t ) / xjac
+          A3_axisym_R = (   Z_t * A3_axisym_s  - Z_s * A3_axisym_t ) / xjac
+          A3_axisym_Z = ( - R_t * A3_axisym_s  + R_s * A3_axisym_t ) / xjac
 
-          AZ0_0_R = (   Z_t * AZ0_0_s  - Z_s * AZ0_0_t ) / xjac
-          AZ0_0_Z = ( - R_t * AZ0_0_s  + R_s * AZ0_0_t ) / xjac
+          AZ_axisym_R = (   Z_t * AZ_axisym_s  - Z_s * AZ_axisym_t ) / xjac
+          AZ_axisym_Z = ( - R_t * AZ_axisym_s  + R_s * AZ_axisym_t ) / xjac
 
-          AR0_0_R = (   Z_t * AR0_0_s  - Z_s * AR0_0_t ) / xjac
-          AR0_0_Z = ( - R_t * AR0_0_s  + R_s * AR0_0_t ) / xjac
+          AR_axisym_R = (   Z_t * AR_axisym_s  - Z_s * AR_axisym_t ) / xjac
+          AR_axisym_Z = ( - R_t * AR_axisym_s  + R_s * AR_axisym_t ) / xjac
 
           A30_all_R = (   Z_t * A30_all_s  - Z_s * A30_all_t ) / xjac
           A30_all_Z = ( - R_t * A30_all_s  + R_s * A30_all_t ) / xjac
@@ -1420,14 +1435,14 @@ module mod_expression
                       - A30_t * (R_st*Z_s  - R_ss*Z_t ) )  / xjac**2               &
                       - xjac_R * (- A30_s * R_t + A30_t * R_s )   / xjac**2
 
-          A30_0_RR   = (A30_0_ss * Z_t**2 - 2.d0*A30_0_st * Z_s*Z_t + A30_0_tt * Z_s**2    &
-                      + A30_0_s * (Z_st*Z_t - Z_tt*Z_s )                             &
-                      + A30_0_t * (Z_st*Z_s - Z_ss*Z_t ) )       / xjac**2           &
-                      - xjac_R * (A30_0_s * Z_t - A30_0_t * Z_s)     / xjac**2
-          A30_0_ZZ   = (A30_0_ss * R_t**2 - 2.d0*A30_0_st * R_s*R_t + A30_0_tt * R_s**2    &
-                      + A30_0_s * (R_st*R_t - R_tt*R_s )                             &
-                      + A30_0_t * (R_st*R_s - R_ss*R_t ) )       / xjac**2           &
-                      - xjac_Z * (- A30_0_s * R_t + A30_0_t * R_s )  / xjac**2
+          A3_axisym_RR   = (A3_axisym_ss * Z_t**2 - 2.d0*A3_axisym_st * Z_s*Z_t + A3_axisym_tt * Z_s**2    &
+                      + A3_axisym_s * (Z_st*Z_t - Z_tt*Z_s )                             &
+                      + A3_axisym_t * (Z_st*Z_s - Z_ss*Z_t ) )       / xjac**2           &
+                      - xjac_R * (A3_axisym_s * Z_t - A3_axisym_t * Z_s)     / xjac**2
+          A3_axisym_ZZ   = (A3_axisym_ss * R_t**2 - 2.d0*A3_axisym_st * R_s*R_t + A3_axisym_tt * R_s**2    &
+                      + A3_axisym_s * (R_st*R_t - R_tt*R_s )                             &
+                      + A3_axisym_t * (R_st*R_s - R_ss*R_t ) )       / xjac**2           &
+                      - xjac_Z * (- A3_axisym_s * R_t + A3_axisym_t * R_s )  / xjac**2
 
           Fprofile_R = (   Z_t * Fprofile_s  - Z_s * Fprofile_t ) / xjac
           Fprofile_Z = ( - R_t * Fprofile_s  + R_s * Fprofile_t ) / xjac
@@ -1482,9 +1497,9 @@ module mod_expression
           BZ_1 = ( AR0_1_p - A30_1_R )/ BigR
           Btor_1 = ( AZ0_1_R - AR0_1_Z )
 
-          BR_0 = ( A30_0_Z - AZ0_0_p )/ BigR
-          BZ_0 = ( AR0_0_p - A30_0_R )/ BigR
-          Btor_0 = ( AZ0_0_R - AR0_0_Z )    + Fprofile / BigR
+          BR_axisym = ( A3_axisym_Z - AZ_axisym_p )/ BigR
+          BZ_axisym = ( AR_axisym_p - A3_axisym_R )/ BigR
+          Btor_axisym = ( AZ_axisym_R - AR_axisym_Z )    + Fprofile / BigR
 
           BR_all = ( A30_all_Z - AZ0_all_p )/ BigR
           BZ_all = ( AR0_all_p - A30_all_R )/ BigR
@@ -1496,7 +1511,7 @@ module mod_expression
           JpolR    = (R*BP_Z - BZ_p) / R
           JpolZ    = (BR_p - R*BP_R - Btor) / R
 
-          psi_norm = get_psi_n(A300, Z)
+          psi_norm = get_psi_n(A3_axisym, Z)
           psi_abs  = sqrt(A30_R*A30_R + A30_Z * A30_Z)
           if (psi_abs > 1.d-6) then
             FFprime_loc = zj0 + (R**2.d0) * (A30_R*P0_R + A30_Z*P0_Z)/(psi_abs**2.d0)
@@ -1515,7 +1530,7 @@ module mod_expression
           Btheta   = sqrt(ps0_R*ps0_R + ps0_Z * ps0_Z) / BigR
           JpolR    = ( -zj0 * BR - R * P0_Z ) / F0
           JpolZ    = ( -zj0 * BZ + R * P0_R ) / F0
-          psi_norm = get_psi_n(ps00, Z)
+          psi_norm = get_psi_n(ps_axisym, Z)
           psi_abs  = sqrt(ps0_R*ps0_R + ps0_Z * ps0_Z)
 
           BR_R     = + ps0_RZ / BigR - ps0_Z / BigR**2
@@ -1535,7 +1550,7 @@ module mod_expression
 #endif
           if (psi_norm>1.d0 .or. psi_norm < 0.d0) then
             write(*,*) "WARNING, psi_norm out of range [0, 1], please check !!!"
-            write(*,*) "psi_norm = ", psi_norm, ", A300 = ", A300, ", ps00 = ", ps00
+            write(*,*) "psi_norm = ", psi_norm, ", A3_axisym = ", A3_axisym, ", ps_axisym = ", ps_axisym
             psi_norm = min(psi_norm, 1.d0)
             psi_norm = max(psi_norm, 0.d0)
             !stop
@@ -1543,7 +1558,7 @@ module mod_expression
 
           Kappa_R    = ( Btot*BR*BR_R - BR*BR*B_R   - BZ*BR*B_Z   + Btot*BZ*BR_Z - Btot*Btor**2/BigR ) / Btot**3.
           Kappa_Z    = ( Btot*BR*BZ_R - BR*BZ*B_R   - BZ*BZ*B_Z   + Btot*BZ*BZ_Z                     ) / Btot**3.
-          Kappa_phi  = ( Btot*BR*Bp_R - BR*Btor*B_R - BZ*Btor*B_Z + Btot*BZ*Bp_Z + Btot*Btor*BR/BigR ) / Btot**3.
+          Kappa_Phi  = ( Btot*BR*Bp_R - BR*Btor*B_R - BZ*Btor*B_Z + Btot*BZ*Bp_Z + Btot*Btor*BR/BigR ) / Btot**3.
 
           Jtor        = -zj0/BigR
           Jpol        = FFprime_loc * Btheta     / F0     !Jpol = F' Bpol
@@ -1553,8 +1568,8 @@ module mod_expression
           ! --- Velocity
           VR       = -R*u0_Z + vpar0*ps0_Z/R 
           VZ       =  R*u0_R - vpar0*ps0_R/R
-          V_phi    =  F0 * vpar0/R
-          Vpar_tot =  (VR*BR + VZ*BZ + V_phi*Btor) / Btot
+          V_Phi    =  F0 * vpar0/R
+          Vpar_tot =  (VR*BR + VZ*BZ + V_Phi*Btor) / Btot
           VperpR   =  VR - Vpar_tot * BR / Btot
           VperpZ   =  VZ - Vpar_tot * BZ / Btot
 
@@ -1615,8 +1630,8 @@ module mod_expression
           pres_flux_par =  gamma/(gamma-1.d0) * r0 * T0 * Vpar_tot * Bnorm / Btot          !  p v_par·n
           pres_flux_tot =  gamma/(gamma-1.d0) * r0 * T0 * (VR*nmlR + VZ*nmlZ)              !  p v·n
 
-          kin_flux_par  = 0.5d0*r0* (VR*VR + VZ*VZ + V_phi*V_phi)* Vpar_tot * Bnorm / Btot ! 0.5 nv^2 v_par·n
-          kin_flux_tot  = 0.5d0*r0* (VR*VR + VZ*VZ + V_phi*V_phi)* (VR*nmlR + VZ*nmlZ)     ! 0.5 nv^2 v·n 
+          kin_flux_par  = 0.5d0*r0* (VR*VR + VZ*VZ + V_Phi*V_Phi)* Vpar_tot * Bnorm / Btot ! 0.5 nv^2 v_par·n
+          kin_flux_tot  = 0.5d0*r0* (VR*VR + VZ*VZ + V_Phi*V_Phi)* (VR*nmlR + VZ*nmlZ)     ! 0.5 nv^2 v·n 
 
           if ( with_TiTe ) then
             ZKipar_flux    = - ZKi_par_T *(BR*Ti0_R + BZ*Ti0_Z + Btor*Ti0_p/R) * Bnorm / BB2 / (gamma-1.d0)   ! q_par·n 
@@ -1667,13 +1682,13 @@ module mod_expression
           Vstar_i  = 0.d0
           VXB_tor  = 0.d0
 	        VXB_tor_all  = 0.d0
-          VXB00_tor= 0.d0
+          VXB_axisym_tor= 0.d0
           etaJtor  = 0.d0
           etaSJtor = 0.d0
 
           VXB_tor_R2           = 0.d0
           VXB_tor_all_R2       = 0.d0 
-          VXB00_tor_R2         = 0.d0 
+          VXB_axisym_tor_R2         = 0.d0 
           etaJtor_R2           = 0.d0
           etaSJtor_R2          = 0.d0 
 
@@ -1807,23 +1822,54 @@ module mod_expression
 #ifdef fullmhd
           VXB_tor = uR_1 * BZ_1 - uZ_1 * BR_1
           VXB_tor_all = uR_all * BZ_all - uZ_all * BR_all
-          VXB00_tor = uR_0 * BZ_0 - uZ_0 * BR_0
+          VXB_axisym_tor = uR_axisym * BZ_axisym - uZ_axisym * BR_axisym
 
           VXB_tor_R2 = VXB_tor / R**2
           VXB_tor_all_R2 = VXB_tor_all / R**2
-          VXB00_tor_R2 = VXB00_tor / R**2
+          VXB_axisym_tor_R2 = VXB_axisym_tor / R**2
 
-          Btor_all = Btor - Btor_0
+          Btor_all = Btor - Btor_axisym
 
-          VXB_para = (uZ_1 * Btor_1 - uPhi_1 * BZ_1) * BR_0 + &
-                     (uPhi_1 * BR_1 - uR_1 * Btor_1) * BZ_0 + &
-                     (uR_1 * BZ_1 - uZ_1 * BR_1) * Btor_0
+          VXB_para = (uZ_1 * Btor_1 - uPhi_1 * BZ_1) * BR_axisym + &
+                     (uPhi_1 * BR_1 - uR_1 * Btor_1) * BZ_axisym + &
+                     (uR_1 * BZ_1 - uZ_1 * BR_1) * Btor_axisym
 
-          VXB_para_all = (uZ_all * Btor_all - uPhi_all * BZ_all) * BR_0 + &
-                     (uPhi_all * BR_all - uR_all * Btor_all) * BZ_0 + &
-                     (uR_all * BZ_all - uZ_all * BR_all) * Btor_0
+          VXB_para_all = (uZ_all * Btor_all - uPhi_all * BZ_all) * BR_axisym + &
+                     (uPhi_all * BR_all - uR_all * Btor_all) * BZ_axisym + &
+                     (uR_all * BZ_all - uZ_all * BR_all) * Btor_axisym
 
+          B_axisym2 = BR_axisym**2 + BZ_axisym**2 + Btor_axisym**2
+          V_allXB_all_R   = (uZ_all * Btor_all - uPhi_all * BZ_all)
+          V_allXB_all_Z   = (uPhi_all * BR_all - uR_all * Btor_all)
+          V_allXB_all_Phi = (uR_all * BZ_all - uZ_all * BR_all)
+          V_allXB_allXB_axisym_over_B_axisym2_R   = -(V_allXB_all_Z * Btor_axisym - V_allXB_all_Phi * BZ_axisym) / B_axisym2
+          V_allXB_allXB_axisym_over_B_axisym2_Z   = -(V_allXB_all_Phi * BR_axisym - V_allXB_all_R * Btor_axisym) / B_axisym2
+          V_allXB_allXB_axisym_over_B_axisym2_Phi = -(V_allXB_all_R * BZ_axisym - V_allXB_all_Z * BR_axisym)     / B_axisym2
           
+          P_axisym = ne_axisym * T_axisym
+          P_all = r0 * T0 - ne_axisym * T_axisym
+
+          ! dynamo_EXB_drift * P_eq
+          P_axisym_V_allXB_allXB_axisym_over_B_axisym2_R   = P_axisym * V_allXB_allXB_axisym_over_B_axisym2_R
+          P_axisym_V_allXB_allXB_axisym_over_B_axisym2_Z   = P_axisym * V_allXB_allXB_axisym_over_B_axisym2_Z
+          P_axisym_V_allXB_allXB_axisym_over_B_axisym2_Phi = P_axisym * V_allXB_allXB_axisym_over_B_axisym2_Phi
+          P_axisym_V_allXB_allXB_axisym_over_B_axisym2_radial = (                  &
+                   P_axisym_V_allXB_allXB_axisym_over_B_axisym2_R * A3_axisym_R  + & 
+                   P_axisym_V_allXB_allXB_axisym_over_B_axisym2_R * A3_axisym_Z) / &
+                   sign(dsqrt(A3_axisym_R**2 + A3_axisym_Z**2), eq%Psi_bnd - eq%Psi_axis)
+
+          ! instability_velocity * P_pert
+          P_all_v_all_R   = P_all * uR_all
+          P_all_v_all_Z   = P_all * uZ_all
+          P_all_v_all_Phi = P_all * uPhi_all
+          P_all_v_all_radial = (P_all_v_all_R * A3_axisym_R + P_all_v_all_Z * A3_axisym_Z) / &
+                   sign(dsqrt(A3_axisym_R**2 + A3_axisym_Z**2), eq%Psi_bnd - eq%Psi_axis)
+          ! equilibrium_velocity * P_pert
+          P_axisym_v_axisym_R   = P_axisym * uR_axisym
+          P_axisym_v_axisym_Z   = P_axisym * uZ_axisym
+          P_axisym_v_axisym_Phi = P_axisym * uPhi_axisym
+          P_axisym_v_axisym_radial = (P_axisym_v_axisym_R * A3_axisym_R + P_axisym_v_axisym_Z * A3_axisym_Z) / &
+                   sign(dsqrt(A3_axisym_R**2 + A3_axisym_Z**2), eq%Psi_bnd - eq%Psi_axis)
 #endif
 
 #ifdef WITH_Impurities
@@ -1898,13 +1944,13 @@ module mod_expression
           etaJtor = eta_T * Jtor
           etaSJtor = eta_T * current_source_Jp / R
 
-          etaJSJ_para = eta_T * (Jtor - current_source_Jp / R) * Btor_0 + 0.d0 * BR_0 + 0.d0 * BZ_0
+          etaJSJ_para = eta_T * (Jtor - current_source_Jp / R) * Btor_axisym + 0.d0 * BR_axisym + 0.d0 * BZ_axisym
 
           etaJtor_R2 = etaJtor / R**2
           etaSJtor_R2 = etaSJtor / R**2
 
-          grad_psi_2 = (A30_0_R * A30_0_R + A30_0_Z * A30_0_Z) / (eq%Psi_bnd - eq%Psi_axis)**2
-          lap_psi    = (A30_0_R / R + A30_0_RR + A30_0_ZZ) / (eq%Psi_bnd - eq%Psi_axis)
+          grad_psi_2 = (A3_axisym_R**2 + A3_axisym_Z**2) / (eq%Psi_bnd - eq%Psi_axis)**2
+          lap_psi    = (A3_axisym_R / R + A3_axisym_RR + A3_axisym_ZZ) / (eq%Psi_bnd - eq%Psi_axis)
 #endif
 
 #ifdef fullmhd
@@ -1917,8 +1963,8 @@ module mod_expression
           if (particlesource_fix_profile) then
             if (psi_norm .lt. particlesource_fix_profile_psi_max) then
               call density    (eq%xpoint, eq%xcase, Z, eq%Z_xpoint, psi_norm,0.d0,1.d0, rho_GS,dd1,dd2,dd3,dd4,dd5,dd6,dd7,dd8)
-              if ( (r0_axisym .lt. rho_GS) .or. particlesource_fix_profile_allow_negative ) &
-                particle_source = (1.0/particlesource_fix_profile_tsteps) * (rho_GS-r0_axisym) ! / tstep
+              if ( (ne_axisym .lt. rho_GS) .or. particlesource_fix_profile_allow_negative ) &
+                particle_source = (1.0/particlesource_fix_profile_tsteps) * (rho_GS-ne_axisym) ! / tstep
             endif
           elseif (particlesource_fix_profile_const_Dperp) then
             call density    (eq%xpoint, eq%xcase, Z, eq%Z_xpoint, psi_norm,0.d0,1.d0, rho_GS,dd1,dd2,dd3,dd4,dd5,dd6,dd7,dd8)
@@ -1931,19 +1977,19 @@ module mod_expression
 
           rho_v_nabla_v_R   = -r0 * (UR0 * UR0_R + UZ0 * UR0_Z + Up0 * UR0_p / R - Up0 ** 2 / R)
           rho_v_nabla_v_Z   = -r0 * (UR0 * UZ0_R + UZ0 * UZ0_Z + Up0 * UZ0_p / R)
-          rho_v_nabla_v_phi = -r0 * (UR0 * Up0_R + UZ0 * Up0_Z + Up0 * Up0_p / R + Up0 * UR0 / R)
+          rho_v_nabla_v_Phi = -r0 * (UR0 * Up0_R + UZ0 * Up0_Z + Up0 * Up0_p / R + Up0 * UR0 / R)
 
           div_BB_R          = BR ** 2 / R + 2 * BR * BR_R + BZ * BR_Z  + BR * BZ_Z + (Btor * BR_p + BR * Bp_p) / R - Btor ** 2 / R
           div_BB_Z          = BR * BZ / R + BR * BZ_R + BZ * BR_R + 2 * BZ * BZ_Z + (Btor * BZ_p + BZ * Bp_p) / R
-          div_BB_phi        = BR * Btor / R + BR * BP_R + Btor * BR_R + BZ * BP_Z + Btor * BZ_Z + 2 * Btor * Bp_p / R + Btor * BR / R
+          div_BB_Phi        = BR * Btor / R + BR * BP_R + Btor * BR_R + BZ * BP_Z + Btor * BZ_Z + 2 * Btor * Bp_p / R + Btor * BR / R
 
           nabla_B2_R        = - (BR * BR_R + BZ * BZ_R + Btor * BP_R)
           nabla_B2_Z        = - (BR * BR_Z + BZ * BZ_Z + Btor * BP_Z)
-          nabla_B2_phi      = - (BR * BR_p + BZ * BZ_p + Btor * Bp_p) / R
+          nabla_B2_Phi      = - (BR * BR_p + BZ * BZ_p + Btor * Bp_p) / R
 
           grad_P_R          = - P0_R
           grad_P_Z          = - P0_Z
-          grad_P_phi        = - P0_p / R
+          grad_P_Phi        = - P0_p / R
 
           visc_term_R       = visco * ( UR0_R / R + UR0_RR + UR0_ZZ + UR0_pp / R ** 2   &
                                       - 2.d0 / R ** 2 * Up0_p - UR0 / R ** 2 )          &
@@ -1952,7 +1998,7 @@ module mod_expression
           visc_term_Z       = visco * ( UZ0_R / R + UZ0_RR + UZ0_ZZ + UZ0_pp / R ** 2 ) &
                             + ( visco_R * UZ0_R + visco_Z * UZ0_Z + visco_p * UZ0_p / R ** 2 )
 
-          visc_term_phi     = visco * ( Up0_R / R + Up0_RR + Up0_ZZ + Up0_pp / R ** 2   &
+          visc_term_Phi     = visco * ( Up0_R / R + Up0_RR + Up0_ZZ + Up0_pp / R ** 2   &
                                       + 2.d0 / R ** 2 * UR0_p - Up0 / R ** 2)           &
                             + ( visco_R * Up0_R + visco_Z * Up0_Z + visco_p * ( Up0_p + UR0 ) / R ** 2 )
 
@@ -2192,13 +2238,13 @@ module mod_expression
                 res = (-JpolR*Btor+Jtor*BR) / fact_mu_zero
 
               case ( 'JxB_radial' )
-                res = ( (JpolZ*Btor-Jtor*BZ) * A30_0_R + (-JpolR*Btor+Jtor*BR) * A30_0_Z ) / dsqrt(A30_0_R * A30_0_R + A30_0_Z * A30_0_Z) / fact_mu_zero
+                res = ( (JpolZ*Btor-Jtor*BZ) * A3_axisym_R + (-JpolR*Btor+Jtor*BR) * A3_axisym_Z ) / dsqrt(A3_axisym_R * A3_axisym_R + A3_axisym_Z * A3_axisym_Z) / fact_mu_zero
 
               case ( 'JpolxBtor_r' )
-                res = ( (JpolZ*Btor) * A30_0_R + (-JpolR*Btor) * A30_0_Z ) / dsqrt(A30_0_R * A30_0_R + A30_0_Z * A30_0_Z) / fact_mu_zero
+                res = ( (JpolZ*Btor) * A3_axisym_R + (-JpolR*Btor) * A3_axisym_Z ) / dsqrt(A3_axisym_R * A3_axisym_R + A3_axisym_Z * A3_axisym_Z) / fact_mu_zero
 
               case ( 'JtorxBpol_r' )
-                res = ( (-Jtor*BZ) * A30_0_R + (+Jtor*BR) * A30_0_Z ) / dsqrt(A30_0_R * A30_0_R + A30_0_Z * A30_0_Z) / fact_mu_zero
+                res = ( (-Jtor*BZ) * A3_axisym_R + (+Jtor*BR) * A3_axisym_Z ) / dsqrt(A3_axisym_R * A3_axisym_R + A3_axisym_Z * A3_axisym_Z) / fact_mu_zero
 
               case ( 'JxB_phi' )
                 res = (JpolR*BZ-JpolZ*BR) / fact_mu_zero
@@ -2216,7 +2262,7 @@ module mod_expression
                 res = (BR*P0_R+BZ*P0_Z+Btor*P0_p/BigR) / Btot / fact_mu_zero
  
               case ( 'gradPdotCurv' )
-                res = ( P0_R*Kappa_R + P0_Z*Kappa_Z + P0_p / BigR * Kappa_phi ) / fact_mu_zero
+                res = ( P0_R*Kappa_R + P0_Z*Kappa_Z + P0_p / BigR * Kappa_Phi ) / fact_mu_zero
       
               case ( 'curvat_R' )
                 res = Kappa_R
@@ -2225,7 +2271,7 @@ module mod_expression
                 res = Kappa_Z
 
               case ( 'curvat_phi' )
-                res = Kappa_phi
+                res = Kappa_Phi
 
               case ( 'Er' )
                 res = Er * fact_Er
@@ -2299,8 +2345,17 @@ module mod_expression
               case ( 'VXBt_all' )
                 res = VXB_tor_all * fact_VXB
 
+              case ( 'enflux_dyna' )
+                res = P_axisym_V_allXB_allXB_axisym_over_B_axisym2_radial * fact_VXB / fact_mu_zero
+
+              case ( 'enflux_inst' )
+                res = P_all_v_all_radial * fact_VXB / fact_mu_zero
+
+              case ( 'enflux_equi' )
+                res = P_axisym_v_axisym_radial * fact_VXB / fact_mu_zero
+
               case ( 'VXBt00' )
-                res = VXB00_tor * fact_VXB
+                res = VXB_axisym_tor * fact_VXB
 
               case ( 'etaJt' )
                 res = etaJtor * fact_resistiv / fact_mu_zero
@@ -2318,7 +2373,7 @@ module mod_expression
                 res = VXB_tor_all_R2 * fact_VXB
 
               case ( 'VXBt00_R2' )
-                res = VXB00_tor_R2 * fact_VXB
+                res = VXB_axisym_tor_R2 * fact_VXB
 
               case ( 'etaJt_R2' )
                 res = etaJtor_R2 * fact_resistiv / fact_mu_zero
@@ -2348,32 +2403,32 @@ module mod_expression
                 res = rho_source_term * fact_rho / fact_time
 
               case ( 'V_radial' )
-                res = ((uR_0 + uR_all) * A30_0_R + (uZ_0 + uZ_all) * A30_0_Z)/dsqrt(A30_0_R * A30_0_R + A30_0_Z * A30_0_Z) / fact_time
+                res = ((uR_axisym + uR_all) * A3_axisym_R + (uZ_axisym + uZ_all) * A3_axisym_Z)/dsqrt(A3_axisym_R * A3_axisym_R + A3_axisym_Z * A3_axisym_Z) / fact_time
 
               case ( 'grad_psi_R' )
-                res = A30_0_R/dsqrt(A30_0_R * A30_0_R + A30_0_Z * A30_0_Z)
+                res = A3_axisym_R/dsqrt(A3_axisym_R * A3_axisym_R + A3_axisym_Z * A3_axisym_Z)
 
               case ( 'grad_psi_Z' )
-                res = A30_0_Z/dsqrt(A30_0_R * A30_0_R + A30_0_Z * A30_0_Z)
+                res = A3_axisym_Z/dsqrt(A3_axisym_R * A3_axisym_R + A3_axisym_Z * A3_axisym_Z)
 
               case ( 'myVnablaV_r' )
-                res = (rho_v_nabla_v_R * A30_0_R + rho_v_nabla_v_R * A30_0_Z) / dsqrt(A30_0_R * A30_0_R + A30_0_Z * A30_0_Z) / fact_mu_zero
+                res = (rho_v_nabla_v_R * A3_axisym_R + rho_v_nabla_v_R * A3_axisym_Z) / dsqrt(A3_axisym_R * A3_axisym_R + A3_axisym_Z * A3_axisym_Z) / fact_mu_zero
 
               case ( 'myDiv_BB_r' )
-                res = (div_BB_R * A30_0_R + div_BB_Z * A30_0_Z) / dsqrt(A30_0_R * A30_0_R + A30_0_Z * A30_0_Z) / fact_mu_zero
+                res = (div_BB_R * A3_axisym_R + div_BB_Z * A3_axisym_Z) / dsqrt(A3_axisym_R * A3_axisym_R + A3_axisym_Z * A3_axisym_Z) / fact_mu_zero
               
               case ( 'myNablaB2_r' )
-                res = (nabla_B2_R * A30_0_R + nabla_B2_Z * A30_0_Z) / dsqrt(A30_0_R * A30_0_R + A30_0_Z * A30_0_Z) / fact_mu_zero
+                res = (nabla_B2_R * A3_axisym_R + nabla_B2_Z * A3_axisym_Z) / dsqrt(A3_axisym_R * A3_axisym_R + A3_axisym_Z * A3_axisym_Z) / fact_mu_zero
 
               case ( 'myGradP_r' )
-                res = (grad_P_R * A30_0_R + grad_P_Z * A30_0_Z) / dsqrt(A30_0_R * A30_0_R + A30_0_Z * A30_0_Z) / fact_mu_zero
+                res = (grad_P_R * A3_axisym_R + grad_P_Z * A3_axisym_Z) / dsqrt(A3_axisym_R * A3_axisym_R + A3_axisym_Z * A3_axisym_Z) / fact_mu_zero
 
               case ( 'myViscTerm_r' )
-                res = (visc_term_R * A30_0_R + visc_term_Z * A30_0_Z) / dsqrt(A30_0_R * A30_0_R + A30_0_Z * A30_0_Z) / fact_mu_zero
+                res = (visc_term_R * A3_axisym_R + visc_term_Z * A3_axisym_Z) / dsqrt(A3_axisym_R * A3_axisym_R + A3_axisym_Z * A3_axisym_Z) / fact_mu_zero
 
               case ( 'myJxB_r' )
-                res = (div_BB_R * A30_0_R + div_BB_Z * A30_0_Z) / dsqrt(A30_0_R * A30_0_R + A30_0_Z * A30_0_Z) / fact_mu_zero + &
-                      (nabla_B2_R * A30_0_R + nabla_B2_Z * A30_0_Z) / dsqrt(A30_0_R * A30_0_R + A30_0_Z * A30_0_Z) / fact_mu_zero
+                res = (div_BB_R * A3_axisym_R + div_BB_Z * A3_axisym_Z) / dsqrt(A3_axisym_R * A3_axisym_R + A3_axisym_Z * A3_axisym_Z) / fact_mu_zero + &
+                      (nabla_B2_R * A3_axisym_R + nabla_B2_Z * A3_axisym_Z) / dsqrt(A3_axisym_R * A3_axisym_R + A3_axisym_Z * A3_axisym_Z) / fact_mu_zero
 
               case ( 'E_||' )
                 res = E_par / fact_time

@@ -41,6 +41,8 @@ real*8,  intent(in)    :: R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint(2), Z_xpoi
 #define TEMPERATURE_DEPENDENT_UPDATE
 #define ENABLE_PARTICLE_SOURCE_IN_MOMENTUM_EQUATION
 
+! #define FULL_THERMALIZATION
+
 ! In model 710, viscType=0 and 22 corresponds to the form: \mu\nabla^2\vec{v}
 ! #define VISCOSITY_TENSOR_FORM
 #ifndef VISCOSITY_TENSOR_FORM
@@ -1275,7 +1277,11 @@ do j=1,n_degrees
           ! --- rho
           rho0      = eq_g(mp,var_rho,ms,mt)
           rho0_corr = max(rho0,1.d-12)!corr_neg_dens1(rho0) ! CAREFUL! FULL-MHD DOESN'T LIKE THE CORR FUNCTIONS AT ALL
+#ifdef FULL_THERMALIZATION
+          drho0_corr_dn = 1.d0
+#else
           drho0_corr_dn = 0.d0!dcorr_neg_dens_drho(rho0)
+#endif
           rho0_p    = eq_p(mp,var_rho,ms,mt)
           rho0_s    = eq_s(mp,var_rho,ms,mt)
           rho0_t    = eq_t(mp,var_rho,ms,mt)
@@ -1298,7 +1304,11 @@ do j=1,n_degrees
           ! --- Ti
           Ti0      = eq_g(mp,var_Ti,ms,mt)
           Ti0_corr = max(Ti0,1.d-12)!corr_neg_temp1(Ti0) ! CAREFUL! FULL-MHD DOESN'T LIKE THE CORR FUNCTIONS AT ALL
+#ifdef FULL_THERMALIZATION
+          dTi0_corr_dT = 1.d0
+#else
           dTi0_corr_dT = 0.d0 !dcorr_neg_temp_dT(Ti0) ! Improve the correction
+#endif
           Ti0_p    = eq_p(mp,var_Ti,ms,mt)
           Ti0_s    = eq_s(mp,var_Ti,ms,mt)
           Ti0_t    = eq_t(mp,var_Ti,ms,mt)
@@ -1321,7 +1331,11 @@ do j=1,n_degrees
           ! --- Te
           Te0      = eq_g(mp,var_Te,ms,mt)
           Te0_corr = max(Te0,1.d-12)!corr_neg_temp1(Te0) ! CAREFUL! FULL-MHD DOESN'T LIKE THE CORR FUNCTIONS AT ALL
+#ifdef FULL_THERMALIZATION
+          dTe0_corr_dT = 1.d0
+#else
           dTe0_corr_dT = 0.d0 !dcorr_neg_temp_dT(Te0) ! Improve the correction
+#endif
           Te0_p    = eq_p(mp,var_Te,ms,mt)
           Te0_s    = eq_s(mp,var_Te,ms,mt)
           Te0_t    = eq_t(mp,var_Te,ms,mt)
@@ -1582,6 +1596,18 @@ do j=1,n_degrees
             !                 this may be for the same reason that correction functions cannot be used for
             !                 the density and temperatures. Will need to be investigated in the future
 
+#ifdef FULL_THERMALIZATION
+            dnu_e_bg_dTi    = -1.5*MASS_ELECTRON*nu_e_bg*dTi0_corr_dT / (MASS_ELECTRON*Ti0_corr + MASS_PROTON*central_mass*Te0_corr)
+            dnu_e_bg_dTe    = -1.5*MASS_PROTON*central_mass*nu_e_bg*dTe0_corr_dT &
+                              / (MASS_ELECTRON*Ti0_corr + MASS_PROTON*central_mass*Te0_corr)
+
+            dnu_e_bg_drho   = nu_e_bg * drho0_corr_dn / rho0_corr
+
+            ddTe_i_dTi      = dnu_e_bg_dTi * (Ti0_corr - Te0_corr) * rho0_corr + nu_e_bg * dTi0_corr_dT * rho0_corr
+            ddTe_i_dTe      = dnu_e_bg_dTe * (Ti0_corr - Te0_corr) * rho0_corr - nu_e_bg * dTe0_corr_dT * rho0_corr
+            ddTe_i_drho     = dnu_e_bg_drho * (Ti0_corr - Te0_corr) * rho0_corr &
+                              + nu_e_bg * (Ti0_corr - Te0_corr) * drho0_corr_dn
+#else
             dnu_e_bg_dTi    = 0.d0!-1.5*MASS_ELECTRON*nu_e_bg*dTi0_corr_dT / (MASS_ELECTRON*Ti0_corr + MASS_PROTON*central_mass*Te0_corr)
             dnu_e_bg_dTe    = 0.d0!-1.5*MASS_PROTON*central_mass*nu_e_bg*dTe0_corr_dT &
                                   !/ (MASS_ELECTRON*Ti0_corr + MASS_PROTON*central_mass*Te0_corr)
@@ -1592,6 +1618,7 @@ do j=1,n_degrees
             ddTe_i_dTe      = 0.d0!dnu_e_bg_dTe * (Ti0_corr - Te0_corr) * rho0_corr - nu_e_bg * dTe0_corr_dT * rho0_corr
             ddTe_i_drho     = 0.d0!dnu_e_bg_drho * (Ti0_corr - Te0_corr) * rho0_corr &
                               !+ nu_e_bg * (Ti0_corr - Te0_corr) * drho0_corr_dn
+#endif
         
             ddTi_e_dTi      = -ddTe_i_dTi
             ddTi_e_dTe      = -ddTe_i_dTe

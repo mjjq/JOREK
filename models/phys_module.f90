@@ -764,6 +764,9 @@ module phys_module
   real*8              :: aki_neo_const    !< if ( (NEO) .and. (neo_file=='none')), this constant value is used for aki_neo
   real*8              :: amu_neo_const    !< if ( (NEO) .and. (neo_file=='none')), this constant value is used for amu_neo
 
+  !> @name initial amplitudes
+  real*8 :: initial_amplitude !< Initial amplitude of n>0 perturbations.
+
   !> @name RMP profiles
   logical :: output_bnd_elements !< If .true., writes bnd nodes and bnd elements in files 'boundary_nodes.dat' and 'boundary_elements.dat'
   logical :: RMP_on              !< Activates RMPs on boundary if .true. (the old version without STARWALL)

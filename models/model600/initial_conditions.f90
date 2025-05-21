@@ -254,8 +254,10 @@ endif
 
     
 !---------------------------- initialise perturbations
-amplitude = 1.d-12
+amplitude = initial_amplitude
 mm = 2
+
+PRINT '(A, F8.3)', 'Initial perturbation amplitude: ', amplitude
 
 do in=2,n_tor
 

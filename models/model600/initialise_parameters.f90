@@ -133,6 +133,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 gmres_m, gmres_4, gmres_tol, iter_precon,           &
                 pastix_pivot, max_steps_noUpdate,                   &
                 keep_n0_const, linear_run, export_for_nemec,        &
+                initial_amplitude,                                  &
                 RMP_on, RMP_har_cos,RMP_har_sin,                    &
                 RMP_growth_rate, RMP_ramp_up_time,                  &
                 RMP_psi_cos_file, RMP_psi_sin_file,                 &

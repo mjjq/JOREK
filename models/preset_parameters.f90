@@ -672,6 +672,8 @@ subroutine preset_parameters
   alpha_Newton       = 2.d0
   strumpack_matching = .false.
 
+!==== Initial amplitude ====
+  initial_amplitude = 1.d-12
   
 !==== RMP parameters =====
   RMP_on             = .false.              ! .true. to activate RMPs (changes boundary conditions)

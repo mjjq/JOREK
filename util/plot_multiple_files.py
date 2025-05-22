@@ -144,9 +144,6 @@ def plot_ascii_files(file_paths, xscaleType, yscaleType, title, xlabel, ylabel, 
         if i == 0:
             x = x + float(shift_first_file)
 
-        linestyle_plot = linestyle_list[i % len(linestyle_list)]  # Cycle through linestyle_list
-        if noline:
-            linestyle_plot = 'none'
 
         if columns_plot_for_Y == -1:
             columns_plot_for_Y_mdf = range(y.shape[1])  # Plot all columns
@@ -155,8 +152,14 @@ def plot_ascii_files(file_paths, xscaleType, yscaleType, title, xlabel, ylabel, 
 
         colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
         # color_plot = colors[i % len(colors)]
+        linestyle_plot = linestyle_list[i % len(linestyle_list)]  # Cycle through linestyle_list
+
         for rankj, j in enumerate(columns_plot_for_Y_mdf):
             color_plot = colors[rankj % len(colors)]
+            if len(file_paths) == 1:
+                linestyle_plot = linestyle_list[rankj % len(linestyle_list)]  # Cycle through linestyle_list
+            if noline:
+                linestyle_plot = 'none'
             if j < y.shape[1]:
                 if mylegends == "":
                     mylegend = f'{column_names[j + 1]} ({file_path})'

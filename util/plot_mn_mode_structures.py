@@ -77,7 +77,7 @@ if __name__ == "__main__":
     
     parser.add_argument("folder_path", default="four_results/", help="Path to the ASCII files.")
     parser.add_argument("-ti", "--title", default="", help="Manually define the title.")
-    parser.add_argument("-xl", "--xlabel", default="$\sqrt{\psi_n}$", help="Manually define the xlabel.")
+    parser.add_argument("-xl", "--xlabel", default=r"$\sqrt{\psi_n}$", help="Manually define the xlabel.")
     parser.add_argument("-yl", "--ylabel", default="A.U.", help="Manually define the ylabel.")
     parser.add_argument("-dm", "--data_marker", default=".", help="Manually define the marker for the data.")
     parser.add_argument("-va", "--variable_list", nargs="+", default={

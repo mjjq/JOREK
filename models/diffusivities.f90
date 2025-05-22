@@ -8,13 +8,13 @@ module diffusivities
                          num_zk_perp, num_zk_e_perp, num_zk_i_perp, ZK_perp, ZK_e_perp, ZK_i_perp, num_zk_perp_x, num_zk_perp_y, num_zk_perp_len,      &
                          num_zk_e_perp_x, num_zk_i_perp_x, num_zk_e_perp_y, num_zk_i_perp_y, num_zk_e_perp_len, num_zk_i_perp_len,     &
        xpoint, xcase, rho_0, rho_coef, T_coef, Ti_coef, Te_coef
-  use profiles,    only: interpolProf
+  use profiles,    only: interpolProf, derivProf
     
   implicit none
   
   
   private
-  public get_dpar, get_dperp, get_zkperp, get_zk_iperp, get_zk_eperp
+  public get_dpar, get_dperp, get_zkperp, get_zk_iperp, get_zk_eperp, get_dzk_i_dpsi_perp, get_dzk_e_dpsi_perp, get_dzk_dpsi_perp
 
   interface get_dpar
     module procedure get_dpar1
@@ -36,6 +36,21 @@ module diffusivities
     module procedure get_zk_iperp1
     module procedure get_zk_iperp2
   end interface get_zk_iperp
+
+  interface get_dzk_i_dpsi_perp
+  module procedure get_dzk_i_dpsi_perp1
+  ! module procedure get_dzk_i_dpsi_perp2
+  end interface get_dzk_i_dpsi_perp
+
+  interface get_dzk_e_dpsi_perp
+  module procedure get_dzk_e_dpsi_perp1
+  ! module procedure get_dzk_e_dpsi_perp2
+  end interface get_dzk_e_dpsi_perp
+
+  interface get_dzk_dpsi_perp
+  module procedure get_dzk_dpsi_perp1
+  ! module procedure get_dzk_dpsi_perp2
+  end interface get_dzk_dpsi_perp
     
   interface get_zk_eperp
     module procedure get_zk_eperp1
@@ -231,6 +246,166 @@ module diffusivities
   end function get_zk_eperp1
 	
 	
+   !> Determine d/dpsi of perpendicular heat diffusivity, ZK_perp, as a function of Psi_N, for ions
+  real*8 function get_dzk_i_dpsi_perp1(psin, psi_axis, psi_bnd)
+    
+    implicit none
+    ! for interpolating numerical profiles
+    integer :: left, right, mid
+    
+    real*8, intent(in)  :: psin 
+    real*8,  intent(in)  :: psi_axis, psi_bnd
+    real*8  :: aux1, aux2, delta_psi
+    real*8, allocatable :: num_zk_i_perp_y1(:)
+    
+    delta_psi = psi_bnd - psi_axis
+    if ( num_zk_i_perp ) then
+
+      call derivProf(num_zk_i_perp_x, num_zk_i_perp_y, num_zk_i_perp_len, num_zk_i_perp_y1)
+      get_dzk_i_dpsi_perp1 = interpolProf(num_zk_i_perp_x, num_zk_i_perp_y1, num_zk_i_perp_len, psin) / delta_psi
+
+      ! ! --- Interpolate profile and derivatives to position psi_n by bisections.
+      ! left  = 1
+      ! right = num_zk_i_perp_len
+      ! do
+      !   if ( right == left + 1 ) exit
+      !   mid = (left + right) / 2
+      !   if ( num_zk_i_perp_x(mid) >= psin ) then
+      !     right = mid
+      !   else
+      !     left = mid
+      !   end if
+      ! end do
+      ! aux1 = (psin - num_zk_i_perp_x(left)) / (num_zk_i_perp_x(right) - num_zk_i_perp_x(left))
+      ! aux2 = (1. - aux1)
+      ! get_dzk_i_dpsi_perp1  = ( num_zk_i_perp_y1(left) * aux2 + num_zk_i_perp_y1(right) * aux1 ) / delta_psi
+      
+    else
+
+      write(*,*) "WARNING, dzk_i_dpsi has not been implemented for analytical profile!"
+      call exit(-1)
+      
+      ! get_zk_iperp1 = ZK_i_perp(1) * ( (1.d0-ZK_i_perp(2)) +                                              &
+      !   ZK_i_perp(2) *(0.5d0 - 0.5d0*tanh((psin-ZK_i_perp(5))/ZK_i_perp(4))) )
+      
+      ! if ( jorek_model >= 300 ) then
+        
+      !   get_zk_iperp1 = get_zk_iperp1 + ZK_i_perp(6)*ZK_i_perp(2) *                                          &
+      !     ((0.5d0 - 0.5d0*tanh((-psin+ZK_i_perp(5)+ZK_i_perp(3)) /ZK_i_perp(4))))
+        
+      ! end if
+      
+    end if
+    
+  end function get_dzk_i_dpsi_perp1
+
+
+   !> Determine d/dpsi of perpendicular heat diffusivity, ZK_perp, as a function of Psi_N, for electrons
+  real*8 function get_dzk_e_dpsi_perp1(psin, psi_axis, psi_bnd)
+    
+    implicit none
+    ! for interpolating numerical profiles
+    integer :: left, right, mid
+    
+    real*8, intent(in)  :: psin 
+    real*8,  intent(in)  :: psi_axis, psi_bnd
+    real*8  :: aux1, aux2, delta_psi
+    real*8, allocatable :: num_zk_e_perp_y1(:)
+    
+    delta_psi = psi_bnd - psi_axis
+    if ( num_zk_e_perp ) then
+
+      call derivProf(num_zk_e_perp_x, num_zk_e_perp_y, num_zk_e_perp_len, num_zk_e_perp_y1)
+      get_dzk_e_dpsi_perp1 = interpolProf(num_zk_e_perp_x, num_zk_e_perp_y1, num_zk_e_perp_len, psin) / delta_psi
+
+      ! ! --- Interpolate profile and derivatives to position psi_n by bisections.
+      ! left  = 1
+      ! right = num_zk_e_perp_len
+      ! do
+      !   if ( right == left + 1 ) exit
+      !   mid = (left + right) / 2
+      !   if ( num_zk_e_perp_x(mid) >= psin ) then
+      !     right = mid
+      !   else
+      !     left = mid
+      !   end if
+      ! end do
+      ! aux1 = (psin - num_zk_e_perp_x(left)) / (num_zk_e_perp_x(right) - num_zk_e_perp_x(left))
+      ! aux2 = (1. - aux1)
+      ! get_dzk_e_dpsi_perp1  = ( num_zk_e_perp_y1(left) * aux2 + num_zk_e_perp_y1(right) * aux1 ) / delta_psi
+      
+    else
+      
+      write(*,*) "WARNING, dzk_e_dpsi has not been implemented for analytical profile!"
+      call exit(-1)
+
+      ! get_zk_eperp1 = ZK_e_perp(1) * ( (1.d0-ZK_e_perp(2)) +                                              &
+      !   ZK_e_perp(2) *(0.5d0 - 0.5d0*tanh((psin-ZK_e_perp(5))/ZK_e_perp(4))) )
+      
+      ! if ( jorek_model >= 300 ) then
+        
+      !   get_zk_eperp1 = get_zk_eperp1 + ZK_e_perp(6)*ZK_e_perp(2) *                                          &
+      !     ((0.5d0 - 0.5d0*tanh((-psin+ZK_e_perp(5)+ZK_e_perp(3)) /ZK_e_perp(4))))
+        
+      ! end if
+      
+    end if
+    
+  end function get_dzk_e_dpsi_perp1
+
+
+   !> Determine d/dpsi of perpendicular heat diffusivity, ZK_perp, as a function of Psi_N
+  real*8 function get_dzk_dpsi_perp1(psin, psi_axis, psi_bnd)
+    
+    implicit none
+    ! for interpolating numerical profiles
+    integer :: left, right, mid
+    
+    real*8, intent(in)  :: psin 
+    real*8,  intent(in)  :: psi_axis, psi_bnd
+    real*8  :: aux1, aux2, delta_psi
+    real*8, allocatable :: num_zk_perp_y1(:)
+    
+    delta_psi = psi_bnd - psi_axis
+    if ( num_zk_perp ) then
+
+      call derivProf(num_zk_perp_x, num_zk_perp_y, num_zk_perp_len, num_zk_perp_y1)
+      get_dzk_dpsi_perp1 = interpolProf(num_zk_perp_x, num_zk_perp_y1, num_zk_perp_len, psin) / delta_psi
+
+      ! ! --- Interpolate profile and derivatives to position psi_n by bisections.
+      ! left  = 1
+      ! right = num_zk_perp_len
+      ! do
+      !   if ( right == left + 1 ) exit
+      !   mid = (left + right) / 2
+      !   if ( num_zk_perp_x(mid) >= psin ) then
+      !     right = mid
+      !   else
+      !     left = mid
+      !   end if
+      ! end do
+      ! aux1 = (psin - num_zk_perp_x(left)) / (num_zk_perp_x(right) - num_zk_perp_x(left))
+      ! aux2 = (1. - aux1)
+      ! get_dzk_dpsi_perp1  = ( num_zk_perp_y1(left) * aux2 + num_zk_perp_y1(right) * aux1 ) / delta_psi
+      
+    else
+
+      write(*,*) "WARNING, dzk_dpsi has not been implemented for analytical profile!"
+      call exit(-1)
+      
+      ! get_zk_perp1 = ZK_perp(1) * ( (1.d0-ZK_perp(2)) +                                              &
+      !   ZK_perp(2) *(0.5d0 - 0.5d0*tanh((psin-ZK_perp(5))/ZK_perp(4))) )
+      
+      ! if ( jorek_model >= 300 ) then
+        
+      !   get_zk_perp1 = get_zk_perp1 + ZK_perp(6)*ZK_perp(2) *                                          &
+      !     ((0.5d0 - 0.5d0*tanh((-psin+ZK_perp(5)+ZK_perp(3)) /ZK_perp(4))))
+        
+      ! end if
+      
+    end if
+    
+  end function get_dzk_dpsi_perp1
 	
   
   !> Determine perpendicular particle diffusivity, D_perp, as a function of Psi_N

@@ -41,7 +41,8 @@ real*8,  intent(in)    :: R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint(2), Z_xpoi
 #define TEMPERATURE_DEPENDENT_UPDATE
 #define ENABLE_PARTICLE_SOURCE_IN_MOMENTUM_EQUATION
 
-! #define FULL_THERMALIZATION
+#define FULL_THERMALIZATION
+! #define FIX_DENSITY # this will leads to the stabilization of n = 1 quasi-interchange mode
 
 ! In model 710, viscType=0 and 22 corresponds to the form: \mu\nabla^2\vec{v}
 ! #define VISCOSITY_TENSOR_FORM
@@ -2238,7 +2239,7 @@ do j=1,n_degrees
             !#  equation 7 (Density equation)                                                                  #
             !###################################################################################################
             Pvec_prev(var_rho) =   v * delta_g(mp,var_rho,ms,mt)
-
+#ifndef FIX_DENSITY
             Qvec_p(var_rho) = - v * ( rho0 * divU + UgradRho )                  &
                               + tauIC_rho * rho0 * VdiaGradVstar__p             &
                               - D_prof * gradRho_gradVstar__p                   &
@@ -2248,6 +2249,7 @@ do j=1,n_degrees
             Qvec_k(var_rho) = + tauIC_rho * rho0 * VdiaGradVstar__k             &
                               - D_prof * gradRho_gradVstar__k                   &
                               - (D_par_prof-D_prof) * BgradVstar__k * BgradRho / BB2
+#endif
 
             !###################################################################################################
             !#  equation 8 (Ion Pressure equation)                                                             #
@@ -7516,7 +7518,7 @@ do j=1,n_degrees
                   !#  equation 7   (Density equation)                                                                #
                   !###################################################################################################
                   Pjac   (var_rho,var_rho) =   v * rho
-
+#ifndef FIX_DENSITY
                   Qjac_p (var_rho,var_AR)  = + tauIC_rho * rho0 * VdiaGradVstar_AR__p &
                                              - (D_par_prof-D_prof) * BgradVstar_AR__p * BgradRho       / BB2 &
                                              - (D_par_prof-D_prof) * BgradVstar__p    * BgradRho_AR__p / BB2 &
@@ -7586,7 +7588,7 @@ do j=1,n_degrees
                   Qjac_n (var_rho,var_Ti ) = + tauIC_rho * rho0 * VdiaGradVstar_Ti__n
                   Qjac_k (var_rho,var_Ti ) = + tauIC_rho * rho0 * VdiaGradVstar_Ti__k
                   Qjac_kn(var_rho,var_Ti ) = + tauIC_rho * rho0 * VdiaGradVstar_Ti__kn
-
+#endif
                   !###################################################################################################
                   !#  equation 8   (Ion Temperature  equation)                                                       #
                   !###################################################################################################
@@ -8412,7 +8414,7 @@ subroutine add_vms_to_rhs()
                 +     eta_T * (JR0 - current_source_JR(ms,mt))
   res(var_AZ) = -     (Up0 * BR0 - UR0 * Bp0) - tauIC_ARAZ * tau_IC * F0/rho0_corr/BB2 * BZ0  * BgradPe &
                 +     eta_T * (JZ0 - current_source_JZ(ms,mt))
-  res(var_A3) = - R * (UR0 * BZ0 - UZ0 * BR0) -              tau_IC * F0/rho0_corr/BB2 * R*Bp0* BgradPe &
+  res(var_A3) = - R * (UR0 * BZ0 - UZ0 * BR0) - tauIC_AP   * tau_IC * F0/rho0_corr/BB2 * R*Bp0* BgradPe &
                 + R * eta_T * (Jp0 - current_source_Jp(ms,mt))
   
   ! residual in momentum
@@ -8433,7 +8435,9 @@ subroutine add_vms_to_rhs()
               + p0_p/R - visco_T * vsp
   
   ! residual in density equation
+#ifndef FIX_DENSITY
   res(var_rho)=   UgradRho + rho0 * divU - D_prof * (rho0_R / R + rho0_RR + rho0_ZZ + rho0_pp/R**2)
+#endif
   
   ! residual in temperature equations
   res(var_Ti) = rho0 * UgradTi + Ti0 * UgradRho + gamma * pi0 * divU &
@@ -8689,30 +8693,30 @@ subroutine add_vms_to_elm()
   
   ! A3 equation:
   res_jac__p(var_A3, var_AR) = + UZ0 * BR0_AR * R &
-                               - tau_IC*F0/rho0_corr/BB2    * R*Bp0_AR * BgradPe &
-                               - tau_IC*F0/rho0_corr/BB2    * R*Bp0    * BgradPe_AR__p &
-                               + tau_IC*F0/rho0_corr/BB2**2 * R*Bp0    * BgradPe * BB2_AR__p &
+                               - tauIC_AP * tau_IC*F0/rho0_corr/BB2    * R*Bp0_AR * BgradPe &
+                               - tauIC_AP * tau_IC*F0/rho0_corr/BB2    * R*Bp0    * BgradPe_AR__p &
+                               + tauIC_AP * tau_IC*F0/rho0_corr/BB2**2 * R*Bp0    * BgradPe * BB2_AR__p &
                                + R * eta_T * Jp0_AR__p
   res_jac__n(var_A3, var_AR) = - UR0 * BZ0_AR__n * R &
-                               - tau_IC*F0/rho0_corr/BB2    * R*Bp0    * BgradPe_AR__n &
-                               + tau_IC*F0/rho0_corr/BB2**2 * R*Bp0    * BgradPe * BB2_AR__n &
+                               - tauIC_AP * tau_IC*F0/rho0_corr/BB2    * R*Bp0    * BgradPe_AR__n &
+                               + tauIC_AP * tau_IC*F0/rho0_corr/BB2**2 * R*Bp0    * BgradPe * BB2_AR__n &
                                + R * eta_T * Jp0_AR__n
   res_jac__nn(var_A3, var_AR) = + R * eta_T * Jp0_AR__nn
   
   res_jac__p(var_A3, var_AZ) = - UR0 * BZ0_AZ * R &
-                               - tau_IC*F0/rho0_corr/BB2    * R*Bp0_AZ * BgradPe &
-                               - tau_IC*F0/rho0_corr/BB2    * R*Bp0    * BgradPe_AZ__p &
-                               + tau_IC*F0/rho0_corr/BB2**2 * R*Bp0    * BgradPe * BB2_AZ__p &
+                               - tauIC_AP * tau_IC*F0/rho0_corr/BB2    * R*Bp0_AZ * BgradPe &
+                               - tauIC_AP * tau_IC*F0/rho0_corr/BB2    * R*Bp0    * BgradPe_AZ__p &
+                               + tauIC_AP * tau_IC*F0/rho0_corr/BB2**2 * R*Bp0    * BgradPe * BB2_AZ__p &
                                + R * eta_T * Jp0_AZ__p
   res_jac__n(var_A3, var_AZ) = + UZ0 * BR0_AZ__n * R &
-                               - tau_IC*F0/rho0_corr/BB2    * R*Bp0    * BgradPe_AZ__n &
-                               + tau_IC*F0/rho0_corr/BB2**2 * R*Bp0    * BgradPe * BB2_AZ__n &
+                               - tauIC_AP * tau_IC*F0/rho0_corr/BB2    * R*Bp0    * BgradPe_AZ__n &
+                               + tauIC_AP * tau_IC*F0/rho0_corr/BB2**2 * R*Bp0    * BgradPe * BB2_AZ__n &
                                + R * eta_T * Jp0_AZ__n
   res_jac__nn(var_A3, var_AZ) = + R * eta_T * Jp0_AZ__nn
   
   res_jac__p(var_A3, var_A3) = - UR0 * BZ0_A3 * R + UZ0 * BR0_A3 * R &
-                               - tau_IC*F0/rho0_corr/BB2    * R*Bp0    * BgradPe_A3 &
-                               + tau_IC*F0/rho0_corr/BB2**2 * R*Bp0    * BgradPe * BB2_A3 &
+                               - tauIC_AP * tau_IC*F0/rho0_corr/BB2    * R*Bp0    * BgradPe_A3 &
+                               + tauIC_AP * tau_IC*F0/rho0_corr/BB2**2 * R*Bp0    * BgradPe * BB2_A3 &
                                + R * eta_T * Jp0_A3__p
   res_jac__n (var_A3, var_A3) = + R * eta_T * Jp0_A3__n
   res_jac__nn(var_A3, var_A3) = + R * eta_T * Jp0_A3__nn
@@ -8721,12 +8725,12 @@ subroutine add_vms_to_elm()
   res_jac__p(var_A3,var_UR) = - UR * BZ0
   res_jac__n(var_A3,var_UZ) = + UZ * BR0
   
-  res_jac__p(var_A3,var_rho) = - tau_IC*F0/rho0_corr   /BB2 * R*Bp0 * BgradPe_rho__p &
-                               + tau_IC*F0/rho0_corr**2/BB2 * R*Bp0 * BgradPe * rho
-  res_jac__n (var_A3,var_rho)= - tau_IC*F0/rho0_corr/BB2 * R*Bp0 * BgradPe_rho__n
+  res_jac__p(var_A3,var_rho) = - tauIC_AP * tau_IC*F0/rho0_corr   /BB2 * R*Bp0 * BgradPe_rho__p &
+                               + tauIC_AP * tau_IC*F0/rho0_corr**2/BB2 * R*Bp0 * BgradPe * rho
+  res_jac__n (var_A3,var_rho)= - tauIC_AP * tau_IC*F0/rho0_corr/BB2 * R*Bp0 * BgradPe_rho__n
   
-  res_jac__p (var_A3,var_Te )= - tau_IC*F0/rho0_corr/BB2 * R*Bp0 * BgradPe_Te__p + R * eta_T_T * Jp0
-  res_jac__n (var_A3,var_Te )= - tau_IC*F0/rho0_corr/BB2 * R*Bp0 * BgradPe_Te__n
+  res_jac__p (var_A3,var_Te )= - tauIC_AP * tau_IC*F0/rho0_corr/BB2 * R*Bp0 * BgradPe_Te__p + R * eta_T_T * Jp0
+  res_jac__n (var_A3,var_Te )= - tauIC_AP * tau_IC*F0/rho0_corr/BB2 * R*Bp0 * BgradPe_Te__n
   
   ! UR equation:
   res_jac__p(var_UR,var_AR ) =  rho0 * ( VdiaGradUR_AR__p  - VdiaP0_AR__p * Up0 / R ) - PneoR_AR__p

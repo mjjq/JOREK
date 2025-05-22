@@ -116,6 +116,7 @@ module mod_expression
     call add(exprs_all, 'y           ', 'Cartesian Coordinate y                                ')
     call add(exprs_all, 'z           ', 'Cartesian Coordinate z (== Cylindrical Z)             ')
     call add(exprs_all, 'Psi_N       ', 'Normalized Poloidal Magnetic Flux                     ')
+    call add(exprs_all, 'rho_p       ', 'Square Root of Normalized Poloidal Magnetic Flux      ')
     call add(exprs_all, 'xjac        ', '2D Jacobian in the Poloidal Plane                     ')
     call add(exprs_all, 't           ', 'Simulation time                                       ')
     call add(exprs_all, 'Psi         ', 'Poloidal Magnetic Flux                                ')
@@ -207,6 +208,12 @@ module mod_expression
     call add(exprs_all, 'enflux_dyna ', 'energy/pressure flux due to the dynamo induced EXB drift')
     call add(exprs_all, 'enflux_inst ', 'energy/pressure flux due to the instability induced flow')
     call add(exprs_all, 'enflux_equi ', 'energy/pressure flux due to the equilibrium flow      ')
+    call add(exprs_all, 'minus_v_graP', 'pressure flux due to convection flow: -v\cdot\gradP   ')
+    call add(exprs_all, 'minus_P_divV', 'pressure flux due to compressible flow: -gammaP\div(v)')
+    call add(exprs_all, 'perp_P_trans', 'perpendicluar flow due to heat conductivity           ')
+    call add(exprs_all, 'para_P_trans', 'parallel flow due to heat conductivity                ')
+    call add(exprs_all, 'heat_source ', 'heat source term                                      ')
+    call add(exprs_all, 'dPdt        ', 'time derivative of Pressure                           ')
     call add(exprs_all, 'VXBt00      ', 'Dynamo loop voltage term (n=0)                        ')
     call add(exprs_all, 'etaJt       ', 'eta J toroidal                                        ')
     call add(exprs_all, 'etaSJt      ', 'eta Jsource toroidal                                  ')
@@ -643,8 +650,16 @@ module mod_expression
       AR0_RR, AZ0_RR, AZ0_ZZ, A30_Rp, A30_Zp, AR0_RZ, AZ0_RZ, AR0_Zp, AZ0_Rp, A30_RZ, BR_p, BZ_p,  &
       BP_Z, BP_R, BR_R, BZ_Z, B_R, B_Z, Kappa_R, Kappa_Z, Kappa_Phi, Bp_p
     real*8  :: eta_T, deta_dT, d2eta_d2T, visco_T, dvisco_dT, D_prof, ZK_prof, ZKi_prof, ZKe_prof, &
-      ZKpar_T, dZKpar_dT, ZKi_par_T, dZKi_par_dT, ZKe_par_T, dZKe_par_dT, eta_num_T, visco_num_T
+      ZKpar_T, dZK_par_dT, ZKi_par_T, dZKi_par_dT, ZKe_par_T, dZKe_par_dT, eta_num_T, visco_num_T
     real*8  :: VXB_tor, VXB_tor_all, VXB_axisym_tor
+    real*8  :: pflux_minus_v_graP, pflux_minus_P_divV, pflux_perp_P_trans, pflux_para_P_trans,     &
+               pflux_heat_source, pflux_dpdt
+    real*8  :: dZKi_dpsi_prof, dZKe_dpsi_prof, dZK_dpsi_prof
+    real*8  :: Ti0_RR, Ti0_ZZ, Te0_RR, Te0_ZZ
+    real*8  :: Ti0_RZ, Ti0_Rp, Ti0_Zp
+    real*8  :: Te0_RZ, Te0_Rp, Te0_Zp
+    real*8  :: T0_Rp, T0_Zp
+    real*8  :: Ti0_sp, Ti0_tp, Te0_sp, Te0_tp, T0_sp, T0_tp
     real*8  :: VXB_para, VXB_para_all, etaJSJ_para
     real*8  :: etaJtor, etaSJtor, current_source_Jp
     real*8  :: VXB_tor_R2, VXB_tor_all_R2, VXB_axisym_tor_R2, etaJtor_R2, etaSJtor_R2
@@ -870,6 +885,13 @@ module mod_expression
 
           deltaTe = 0.d0; deltaTi = 0.d0; deltaRho = 0.d0
 
+          Ti0_sp = 0.d0;
+          Ti0_tp = 0.d0;
+          Te0_sp = 0.d0;
+          Te0_tp = 0.d0;
+          T0_sp = 0.d0;
+          T0_tp = 0.d0;
+
           ! Extra derivatives for current density calculation
           AR0_sp   = 0.d0; AR0_tp   = 0.d0
           AZ0_sp   = 0.d0; AZ0_tp   = 0.d0
@@ -985,6 +1007,8 @@ module mod_expression
                 Ti0_st    = Ti0_st    + ( vv(var_Ti) + vv(var_T)/2.d0 ) * sz * hh_st * hhz
                 Ti0_p     = Ti0_p     + ( vv(var_Ti) + vv(var_T)/2.d0 ) * sz * hh    * hhz_p
                 Ti0_pp    = Ti0_pp    + ( vv(var_Ti) + vv(var_T)/2.d0 ) * sz * hh    * hhz_pp
+                Ti0_sp    = Ti0_sp    + ( vv(var_Ti) + vv(var_T)/2.d0 ) * sz * hh_s  * hhz_p
+                Ti0_tp    = Ti0_tp    + ( vv(var_Ti) + vv(var_T)/2.d0 ) * sz * hh_t  * hhz_p
                 if(i_tor .ne. 1) then
                   deltaTi       = deltaTi       + ( vv(var_Ti) + vv(var_T)/2.d0 ) * sz * hh    * hhz
                 endif
@@ -998,6 +1022,8 @@ module mod_expression
                 Te0_st    = Te0_st    + ( vv(var_Te) + vv(var_T)/2.d0 ) * sz * hh_st * hhz
                 Te0_p     = Te0_p     + ( vv(var_Te) + vv(var_T)/2.d0 ) * sz * hh    * hhz_p
                 Te0_pp    = Te0_pp    + ( vv(var_Te) + vv(var_T)/2.d0 ) * sz * hh    * hhz_pp
+                Te0_sp    = Te0_sp    + ( vv(var_Te) + vv(var_T)/2.d0 ) * sz * hh_s  * hhz_p
+                Te0_tp    = Te0_tp    + ( vv(var_Te) + vv(var_T)/2.d0 ) * sz * hh_t  * hhz_p
                 if(i_tor .ne. 1) then
                   deltaTe       = deltaTe       + ( vv(var_Te) + vv(var_T)/2.d0 ) * sz * hh    * hhz
                 endif
@@ -1011,6 +1037,8 @@ module mod_expression
                 T0_st    = T0_st    + ( vv(var_T) + vv(var_Ti) + vv(var_Te) ) * sz * hh_st * hhz
                 T0_p     = T0_p     + ( vv(var_T) + vv(var_Ti) + vv(var_Te) ) * sz * hh    * hhz_p
                 T0_pp    = T0_pp    + ( vv(var_T) + vv(var_Ti) + vv(var_Te) ) * sz * hh    * hhz_pp
+                T0_sp    = T0_sp    + ( vv(var_T) + vv(var_Ti) + vv(var_Te) ) * sz * hh_s  * hhz_p
+                T0_tp    = T0_tp    + ( vv(var_T) + vv(var_Ti) + vv(var_Te) ) * sz * hh_t  * hhz_p
 
                 ! --- Parallel velocity
                 Vpar0    = Vpar0    + vv(var_Vpar) * sz * hh    * hhz
@@ -1321,6 +1349,38 @@ module mod_expression
           Te0_R    = (   Z_t * Te0_s  - Z_s * Te0_t ) / xjac
           Te0_Z    = ( - R_t * Te0_s  + R_s * Te0_t ) / xjac
 
+          Ti0_RR    = (Ti0_ss * Z_t**2 - 2.d0*Ti0_st * Z_s*Z_t + Ti0_tt * Z_s**2 &
+                      + Ti0_s * (Z_st*Z_t - Z_tt*Z_s )                                 &
+                      + Ti0_t * (Z_st*Z_s - Z_ss*Z_t ) )        / xjac**2        &
+                     - xjac_R * (Ti0_s * Z_t - Ti0_t * Z_s)     / xjac**2
+          Ti0_ZZ    = (Ti0_ss * R_t**2 - 2.d0*Ti0_st * R_s*R_t + Ti0_tt * R_s**2 &
+                      + Ti0_s * (R_st*R_t - R_tt*R_s )                                 &
+                      + Ti0_t * (R_st*R_s - R_ss*R_t ) )        / xjac**2        &
+                     - xjac_Z * (- Ti0_s * R_t + Ti0_t * R_s )  / xjac**2
+          Ti0_RZ    = (- Ti0_ss * Z_t*R_t - Ti0_tt * R_s*Z_s                         &
+                       + Ti0_st * (Z_s*R_t  + Z_t*R_s  )                           &
+                       - Ti0_s  * (R_st*Z_t - R_tt*Z_s )                           &
+                       - Ti0_t  * (R_st*Z_s - R_ss*Z_t )  )       / xjac**2      &
+                       - xjac_R * (- Ti0_s * R_t + Ti0_t * R_s )  / xjac**2
+          Ti0_Rp = (   Z_t * Ti0_sp  - Z_s * Ti0_tp ) / xjac
+          Ti0_Zp = ( - R_t * Ti0_sp  + R_s * Ti0_tp ) / xjac
+
+          Te0_RR    = (Te0_ss * Z_t**2 - 2.d0*Te0_st * Z_s*Z_t + Te0_tt * Z_s**2 &
+                      + Te0_s * (Z_st*Z_t - Z_tt*Z_s )                                 &
+                      + Te0_t * (Z_st*Z_s - Z_ss*Z_t ) )        / xjac**2        &
+                     - xjac_R * (Te0_s * Z_t - Te0_t * Z_s)     / xjac**2
+          Te0_ZZ    = (Te0_ss * R_t**2 - 2.d0*Te0_st * R_s*R_t + Te0_tt * R_s**2 &
+                      + Te0_s * (R_st*R_t - R_tt*R_s )                                 &
+                      + Te0_t * (R_st*R_s - R_ss*R_t ) )        / xjac**2        &
+                     - xjac_Z * (- Te0_s * R_t + Te0_t * R_s )  / xjac**2
+          Te0_RZ    = (- Te0_ss * Z_t*R_t - Te0_tt * R_s*Z_s                         &
+                       + Te0_st * (Z_s*R_t  + Z_t*R_s  )                           &
+                       - Te0_s  * (R_st*Z_t - R_tt*Z_s )                           &
+                       - Te0_t  * (R_st*Z_s - R_ss*Z_t )  )       / xjac**2      &
+                       - xjac_R * (- Te0_s * R_t + Te0_t * R_s )  / xjac**2
+          Te0_Rp = (   Z_t * Te0_sp  - Z_s * Te0_tp ) / xjac
+          Te0_Zp = ( - R_t * Te0_sp  + R_s * Te0_tp ) / xjac
+
           T0_RR    = (T0_ss * Z_t**2 - 2.d0*T0_st * Z_s*Z_t + T0_tt * Z_s**2 &
                       + T0_s * (Z_st*Z_t - Z_tt*Z_s )                                 &
                       + T0_t * (Z_st*Z_s - Z_ss*Z_t ) )        / xjac**2        &
@@ -1334,6 +1394,9 @@ module mod_expression
                        - T0_s  * (R_st*Z_t - R_tt*Z_s )                           &
                        - T0_t  * (R_st*Z_s - R_ss*Z_t )  )       / xjac**2      &
                        - xjac_R * (- T0_s * R_t + T0_t * R_s )  / xjac**2
+          T0_Rp = (   Z_t * T0_sp  - Z_s * T0_tp ) / xjac
+          T0_Zp = ( - R_t * T0_sp  + R_s * T0_tp ) / xjac
+
           T0_ps0_R = T0_RR * ps0_Z - T0_RZ * ps0_R + T0_R * ps0_RZ - T0_Z * ps0_RR
           T0_ps0_Z = T0_RZ * ps0_Z - T0_ZZ * ps0_R + T0_R * ps0_ZZ - T0_Z * ps0_RZ
           !----------------- simplified version of 2nd derivatives (for some unknown reason this is more stable!)
@@ -1603,14 +1666,14 @@ module mod_expression
           if ( with_TiTe ) then ! (with_TiTe) ******************************************************
 
             call conductivity_parallel(ZK_i_par, ZK_par_max, Ti0, Ti0_corr, Ti_min_ZKpar, Ti_0, &
-                                       ZKi_par_T, ZK_i_par_neg_thresh, ZK_i_par_neg)
+                                       ZKi_par_T, ZK_i_par_neg_thresh, ZK_i_par_neg, 1.d0, dZKi_par_dT)
 
             call conductivity_parallel(ZK_e_par, ZK_par_max, Te0, Te0_corr, Te_min_ZKpar, Te_0, &
-                                       ZKe_par_T, ZK_e_par_neg_thresh, ZK_e_par_neg)
+                                       ZKe_par_T, ZK_e_par_neg_thresh, ZK_e_par_neg, 1.d0, dZKe_par_dT)
           else ! (with_TiTe), i.e. with single temperature *****************************************
 
             call conductivity_parallel(ZK_par, ZK_par_max, T0, T0_corr, T_min_ZKpar, T_0,       &
-                                      ZKpar_T, ZK_par_neg_thresh, ZK_par_neg)
+                                      ZKpar_T, ZK_par_neg_thresh, ZK_par_neg, 1.d0, dZK_par_dT)
             ZKi_par_T   = ZKpar_T
             ZKe_par_T   = ZKpar_T
           end if ! (with_TiTe) *********************************************************************
@@ -1619,9 +1682,12 @@ module mod_expression
           if ( with_TiTe ) then
             ZKi_prof = get_zk_iperp(psi_norm)
             ZKe_prof = get_zk_eperp(psi_norm)
+            dZKi_dpsi_prof = get_dzk_i_dpsi_perp(psi_norm, eq%Psi_axis, eq%Psi_bnd)
+            dZKe_dpsi_prof = get_dzk_e_dpsi_perp(psi_norm, eq%Psi_axis, eq%Psi_bnd)
             ZK_prof  = 0.d0
           else
             ZK_prof  = get_zkperp(psi_norm)
+            dZK_dpsi_prof = get_dzk_dpsi_perp(psi_norm, eq%Psi_axis, eq%Psi_bnd)
             ZKi_prof = ZK_prof
             ZKe_prof = ZK_prof
           end if
@@ -1685,6 +1751,13 @@ module mod_expression
           VXB_axisym_tor= 0.d0
           etaJtor  = 0.d0
           etaSJtor = 0.d0
+
+          pflux_minus_v_graP = 0.d0
+          pflux_minus_P_divV = 0.d0
+          pflux_perp_P_trans = 0.d0
+          pflux_para_P_trans = 0.d0
+          pflux_heat_source  = 0.d0
+          pflux_dpdt         = 0.d0
 
           VXB_tor_R2           = 0.d0
           VXB_tor_all_R2       = 0.d0 
@@ -2002,6 +2075,60 @@ module mod_expression
                                       + 2.d0 / R ** 2 * UR0_p - Up0 / R ** 2)           &
                             + ( visco_R * Up0_R + visco_Z * Up0_Z + visco_p * ( Up0_p + UR0 ) / R ** 2 )
 
+          ! pressure flux due to convection flow: -v\cdot\gradP  
+          pflux_minus_v_graP = - (UR0 * P0_R + UZ0 * P0_Z + Up0 * P0_p / R)
+          ! pressure flux due to compressible flow: -gammaP\div(v) 
+          pflux_minus_P_divV = - gamma * P0 * (UR0 / R + UR0_R + UZ0_Z + Up0_p / R)
+          ! perpendicluar flow due to heat conductivity           
+          if (with_TiTe) then
+            pflux_perp_P_trans = ZKi_prof * (Ti0_R / R + Ti0_RR + Ti0_ZZ + Ti0_pp / R**2) + &
+                                 dZKi_dpsi_prof * (A3_axisym_R * Ti0_R + A3_axisym_Z * Ti0_Z + A3_axisym_p * Ti0_p / R**2) + &
+                                 ZKe_prof * (Te0_R / R + Te0_RR + Te0_ZZ + Te0_pp / R**2) + &
+                                 dZKe_dpsi_prof * (A3_axisym_R * Te0_R + A3_axisym_Z * Te0_Z + A3_axisym_p * Te0_p / R**2)
+          else
+            pflux_perp_P_trans = ZK_prof * (T0_R / R + T0_RR + T0_ZZ + T0_pp / R**2) + &
+                                 dZK_dpsi_prof * (A3_axisym_R * T0_R + A3_axisym_Z * T0_Z + A3_axisym_p * T0_p / R**2)
+          endif
+          ! parallel flow due to heat conductivity           
+          if (with_TiTe) then
+            pflux_para_P_trans = (ZKi_par_T - ZKi_prof) / BB2 * ( BR**2 * Ti0_RR + BR * BZ * Ti0_RZ + BR * Btor / R * Ti0_Rp + BR * BR_R * Ti0_R + BR * BZ_R * Ti0_Z + BR / R * BP_R * Ti0_p - 1.d0 / R**2 * BR * Btor * Ti0_p + &
+                                                                  BR * BZ * Ti0_RZ + BZ**2 * Ti0_ZZ + 1.d0 / R * Btor * BZ * Ti0_Zp + BZ * BR_Z * Ti0_R + BZ * BZ_Z * Ti0_Z + 1.d0 / R * BZ * BP_Z * Ti0_p                     + &
+                                                                  1.d0 / R * Btor * BR * Ti0_Rp + 1.d0 / R * Btor * BZ * Ti0_Zp + 1.d0 / R**2 * Btor**2 * Ti0_pp + 1.d0 / R * Btor * BR_p * Ti0_R + 1.d0 / R * Btor * BZ_p * Ti0_Z + 1.d0 / R**2 * Btor * Bp_p * Ti0_p + &
+                                                                  - 2.d0 / BB2 * (BR * Ti0_R + BZ * Ti0_Z + 1.d0 / R * Btor * Ti0_p) * (   &
+                                                                  (BR**2 * BR_R + BR * BZ * BZ_R + BR * Btor * BP_R)                       + &
+                                                                  (BR * BZ * BR_Z + BZ**2 * BZ_Z + BZ * Btor * BP_Z)                     + &
+                                                                  (BR * Btor / R * BR_p + BZ * Btor / R * BZ_p + Btor**2 / R * Bp_p) ) ) + &
+                                 (ZKe_par_T - ZKe_prof) / BB2 * ( BR**2 * Te0_RR + BR * BZ * Te0_RZ + BR * Btor / R * Te0_Rp + BR * BR_R * Te0_R + BR * BZ_R * Te0_Z + BR / R * BP_R * Te0_p - 1.d0 / R**2 * BR * Btor * Te0_p + &
+                                                                  BR * BZ * Te0_RZ + BZ**2 * Te0_ZZ + 1.d0 / R * Btor * BZ * Te0_Zp + BZ * BR_Z * Te0_R + BZ * BZ_Z * Te0_Z + 1.d0 / R * BZ * BP_Z * Te0_p                     + &
+                                                                  1.d0 / R * Btor * BR * Te0_Rp + 1.d0 / R * Btor * BZ * Te0_Zp + 1.d0 / R**2 * Btor**2 * Te0_pp + 1.d0 / R * Btor * BR_p * Te0_R + 1.d0 / R * Btor * BZ_p * Te0_Z + 1.d0 / R**2 * Btor * Bp_p * Te0_p + &
+                                                                  - 2.d0 / BB2 * (BR * Te0_R + BZ * Te0_Z + 1.d0 / R * Btor * Te0_p) * (   &
+                                                                  (BR**2 * BR_R + BR * BZ * BZ_R + BR * Btor * BP_R)                       + &
+                                                                  (BR * BZ * BR_Z + BZ**2 * BZ_Z + BZ * Btor * BP_Z)                     + &
+                                                                  (BR * Btor / R * BR_p + BZ * Btor / R * BZ_p + Btor**2 / R * Bp_p) ) ) + &
+                                 dZKi_par_dT / BB2 * (BR * Ti0_R + BZ * Ti0_Z + Btor * 1.d0 / R * Ti0_p) ** 2 + &
+                               - dZKi_dpsi_prof/ BB2 * (A3_axisym_R * BR + A3_axisym_Z * BZ + 1.d0 / R * A3_axisym_p * Btor) * (BR * Ti0_R + BZ * Ti0_Z + Btor * 1.d0 / R * Ti0_p) + &
+                                 dZKe_par_dT / BB2 * (BR * Te0_R + BZ * Te0_Z + Btor * 1.d0 / R * Te0_p) ** 2 + &
+                               - dZKe_dpsi_prof/ BB2 * (A3_axisym_R * BR + A3_axisym_Z * BZ + 1.d0 / R * A3_axisym_p * Btor) * (BR * Te0_R + BZ * Te0_Z + Btor * 1.d0 / R * Te0_p)
+                                 
+          else
+            pflux_para_P_trans = (ZKpar_T - ZK_prof) / BB2 * ( BR**2 * T0_RR + BR * BZ * T0_RZ + BR * Btor / R * T0_Rp + BR * BR_R * T0_R + BR * BZ_R * T0_Z + BR / R * BP_R * T0_p - 1.d0 / R**2 * BR * Btor * T0_p + &
+                                                                  BR * BZ * T0_RZ + BZ**2 * T0_ZZ + 1.d0 / R * Btor * BZ * T0_Zp + BZ * BR_Z * T0_R + BZ * BZ_Z * T0_Z + 1.d0 / R * BZ * BP_Z * T0_p                     + &
+                                                                  1.d0 / R * Btor * BR * T0_Rp + 1.d0 / R * Btor * BZ * T0_Zp + 1.d0 / R**2 * Btor**2 * T0_pp + 1.d0 / R * Btor * BR_p * T0_R + 1.d0 / R * Btor * BZ_p * T0_Z + 1.d0 / R**2 * Btor * Bp_p * T0_p + &
+                                                                  - 2.d0 / BB2 * (BR * T0_R + BZ * T0_Z + 1.d0 / R * Btor * T0_p) * (   &
+                                                                  (BR**2 * BR_R + BR * BZ * BZ_R + BR * Btor * BP_R)                       + &
+                                                                  (BR * BZ * BR_Z + BZ**2 * BZ_Z + BZ * Btor * BP_Z)                     + &
+                                                                  (BR * Btor / R * BR_p + BZ * Btor / R * BZ_p + Btor**2 / R * Bp_p) ) ) + &
+                                dZK_par_dT / BB2 * (BR * T0_R + BZ * T0_Z + Btor * 1.d0 / R * T0_p) ** 2 + &
+                              - dZK_dpsi_prof/ BB2 * (A3_axisym_R * BR + A3_axisym_Z * BZ + 1.d0 / R * A3_axisym_p * Btor) * (BR * T0_R + BZ * T0_Z + Btor * 1.d0 / R * T0_p)
+          endif
+          ! heat source term                                      
+          if (with_TiTe) then
+            pflux_heat_source = heat_source_i + heat_source_e
+          else
+            pflux_heat_source = heat_source
+          endif
+          ! time derivative of Pressure
+          pflux_dpdt = pflux_minus_v_graP + pflux_minus_P_divV + pflux_perp_P_trans + pflux_para_P_trans + pflux_heat_source
 #endif
 
 
@@ -2086,6 +2213,9 @@ module mod_expression
                 
               case ( 'Psi_N' )
                 res = psi_norm
+
+              case ( 'rho_p' )
+                res = dsqrt(psi_norm)
                 
               case ( 'u' )
                 res = u0
@@ -2353,6 +2483,24 @@ module mod_expression
 
               case ( 'enflux_equi' )
                 res = P_axisym_v_axisym_radial * fact_VXB / fact_mu_zero
+
+              case ( 'minus_v_graP' )
+                res = pflux_minus_v_graP * fact_VXB / fact_mu_zero
+
+              case ( 'minus_P_divV' )
+                res = pflux_minus_P_divV * fact_VXB / fact_mu_zero
+
+              case ( 'perp_P_trans' )
+                res = pflux_perp_P_trans * fact_VXB / fact_mu_zero
+
+              case ( 'para_P_trans' )
+                res = pflux_para_P_trans * fact_VXB / fact_mu_zero
+
+              case ( 'heat_source' )
+                res = pflux_heat_source * fact_VXB / fact_mu_zero
+              
+              case ( 'dPdt' )
+                res = pflux_dpdt * fact_VXB / fact_mu_zero
 
               case ( 'VXBt00' )
                 res = VXB_axisym_tor * fact_VXB

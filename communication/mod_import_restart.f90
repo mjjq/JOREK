@@ -2018,7 +2018,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
       stop
     ! --- Using just noise
     else
-      amplitude = 1.d-10
+      amplitude = initial_amplitude
       do i=1,node_list%n_nodes
         do m=2,n_tor
           if ( new_mode(m) .eq. 1 ) then

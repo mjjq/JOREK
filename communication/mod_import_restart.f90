@@ -813,7 +813,7 @@ endif
     ! --- Using just noise
     else
 
-      amplitude = 1.d-10
+      amplitude = initial_amplitude
       do i=1,node_list%n_nodes
         node_list%node(i)%values(n_tor_tmp+1:n_tor,:,:)= 0.d0
         do j=n_tor_tmp+1, n_tor

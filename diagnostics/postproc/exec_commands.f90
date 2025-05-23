@@ -129,6 +129,8 @@ module exec_commands
       select case ( trim(command%args(0)) )
         case ( 'average' )           
           call average(command, first_step, ierr)
+        case ( 'int2D_fluxsurface' )           
+          call int2D_fluxsurface(command, first_step, ierr)
         case ( 'boundary_quantities' )           
           call boundary_quantities(command, first_step, ierr)
         case ( 'zeroD_quantities' )
@@ -238,7 +240,7 @@ module exec_commands
       
       select case ( trim(command%args(0)) )
         case ( 'expressions', 'expressions_int', 'mark_coords', 'int2d', 'int3d','midplane',       &
-          'average', 'point', 'pol_line', 'int_along_pol_line', 'tor_line', 'equil_params',        &
+          'average', 'int2D_fluxsurface', 'point', 'pol_line', 'int_along_pol_line', 'tor_line', 'equil_params',        &
           'qprofile', 'q_at_psin', 'fluxsurfaces', 'separatrix', 'set', 'four2d', 'gourdon',       &
           'jorek-units', 'jnorm_bnd_curr', 'si-units', 'grid', 'grid_diagnostics', 'rectangle',    &
           'rectangular_torus', 'energy_spectrum', 'average_h5', 'I_halo_TPF', 'spi-state',         &
@@ -1826,9 +1828,103 @@ module exec_commands
       filename=trim(filename), append=(.not.first_step), blanks=.true., comment=trim(comment))
     
   end subroutine average
-  
-  
-  
+
+
+  !> Integrage the flux of a vector over each flux surface
+  subroutine int2D_fluxsurface(command, first_step, ierr)
+    
+    ! --- Routine parameters
+    type(type_command), intent(in)  :: command     !< Command to be executed
+    logical,            intent(in)  :: first_step  !< First time step of a for loop?
+    integer,            intent(out) :: ierr        !< Error flag
+    
+    ! --- Local variables
+    integer :: units, npts, nsmall
+    character(len=1024) :: filename, comment
+    type(t_pol_pos_list), save :: pol_pos_list
+    type(t_tor_pos_list), save :: tor_pos_list
+    real*8  :: dPhi, R0, Z0, R1, Z1, dl, R_avg, ds_surface, ps0_R, ps0_Z, f0_R, f0_Z, radial_coord
+    real*8  :: dintg2Dsurface
+    integer :: ipsi, iphi, itht
+
+    ierr = 0
+    
+    ! --- Some checks
+    call check_args(command%n_args,ierr,0);  if ( ierr /= 0 ) return
+    call check_step_imported(ierr);          if ( ierr /= 0 ) return
+    call check_exprs_selected(ierr);         if ( ierr /= 0 ) return
+    
+    units = get_int_setting('units', ierr)
+    npts  = get_int_setting('surfaces', ierr)
+    nsmall= get_int_setting('nsmallsteps', ierr)
+    
+    write(filename,'(4a)') trim(DIR), 'exprs_surface_flux',                                                  &
+      trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
+    
+    ! ### is nTht and nphi really chosen well???
+    pol_pos_list = pol_pos(node_list, element_list, ES, nPsiN=npts, nTht=max(150,6*n_plane),                &
+      nsmallsteps=nsmall)
+    tor_pos_list = tor_pos(nphi=max(n_plane,2))
+    
+    if(expr_list%n_expr < 5) then
+      ierr = -523
+      return
+    endif
+
+    ! --- expr_list should at least contain R and Z conponent of an expression or quantity
+    call eval_expr(ES, units, expr_list, pol_pos_list, tor_pos_list, result, ierr)
+
+    if(allocated(res1d)) deallocate(res1d)
+    allocate(res1d(pol_pos_list%n_pos(2), 3))
+
+    res1d = 0
+    dPhi = tor_pos_list%pos(2)%phi - tor_pos_list%pos(1)%phi
+    ! write(*,*) 'pol_pos_list%n_pos = ', pol_pos_list%n_pos(1), pol_pos_list%n_pos(2)
+    
+    do ipsi = 1, pol_pos_list%n_pos(2)
+      do iphi = 1, tor_pos_list%n_pos
+        do itht = 1, pol_pos_list%n_pos(1)
+          R0 = pol_pos_list%pos(itht, ipsi)%R
+          Z0 = pol_pos_list%pos(itht, ipsi)%Z
+          if(itht == pol_pos_list%n_pos(1)) then
+            R1 = pol_pos_list%pos(1, ipsi)%R
+            Z1 = pol_pos_list%pos(1, ipsi)%Z
+          else
+            R1 = pol_pos_list%pos(itht + 1, ipsi)%R
+            Z1 = pol_pos_list%pos(itht + 1, ipsi)%Z
+          endif
+          dl    = dsqrt((R1-R0)**2 + (Z1-Z0)**2)
+          R_avg = (R0+R1) / 2
+          ds_surface = R_avg * dl * dPhi
+
+          ps0_R = result(iphi, itht, ipsi, 2)
+          ps0_Z = result(iphi, itht, ipsi, 3)
+          f0_R  = result(iphi, itht, ipsi, 4)
+          f0_Z  = result(iphi, itht, ipsi, 5)
+
+          dintg2Dsurface = ds_surface * (ps0_R * f0_R + ps0_Z * f0_Z)/dsqrt(ps0_R**2 + ps0_Z**2) * sign(1.0, ES%Psi_bnd - ES%Psi_axis)
+          res1d(ipsi,2) = res1d(ipsi,2) + dintg2Dsurface
+          res1d(ipsi,3) = res1d(ipsi,3) + ds_surface
+        end do
+      end do
+      radial_coord = sum(result(1, :, ipsi, 1)) / pol_pos_list%n_pos(1)
+      ! res1d(ipsi,1) = result(1, 1, ipsi, 1) ! save psi_n or rho_p
+      res1d(ipsi,1) = radial_coord          ! save psi_n or rho_p
+    end do
+   
+    write(comment,'(a,i6.6,a)') 'time step #', index_now, ', from '//expr_list%expr(4)%name//' and '//expr_list%expr(5)%name
+
+    ! --- only output psi/rho_p and flux
+    expr_list%expr(2)%name = 'surf_flux'
+    expr_list%expr(3)%name = 'surf_area'
+    expr_list%n_expr = 3
+    
+    call write_ascii_1d(ierr, ES, expr_list, res1d, FORM_TABLE, header=.true.,                     &
+      filename=trim(filename), append=(.not.first_step), blanks=.true., comment=trim(comment))
+
+    if(allocated(res1d)) deallocate(res1d)
+    
+  end subroutine int2D_fluxsurface
   
   
   !> Output equilibrium information.
@@ -2334,7 +2430,9 @@ module exec_commands
     
   end subroutine qprofile
 
+#define SAME_PSI_AS_AVERAGE
 
+#ifndef SAME_PSI_AS_AVERAGE
   !> Output the integral3D-profile as a function of Psi_N
   recursive subroutine int3Dprofile(command, first_step, ierr)
   
@@ -2346,12 +2444,13 @@ module exec_commands
     integer,            intent(out) :: ierr        !< Error flag
 
     ! --- Local variables
-    integer                  :: k, npts
-    real*8, allocatable      :: res(:)
+    integer                  :: k, npts, nplot, i, j, ip, i_elm, n_toroidal
+    real*8, allocatable      :: res(:), Rflux(:), Zflux(:)
     type (type_surface_list) :: surface_list
     character(len=1024)      :: filename, comment
     integer                  :: units
-    real*8                   :: psin_value
+    real*8                   :: psin_value, ss1, dss1, ss2, dss2, tt1, dtt1, tt2, dtt2, u, si, dsi, ti, dti
+    real*8                   :: R, R_s, R_t, R_st, R_ss, R_tt, Z, Z_s, Z_t, Z_st, Z_ss, Z_tt, ds_flux, dl
     type(t_expr_list)        :: tmp_expr_list
     
     ierr = 0
@@ -2368,10 +2467,9 @@ module exec_commands
     do k = 1, npts
       surface_list%psi_values(k) = ES%psi_axis + (ES%psi_bnd - ES%psi_axis) * real(k-1)/real(npts-1)
     end do
-    call find_flux_surfaces(0,xpoint, xcase, node_list, element_list, surface_list)
-    
+    call find_flux_surfaces(0,xpoint, xcase, node_list, element_list, surface_list) 
 
-    ! calculate the integrals of volume and area for each magnetic flux surface
+    ! --- Calculate the integrals of volume and area for each magnetic flux surface
     write(filename,'(4a)') trim(DIR), 'int3Dprofile', trim(step_range_string(loop_min_step,loop_max_step)),  &
       '.dat'
     write(comment,'(a,i6.6)') 'time step #', index_now
@@ -2383,6 +2481,7 @@ module exec_commands
 
     units = get_int_setting('units', ierr)
     do k = 1, npts
+      write(*,'(i3.3, a, i3.3, a)') k, ' of ', npts, 'in int3Dprofile.'
       psin_value = get_psi_n(surface_list%psi_values(k))
       call int3d_new(0, node_list, element_list, bnd_node_list, bnd_elm_list, expr_list, res, units, psin_value)
       res(1) = psin_value
@@ -2406,6 +2505,81 @@ module exec_commands
     
   end subroutine int3Dprofile
 
+#else
+  !> SAME_PSI_AS_AVERAGE
+  !> Output the integral3D-profile as a function of Psi_N
+  recursive subroutine int3Dprofile(command, first_step, ierr)
+  
+    use mod_integrals3D_nompi
+    
+    ! --- Routine parameters
+    type(type_command), intent(in)  :: command     !< Command to be executed
+    logical,            intent(in)  :: first_step  !< First time step of a for loop?
+    integer,            intent(out) :: ierr        !< Error flag
+
+    ! --- Local variables
+    integer                  :: k, npts, nplot, i, j, ip, i_elm, n_toroidal, nsmall
+    real*8, allocatable      :: res(:), Rflux(:), Zflux(:)
+    character(len=1024)      :: filename, comment
+    integer                  :: units
+    real*8                   :: psin_value, ss1, dss1, ss2, dss2, tt1, dtt1, tt2, dtt2, u, si, dsi, ti, dti
+    real*8                   :: R, R_s, R_t, R_st, R_ss, R_tt, Z, Z_s, Z_t, Z_st, Z_ss, Z_tt, ds_flux, dl
+    type(t_expr_list)        :: tmp_expr_list
+    type(t_pol_pos_list), save :: pol_pos_list
+    type(t_tor_pos_list), save :: tor_pos_list
+    
+    ierr = 0
+    
+    ! --- Some checks
+    call check_args(command%n_args,ierr,0);  if ( ierr /= 0 ) return
+    call check_step_imported(ierr);          if ( ierr /= 0 ) return
+    call check_exprs_selected(ierr);         if ( ierr /= 0 ) return
+    
+    units = get_int_setting('units', ierr)
+    npts  = get_int_setting('surfaces', ierr)
+    nsmall= get_int_setting('nsmallsteps', ierr)
+
+    pol_pos_list = pol_pos(node_list, element_list, ES, nPsiN=npts, nTht=max(150,6*n_plane),                &
+    nsmallsteps=nsmall)
+    tor_pos_list = tor_pos(nphi=max(n_plane,2))
+
+    tmp_expr_list%n_expr = 1
+    tmp_expr_list%expr(1)%name = 'Psi_N'
+
+    call eval_expr(ES, units, tmp_expr_list, pol_pos_list, tor_pos_list, result, ierr)
+
+    ! --- Calculate the integrals of volume and area for each magnetic flux surface
+    write(filename,'(4a)') trim(DIR), 'int3Dprofile', trim(step_range_string(loop_min_step,loop_max_step)),  &
+      '.dat'
+    write(comment,'(a,i6.6)') 'time step #', index_now
+    if ( allocated(res1d) ) deallocate(res1d)   
+    allocate(res1d(npts, expr_list%n_expr+1))
+    allocate(res(expr_list%n_expr+1))
+    res1d = 0.d0
+    res   = 0.d0
+
+    do k = 1, npts
+      write(*,'(i3.3, a, i3.3, a)') k, ' of ', npts, 'in int3Dprofile.'
+      psin_value = sum(result(1, :, k, 1)) / pol_pos_list%n_pos(1)
+      call int3d_new(0, node_list, element_list, bnd_node_list, bnd_elm_list, expr_list, res, units, psin_value)
+      res(1) = psin_value
+      res1d(k, :) = res(:)
+    enddo
+
+    tmp_expr_list%n_expr = expr_list%n_expr + 1
+    do k = 1, expr_list%n_expr
+      tmp_expr_list%expr(k+1)%name = expr_list%expr(k)%name
+    enddo
+
+    call write_ascii_1d(ierr, ES, tmp_expr_list, res1d, FORM_TABLE, header=.true.,                 &
+      filename=trim(filename), append=(.not.first_step), blanks=.true., comment=trim(comment))
+
+    ! --- Clean up.
+    if ( allocated(res)                        ) deallocate(res)
+    
+  end subroutine int3Dprofile
+
+#endif
 
     !> Output the Rmax/Rmin, Zmax/Zmin-profile as a function of Psi_N
   recursive subroutine RZ_flux_surface(command, first_step, ierr)

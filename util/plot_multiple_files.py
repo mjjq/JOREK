@@ -100,7 +100,7 @@ def read_ascii_file(file_path, skiprows, droprows=-1):
         column_names = lines[skiprows - 1].strip().split()
 
     # Read data from the remaining lines, converting them to a NumPy array
-    data = np.genfromtxt(lines[skiprows:droprows], dtype=float)
+    data = np.genfromtxt(lines[skiprows:len(lines) + 1 + droprows], dtype=float)
 
     return column_names, data
 

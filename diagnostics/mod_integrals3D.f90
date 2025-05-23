@@ -118,6 +118,10 @@ real*8  :: vpar_disp_tot, vpar_disp, viscopar_dissip_tot, source_tot, heating_to
 real*8  :: vprp_disp_tot, vprp_disp, visco_dissip_tot, visco_T, visco_fact_old, visco_fact_new
 real*8  :: fric_disp_tot, fric_disp, friction_dissip_tot
 real*8  :: H_int, H_ext, S_int, S_ext, heating_in, heating_out, source_in, source_out
+#ifdef WITH_TiTe
+real*8  :: H_int_electron, H_ext_electron, heating_in_electron, heating_out_electron
+real*8  :: H_int_ion,      H_ext_ion,      heating_in_ion,      heating_out_ion
+#endif
 real*8  :: psi_xpoint(2),R_xpoint(2),Z_xpoint(2),s_xpoint(2),t_xpoint(2)
 real*8  :: dTdx, dTdy, drhodx, drhody, dPdx, dPdy, dpsidx, dpsidy, dudx, dudy, drhondx, drhondy, drhoimpdx, drhoimpdy
 real*8  :: dTedx, dTedy, dTidx, dTidy, dPedx, dPedy, dPidx, dPidy
@@ -265,6 +269,10 @@ P_e_int  = 0.d0
 P_i_int  = 0.d0
 C_intern = 0.d0
 H_int    = 0.d0
+#ifdef WITH_TiTe
+H_int_electron    = 0.d0
+H_int_ion  = 0.d0
+#endif
 H_impl_int = 0.d0
 S_int    = 0.d0
 VP_int   = 0.d0
@@ -277,6 +285,10 @@ P_e_ext  = 0.d0
 P_i_ext  = 0.d0
 C_ext    = 0.d0
 H_ext    = 0.d0
+#ifdef WITH_TiTe
+H_ext_electron = 0.d0
+H_ext_ion    = 0.d0
+#endif
 H_impl_ext  = 0.d0
 S_ext    = 0.d0
 VP_ext   = 0.d0
@@ -375,7 +387,10 @@ Tie_min_neg = 0.5*T_min_neg
 !$omp          R_xpoint, Z_xpoint, my_id, use_pellet, delta_phi, R_axis, Z_axis, psi_axis, psi_bnd, &
 !$omp          D_tot, D_int, D_Ext, P_tot, P_int, P_ext, Vol, C_intern, C_ext, VP_ext, VP_int, &
 !$omp          VK_ext, VK_int, VK_tot, VM_ext, VM_int, VM_tot, J2_tot, J2_ext, J2_int,         &
-!$omp          H_int, H_ext, S_int, S_ext,psi_xpoint,  F0, VP_tot,eta, T_0, Te_0, T_min,       &
+!$omp          H_int, S_int, S_ext,psi_xpoint,  F0, VP_tot,eta, T_0, Te_0, T_min,       &
+#ifdef WITH_TiTe
+!$omp          H_int_electron, H_int_ion, H_ext, H_ext_electron, H_ext_ion,                    &
+#endif
 !$omp          ne_SI_min, Te_eV_min, rn0_min, P_e_tot, P_i_tot, P_e_int, P_i_int, P_e_ext, P_i_ext, &
 !$omp          T_min_neg, Tie_min_neg, H_impl_int,H_impl_ext,implicit_heat_source,GAMMA,                                     &
 !$omp          pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi,                       &
@@ -467,6 +482,9 @@ omp_tid      = 0
 !$omp                local_source_volume, local_source_volume_drift, local_radiation_bg,      &
 #endif
 !$omp                D_int, D_ext, P_int, H_int, S_int, H_ext, S_ext, P_ext, C_intern, C_ext, &
+#ifdef WITH_TiTe
+!$omp                H_int_electron, H_int_ion, H_ext_electron, H_ext_ion,                    &
+#endif
 !$omp                P_e_int, P_i_int, P_e_ext, P_i_ext, P_e_tot, P_i_tot,                    &
 !$omp                VP_int, VP_ext, VP_tot, VK_tot, VK_int, VK_ext, VM_ext,                  &
 !$omp                VM_int, VM_tot, Vol, P_tot, D_tot,J2_tot, J2_int, J2_ext,                &
@@ -1293,6 +1311,10 @@ do ife = ife_min, ife_max
           area1    = area1    +  xjac * wst * delta_phi         
           Vol   = Vol   +             xjac * BigR * wst * delta_phi
           H_int = H_int + heat_source     * xjac * BigR * wst * delta_phi
+#ifdef WITH_TiTe
+          H_int_electron = H_int_electron + heat_source_e     * xjac * BigR * wst * delta_phi
+          H_int_ion      = H_int_ion      + heat_source_i     * xjac * BigR * wst * delta_phi
+#endif
           S_int = S_int + particle_source * xjac * BigR * wst * delta_phi
           VP_int = VP_int + r0 * vpar0**2 * BB2 * xjac * BigR * wst * delta_phi
           VK_int = VK_int + r0 * (dudx**2 + dudy**2) * BigR**2 * xjac * BigR * wst * delta_phi
@@ -1336,6 +1358,10 @@ do ife = ife_min, ife_max
 #endif /* WITH_TiTe */
           C_ext = C_ext - zj0 / BigR * xjac *        wst * delta_phi  ! 2D integral
           H_ext = H_ext + heat_source     * xjac * BigR * wst * delta_phi
+#ifdef WITH_TiTe
+          H_ext_electron = H_ext_electron + heat_source_e     * xjac * BigR * wst * delta_phi
+          H_ext_ion      = H_ext_ion      + heat_source_i     * xjac * BigR * wst * delta_phi
+#endif
           S_ext = S_ext + particle_source * xjac * BigR * wst * delta_phi
           VP_ext = VP_ext + r0 * vpar0**2 * BB2 * xjac * BigR * wst * delta_phi
           VK_ext = VK_ext + r0 * (dudx**2 + dudy**2) * BigR**2 * xjac * BigR * wst * delta_phi
@@ -1775,7 +1801,15 @@ call MPI_AllReduce(P_tot,pressure,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,
 call MPI_AllReduce(P_e_tot,pressure_e,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 call MPI_AllReduce(P_i_tot,pressure_i,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 call MPI_AllReduce(H_ext,heating_out,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+#ifdef WITH_TiTe
+call MPI_AllReduce(H_ext_electron,heating_out_electron,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+call MPI_AllReduce(H_ext_ion,heating_out_ion,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+#endif
 call MPI_AllReduce(H_int,heating_in,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+#ifdef WITH_TiTe
+call MPI_AllReduce(H_int_electron,heating_in_electron,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+call MPI_AllReduce(H_int_ion,heating_in_ion,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+#endif
 call MPI_AllReduce(H_impl_ext,heating_impl_out,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 call MPI_AllReduce(H_impl_int,heating_impl_in,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 call MPI_AllReduce(S_ext,source_out,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
@@ -1830,7 +1864,15 @@ pressure             = P_tot
 pressure_e           = P_e_tot
 pressure_i           = P_i_tot
 heating_out          = H_ext
+#ifdef WITH_TiTe
+heating_out_electron = H_ext_electron
+heating_out_ion      = H_ext_ion
+#endif
 heating_in           = H_int
+#ifdef WITH_TiTe
+heating_in_electron  = H_int_electron
+heating_in_ion       = H_int_ion
+#endif
 heating_impl_out     = H_impl_ext
 heating_impl_in      = H_impl_int
 source_out           = S_ext
@@ -1953,7 +1995,15 @@ ohm_tot              = n_period * ohm_tot     * fact_flux
 ohm_in               = n_period * ohm_in      * fact_flux
 ohm_out              = n_period * ohm_out     * fact_flux
 heating_out          = n_period * heating_out * fact_flux / (GAMMA-1.d0)
+#ifdef WITH_TiTe
+heating_out_electron = n_period * heating_out_electron * fact_flux / (GAMMA-1.d0)
+heating_out_ion      = n_period * heating_out_ion * fact_flux / (GAMMA-1.d0)
+#endif
 heating_in           = n_period * heating_in  * fact_flux / (GAMMA-1.d0)
+#ifdef WITH_TiTe
+heating_in_electron  = n_period * heating_in_electron  * fact_flux / (GAMMA-1.d0)
+heating_in_ion       = n_period * heating_in_ion  * fact_flux / (GAMMA-1.d0)
+#endif
 heating_impl_out     = n_period * heating_impl_out * fact_flux / (GAMMA-1.d0)
 heating_impl_in      = n_period * heating_impl_in  * fact_flux / (GAMMA-1.d0)
 source_out           = n_period * source_out  * fact_part / t_norm2
@@ -2181,6 +2231,14 @@ if (my_id .eq. 0) then
 
       case ( 'Heat_src_in' )
         res(iexpr+1) = heating_in
+
+#ifdef WITH_TiTe
+      case ( 'Heat_srcin_e' )
+        res(iexpr+1) = heating_in_electron
+
+      case ( 'Heat_srcin_i' )
+        res(iexpr+1) = heating_in_ion
+#endif
 
       case ( 'Heat_src_out' )
         res(iexpr+1) = heating_out

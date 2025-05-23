@@ -233,6 +233,13 @@ module mod_expression
     call add(exprs_all, 'V_radial    ', 'radial velocity = V\cdot\nabla\psi/|\nabla\psi|       ')
     call add(exprs_all, 'grad_psi_R  ', 'grad_psi_R/abs{grad_psi} component                    ')
     call add(exprs_all, 'grad_psi_Z  ', 'grad_psi_Z/abs{grad_psi} component                    ')
+    
+    call add(exprs_all, 'grad_Te_R   ', 'grad_Te_R component                                   ')
+    call add(exprs_all, 'grad_Te_Z   ', 'grad_Te_Z component                                   ')
+
+    call add(exprs_all, 'grad_Ti_R   ', 'grad_Ti_R component                                   ')
+    call add(exprs_all, 'grad_Ti_Z   ', 'grad_Ti_Z component                                   ')
+
     call add(exprs_all, 'myVnablaV_r ', 'radial component of {-\rho v\cdot\nabla v}     term in momentum equation')
     call add(exprs_all, 'myDiv_BB_r  ', 'radial component of {\nabla\cdot (BB)}         term in momentum equation')
     call add(exprs_all, 'myNablaB2_r ', 'radial component of {-0.5\nabla (B^2)}         term in momentum equation')
@@ -275,6 +282,10 @@ module mod_expression
     call add(exprs_all, 'area        ', 'Poloidal cross section area inside psi_limit          ')
     call add(exprs_all, 'volume      ', 'Plasma volume, inside psi_limit                       ')
     call add(exprs_all, 'Ip_in       ', 'Plasma current, inside psi_limit                      ')
+#ifdef WITH_TiTe
+    call add(exprs_all, 'Heat_srcin_e', 'Heat source for electron (inside  LCFS/givenPsi)      ')
+    call add(exprs_all, 'Heat_srcin_i', 'Heat source for ion (inside  LCFS/givenPsi)           ')
+#endif
 #if JOREK_MODEL >= 303
     call add(exprs_all, 'J_bootstrap ', 'Bootstrap Current                                     ')
 #endif
@@ -331,6 +342,10 @@ module mod_expression
     call add(exprs_all_int, 'Heat_src_tot', 'Total heat source                                     ')
     call add(exprs_all_int, 'Heat_src_in ', 'Heat source (inside  LCFS)                            ')
     call add(exprs_all_int, 'Heat_src_out', 'Heat source (outside LCFS)                            ')
+#ifdef WITH_TiTe
+    call add(exprs_all_int, 'Heat_srcin_e', 'Heat source for electron (inside  LCFS/givenPsi)      ')
+    call add(exprs_all_int, 'Heat_srcin_i', 'Heat source for ion (inside  LCFS/givenPsi)           ')
+#endif
     call add(exprs_all_int, 'Viscpar_diss', 'Total parallel viscosity dissipation                  ')
     call add(exprs_all_int, 'Visc_diss   ', 'Total perpendicular viscosity dissipation             ')
     call add(exprs_all_int, 'Fric_diss   ', 'Total frictional dissipation                          ')
@@ -2558,6 +2573,18 @@ module mod_expression
 
               case ( 'grad_psi_Z' )
                 res = A3_axisym_Z/dsqrt(A3_axisym_R * A3_axisym_R + A3_axisym_Z * A3_axisym_Z)
+
+              case ( 'grad_Te_R' )
+                res = Te0_R * fact_T
+
+              case ( 'grad_Te_Z' )
+                res = Te0_Z * fact_T
+
+              case ( 'grad_Ti_R' )
+                res = Ti0_R * fact_T
+
+              case ( 'grad_Ti_Z' )
+                res = Ti0_Z * fact_T
 
               case ( 'myVnablaV_r' )
                 res = (rho_v_nabla_v_R * A3_axisym_R + rho_v_nabla_v_R * A3_axisym_Z) / dsqrt(A3_axisym_R * A3_axisym_R + A3_axisym_Z * A3_axisym_Z) / fact_mu_zero

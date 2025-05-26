@@ -151,7 +151,7 @@ def plot_ascii_files(file_paths, xscaleType, yscaleType, title, xlabel, ylabel, 
             columns_plot_for_Y_mdf = [j - 1 for j in columns_plot_for_Y]
 
         colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
-        # color_plot = colors[i % len(colors)]
+        color_plot = colors[i % len(colors)]
         linestyle_plot = linestyle_list[i % len(linestyle_list)]  # Cycle through linestyle_list
 
         for rankj, j in enumerate(columns_plot_for_Y_mdf):

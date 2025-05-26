@@ -30,7 +30,7 @@ source_T_int3D_file = 'int3Dprofile_s000000.dat'
 gamma = 5.0/3.0
 npsi_target = 200
 
-plot_electron = False
+plot_electron = True
 
 if __name__ == "__main__":
 
@@ -66,6 +66,7 @@ if __name__ == "__main__":
     else:
         heat_source_int3D = data_heat_source_int3D[:, 5] # ion
 
+    heat_source_int3D = heat_source_int3D * (gamma - 1)
 
     zk_perp_original =  - heat_source_int3D / grad_T_flux
     heat_source_int3D = gaussian_filter1d(heat_source_int3D, sigma=1)

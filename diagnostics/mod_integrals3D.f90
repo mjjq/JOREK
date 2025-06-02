@@ -387,9 +387,9 @@ Tie_min_neg = 0.5*T_min_neg
 !$omp          R_xpoint, Z_xpoint, my_id, use_pellet, delta_phi, R_axis, Z_axis, psi_axis, psi_bnd, &
 !$omp          D_tot, D_int, D_Ext, P_tot, P_int, P_ext, Vol, C_intern, C_ext, VP_ext, VP_int, &
 !$omp          VK_ext, VK_int, VK_tot, VM_ext, VM_int, VM_tot, J2_tot, J2_ext, J2_int,         &
-!$omp          H_int, S_int, S_ext,psi_xpoint,  F0, VP_tot,eta, T_0, Te_0, T_min,       &
+!$omp          H_int, S_int, S_ext,psi_xpoint,  F0, VP_tot,eta, T_0, Te_0, T_min, H_ext,       &
 #ifdef WITH_TiTe
-!$omp          H_int_electron, H_int_ion, H_ext, H_ext_electron, H_ext_ion,                    &
+!$omp          H_int_electron, H_int_ion, H_ext_electron, H_ext_ion,                    &
 #endif
 !$omp          ne_SI_min, Te_eV_min, rn0_min, P_e_tot, P_i_tot, P_e_int, P_i_int, P_e_ext, P_i_ext, &
 !$omp          T_min_neg, Tie_min_neg, H_impl_int,H_impl_ext,implicit_heat_source,GAMMA,                                     &

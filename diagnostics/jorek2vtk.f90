@@ -22,6 +22,7 @@ use mod_atomic_coeff_deuterium, only : atomic_coeff_deuterium
 use mod_openadas , only : read_adf11
 use mod_atomic_coeff_deuterium, only : ad_deuterium , atomic_coeff_deuterium
 use mod_math_operators
+use mod_F_profile
 
 implicit none
 
@@ -54,7 +55,10 @@ real*8                :: Te0, Te0_s, Te0_t, Te0_st, Te0_ss, Te0_tt, Te, Te_s,  T
 real*8                :: V0,  V0_s,  V0_t,  V0_st,  V0_ss,  V0_tt,  V, V_s, V_t, V_st, V_ss, V_tt, V_sum
 real*8                :: dPsi, dPs_s, dPs_t, dPs_st, dPs_ss, dPs_tt
 real*8                :: dU,    dU_s,  dU_t,  dU_st,  dU_ss,  dU_tt
-real*8                :: ps0_x, ps0_y, psi_sum, ps_x, ps_y, ps_p
+real*8                :: ps0_x, ps0_y, psi_sum, ps_x, ps_y, ps_p, ps0_xy
+real*8                :: Fprof_tmp, dF_dpsi_tmp, dF_dz_tmp, dF2_dpsi2, dF_dz2_tmp, dF_dpsi_dz_tmp
+real*8                :: FFprime_tmp, dFFprime_dpsi_tmp, dFFprime_dz_tmp, dFFprime_dpsi2_tmp, dFFprime_dz2_tmp, dFFprime_dpsi_dz_tmp
+real*8                :: current_source_JR_R, current_source_JZ_Z
 real*8                :: u0_x,  u0_y,  u_sum,   u_x,  u_y,  u_p
 real*8                :: zj0_x, zj0_y, zj_sum,  zj_x, zj_y, zj_p
 real*8                :: w0_x,  w0_y,  w_sum,   w0_xx, w0_yy, w_x, w_y, w_p, w_xx, w_yy
@@ -785,6 +789,13 @@ do i=1,element_list%n_elements
             call interp(node_list,element_list,i,var_A3, i_tor,s,t,Ps0,Ps0_s,Ps0_t,Ps0_st,Ps0_ss,Ps0_tt)
             ps0_x = op_grad_R(Ps0_s, Ps0_t, R_s, R_t, Z_s, Z_t, xjac)
             ps0_y = op_grad_Z(Ps0_s, Ps0_t, R_s, R_t, Z_s, Z_t, xjac)
+            
+            ps0_xy= + ( (- ps0_ss * Z_t*R_t - ps0_tt * R_s*Z_s                        &
+                    + ps0_st * (Z_s*R_t  + Z_t*R_s  )                            &
+                    - ps0_s  * (R_st*Z_t - R_tt*Z_s )                            &
+                    - ps0_t * (R_st*Z_s  - R_ss*Z_t ) )  / xjac**2               &
+                    - xjac_x * (- ps0_s * R_t + ps0_t * R_s )   / xjac**2        ) * HZ(i_tor,i_plane)
+            
             psi_abs = dsqrt(ps0_x * ps0_x + ps0_y * ps0_y)
             wR2r =   ps0_x / psi_abs
             wZ2r =   ps0_y / psi_abs
@@ -976,6 +987,11 @@ do i=1,element_list%n_elements
         psi_equi_Z = ( - R_t * psi_equi_s + R_s * psi_equi_t ) / xjac
         dF_dpsi = (dF_dR*psi_equi_R + dF_dZ*psi_equi_Z) / max(1.d-13,(psi_equi_R**2 + psi_equi_Z**2))
 
+        call F_profile(ES%xpoint, ES%xcase, Z, ES%Z_xpoint, ps0, ES%psi_axis, ES%psi_bnd,     &
+                   Fprof_tmp, dF_dpsi_tmp, dF_dz_tmp, dF2_dpsi2, dF_dz2_tmp, dF_dpsi_dz_tmp , &
+                   FFprime_tmp, dFFprime_dpsi_tmp, dFFprime_dz_tmp, dFFprime_dpsi2_tmp,       &
+                   dFFprime_dz2_tmp, dFFprime_dpsi_dz_tmp)
+
         BR = ( A3_Z - AZ_p )/ R
         BZ = ( AR_p - A3_R )/ R 
         BP = ( AZ_R - AR_Z )    + F_prof/ R  
@@ -1075,12 +1091,15 @@ do i=1,element_list%n_elements
             current_source_JZ = 0.d0
             divE = divE + (J_R - current_source_JR) * eta_R + (J_Z - current_source_JZ) * eta_Z + (J_phi - current_source_phi) * eta_p
           else
-            ! current_source_JR = + (ES%psi_bnd_init - ES%psi_axis_init) / (psi_bnd - psi_axis) * psi_axisym_Z * dF_dpsi / R
-            ! current_source_JZ = - (ES%psi_bnd_init - ES%psi_axis_init) / (psi_bnd - psi_axis) * psi_axisym_R * dF_dpsi / R
-            ! divE = divE + (J_R - current_source_JR) * eta_R + (J_Z - current_source_JZ) * eta_Z + (J_phi - current_source_phi) * eta_p &
-            !             - eta_T * (current_source_JR_R + current_source_JR / R + current_source_JZ_Z)
-            write(*,*) 'divE for (eta_ARAZ_on = true & eta_ARAZ_simple = false) is undefined in jorek2vtk.f90'
-            call exit(-1)
+            current_source_JR = + (ES%psi_bnd_init - ES%psi_axis_init) / (ES%psi_bnd - ES%psi_axis) * ps0_y * dF_dpsi / R
+            current_source_JZ = - (ES%psi_bnd_init - ES%psi_axis_init) / (ES%psi_bnd - ES%psi_axis) * ps0_x * dF_dpsi / R
+            current_source_JR_R = + (ES%psi_bnd_init - ES%psi_axis_init) / (ES%psi_bnd - ES%psi_axis) / R * &
+                                    (ps0_x * ps0_y * dF2_dpsi2 + ps0_xy * dF_dpsi - 1 / R * dF_dpsi * ps0_y )
+            current_source_JZ_Z = - (ES%psi_bnd_init - ES%psi_axis_init) / (ES%psi_bnd - ES%psi_axis) / R * &
+                                    (ps0_x * ps0_y * dF2_dpsi2 + ps0_xy * dF_dpsi)
+
+            divE = divE + (J_R - current_source_JR) * eta_R + (J_Z - current_source_JZ) * eta_Z + (J_phi - current_source_phi) * eta_p &
+                        - eta_T * (current_source_JR_R + current_source_JR / R + current_source_JZ_Z)
           endif
           
         else

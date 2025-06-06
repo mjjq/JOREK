@@ -168,7 +168,7 @@ program JOREK2
   
   type(type_MHD_SIM)          :: mhd_sim
   type(type_SP_MATRIX)        :: a_mat
-  type(type_RHS)              :: rhs_vec, deltas
+  type(type_RHS)              :: rhs_vec, rhs_vec_prev, deltas, deltas_prev
   type(type_SP_SOLVER)        :: solver
  
   call init_expr()
@@ -569,7 +569,22 @@ mpi_required = 0
   !***********************************************************************
   !***********************************************************************
   
-  if (nstep > 0) call update_deltas(mhd_sim%node_list, deltas) ! create list of delta values in local_matrix module
+  if (nstep > 0) then 
+    call update_deltas(mhd_sim%node_list, deltas) ! create list of delta values in local_matrix module
+
+    if (.not. associated(deltas_prev%val)) then
+      call tr_allocatep(deltas_prev%val,1,mhd_sim%node_list%n_dof,"deltas",CAT_FEM)
+      deltas_prev%n = mhd_sim%node_list%n_dof
+      deltas_prev%val(1:deltas_prev%n) = 0.d0
+    endif
+
+    if (.not. associated(rhs_vec_prev%val)) then
+      call tr_allocatep(rhs_vec_prev%val,1,mhd_sim%node_list%n_dof,"deltas",CAT_FEM)
+      rhs_vec_prev%n = mhd_sim%node_list%n_dof
+      rhs_vec_prev%val(1:rhs_vec_prev%n) = 0.d0
+    endif
+
+  endif
 
   call solver%setup() ! set sparse solver parameters
 
@@ -581,6 +596,9 @@ mpi_required = 0
   index_now = index_start  ! index_now: Index of current timestep
 
   jstep_loop: do jstep = 1, 10 ! Go through the different values of the tstep_n and nstep_n arrays
+
+  tstep = tstep_n(jstep)
+
   istep_loop: do istep = 1, nstep_n(jstep)
 
     call clck_time_barrier(t_itstart)
@@ -591,7 +609,8 @@ mpi_required = 0
 
     index_now = index_now + 1
     
-    tstep = tstep_n(jstep)
+    if (associated(rhs_vec%val)) write(*,*) "rhs_vals begin: ", rhs_vec%val(1:3)
+    if (associated(deltas%val)) write(*,*) "deltas begin: ", deltas%val(1:3)
 
     ! start from t=0 
     if (index_now <= 1) tstep_prev = tstep
@@ -639,7 +658,9 @@ mpi_required = 0
     !--------- Constructing Global Matrix
     mhd_sim%es => es ! assign pointer to the equilibrium state
     call construct_matrix(mhd_sim, mhd_sim%local_elms, mhd_sim%n_local_elms, a_mat, rhs_vec, harmonic_matrix=.false.)
-  
+
+    write(*,*) "amat post construction", a_mat%val(1:3)
+
     call clck_time_barrier(t1); call clck_ldiff(t0,t1,tsecond)
     if (my_id.eq.0) write(*,FMT_TIMING) my_id, '# Elapsed time in construct global matrix :',tsecond
       
@@ -683,6 +704,8 @@ mpi_required = 0
 
       call update_values(mhd_sim%element_list, mhd_sim%node_list, deltas)         ! add solution to node values
       call update_deltas(mhd_sim%node_list, deltas)
+      rhs_vec_prev%val(1:rhs_vec_prev%n) = rhs_vec%val(1:rhs_vec%n)
+      deltas_prev%val(1:deltas_prev%n) = deltas%val(1:deltas%n)
 
       t_now = t_now + tstep
 
@@ -693,11 +716,32 @@ mpi_required = 0
     
       if ( my_id == 0 ) then
         write(*,*)
-        write(*,'(a,i6.6,a)') '>>>>> NO CONVERGENCE AFTER ', solver%iter_gmres, ' ITERATIONS. ABORTING <<<<<'
-        write(*,*)
+        write(*,'(a,i6.6,a)') '>>>>> NO CONVERGENCE AFTER ', solver%iter_gmres, ' ITERATIONS. <<<<<'
       end if
+
       index_now = index_now - 1 ! Undo the time step
-      exit jstep_loop
+
+      if ( adaptive_time .and. (tstep/adaptive_time_factor .ge. adaptive_time_min) ) then
+          ! Restore deltas and values from previous timestep
+          rhs_vec%val(1:rhs_vec%n) = rhs_vec_prev%val(1:rhs_vec_prev%n)
+          deltas%val(1:deltas%n) = deltas_prev%val(1:deltas_prev%n)
+          write(*,*) "rhs_vals restored: ", rhs_vec%val(1:3)
+          write(*,*) "deltas restored: ", deltas%val(1:3)
+          
+          tstep = tstep/adaptive_time_factor
+
+          if ( my_id == 0 ) then
+              write(*,*) 'ADAPTING TIMESTEP : ',tstep
+              write(*,*)
+          endif
+      else
+          if (my_id ==0) then
+	          write(*,*) 'ABORTING'
+            write(*,*)
+          endif
+
+          exit jstep_loop
+      endif
       
     endif
     

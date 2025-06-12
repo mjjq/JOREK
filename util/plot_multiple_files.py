@@ -11,6 +11,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import argparse
+import plot_q_versus_time
+import plot_poincare_all
 
 # Set global font properties using rcParams
 plt.rcParams.update({
@@ -106,7 +108,7 @@ def read_ascii_file(file_path, skiprows, droprows=-1):
 
 
 def plot_ascii_files(file_paths, xscaleType, yscaleType, title, xlabel, ylabel, skiprows, droprows, column_plot_for_X, columns_plot_for_Y, 
-                     shift_first_file, color_first_file, pow_for_X, pow_for_Y, multiplier_for_X, multiplier_for_Y, font_size, line_width, xlim, ylim, data_marker, mylegends="", noline = False):
+                     shift_first_file, color_first_file, pow_for_X, pow_for_Y, multiplier_for_X, multiplier_for_Y, font_size, line_width, xlim, ylim, data_marker, mylegends="", noline = False, colorful = False, multiplier_for_time = 1.0):
     """
     Plot lines from multiple ASCII files in the same plot.
 
@@ -120,9 +122,24 @@ def plot_ascii_files(file_paths, xscaleType, yscaleType, title, xlabel, ylabel, 
 
     # plt.figure(figsize=(10, 6))  # Set the figure size
 
+    if colorful:
+        n_curves = len(file_paths)
+        cmap = plt.get_cmap('viridis_r')
+        colors = cmap(np.linspace(0, 1, n_curves))
+        time_array = []
+
     ilegend = 0
+    
     for i, file_path in enumerate(file_paths):
+        
         column_names, data = read_ascii_file(file_path, skiprows, droprows)
+
+        if colorful:
+            num_time = plot_q_versus_time.extract_number(file_path)
+            time = plot_poincare_all.get_time(num_time) * multiplier_for_time
+            time_array.append(time)
+            print(f'time = {time} [ms]')
+
         if column_plot_for_X >= data.shape[1]:
             print("Error: Value of -xc is out of range!!!")
             exit(-1)
@@ -150,13 +167,19 @@ def plot_ascii_files(file_paths, xscaleType, yscaleType, title, xlabel, ylabel, 
         elif i == 0:
             columns_plot_for_Y_mdf = [j - 1 for j in columns_plot_for_Y]
 
-        colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
+        if not colorful:
+            colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
+
         color_plot = colors[i % len(colors)]
-        linestyle_plot = linestyle_list[i % len(linestyle_list)]  # Cycle through linestyle_list
+
+        if colorful:
+            linestyle_plot = linestyle_list[0]
+        else:
+            linestyle_plot = linestyle_list[i % len(linestyle_list)]  # Cycle through linestyle_list
 
         for rankj, j in enumerate(columns_plot_for_Y_mdf):
-            color_plot = colors[rankj % len(colors)]
             if len(file_paths) == 1:
+                color_plot = colors[rankj % len(colors)]
                 linestyle_plot = linestyle_list[rankj % len(linestyle_list)]  # Cycle through linestyle_list
             if noline:
                 linestyle_plot = 'none'
@@ -168,7 +191,7 @@ def plot_ascii_files(file_paths, xscaleType, yscaleType, title, xlabel, ylabel, 
                     ilegend += 1
                 if (i == 0) and (color_first_file != ""):
                     color_plot = color_first_file
-                plt.plot(x, y[:, j], data_marker, label=mylegend, linestyle=linestyle_plot, color=color_plot, markersize=1)
+                plt.plot(x, y[:, j], data_marker, label=mylegend, linestyle=linestyle_plot, color=color_plot, markersize=20)
             else:
                 print("Error: Value of -yc is out of range!!!")
                 print("file_path: ", file_path)
@@ -176,11 +199,28 @@ def plot_ascii_files(file_paths, xscaleType, yscaleType, title, xlabel, ylabel, 
 
     plt.xlabel(column_names[column_plot_for_X] if xlabel == "" else xlabel, fontsize=font_size)  # Set the x-axis label based on the first file
     plt.ylabel('Y-axis Label' if ylabel == "" else ylabel, fontsize=font_size)  # Set the y-axis label (customize as needed)
-    # legend = plt.legend(loc="upper left", bbox_to_anchor=(1, 1))  # Show legends for each line
-    legend = plt.legend()  # Show legends for each line
-    legend.set_draggable(True)
-    for label in legend.get_texts():
-        label.set_fontsize(font_size)
+    if colorful:
+        import matplotlib.cm as cm
+        import matplotlib.colors as mcolors
+        from matplotlib.ticker import ScalarFormatter
+
+        time_array = np.array(time_array)
+        norm = mcolors.Normalize(vmin=time_array.min(), vmax=time_array.max())
+        sm = cm.ScalarMappable(cmap=cmap, norm=norm)
+        # Add the colorbar
+        cbar = plt.colorbar(sm, ax=plt.gca())
+        cbar.set_label('time [ms]')
+        # Set colorbar formatter with custom limits
+        formatter = ScalarFormatter()
+        formatter.set_scientific(True)
+        formatter.set_powerlimits((-1000, 1000))  # Only use scientific notation outside this range
+        cbar.ax.yaxis.set_major_formatter(formatter)
+    else:
+        # legend = plt.legend(loc="upper left", bbox_to_anchor=(1, 1))  # Show legends for each line
+        legend = plt.legend()  # Show legends for each line
+        legend.set_draggable(True)
+        for label in legend.get_texts():
+            label.set_fontsize(font_size)
     plt.title(title, fontsize=font_size)  # Set the plot title
     plt.grid(True)  # Show grid lines
     plt.xscale(xscaleType)  # Set linear or log for the x scale
@@ -245,6 +285,10 @@ if __name__ == "__main__":
                         help='Specify xmin, xmax for the plot.')
     parser.add_argument('-ylim', nargs=2, type=float, metavar=('ymin', 'ymax'),
                         help='Specify ymin, ymax for the plot.')
+    parser.add_argument("-tm", "--multiplier_for_time", type=float, default=1.0,
+                        help="Multiple the time-data with the specified value.")
+    parser.add_argument("-cful", "--colorful", type=lambda x: (str(x).lower() in ['true', '1', 'yes']), default=False,
+                        help="Set different colors for lines.")
     parser.add_argument("-legends", type=str, default="", nargs="+", help="Legends for each line.")
     parser.add_argument("-nln", "--noline", type=lambda x: (str(x).lower() in ['true', '1', 'yes']), default=False,
                         help="Plot without lines.")
@@ -253,4 +297,4 @@ if __name__ == "__main__":
 
     plot_ascii_files(args.file_paths, args.xscale, args.yscale, args.title, args.xlabel, args.ylabel,
                      int(args.skiprows), int(args.droprows), args.column_plot_for_X, args.columns_plot_for_Y, args.shift_first_file, args.color_first_file, 
-                     args.pow_for_X, args.pow_for_Y, args.multiplier_for_X, args.multiplier_for_Y, args.fontsize, args.linewidth, args.xlim, args.ylim, args.data_marker, args.legends, args.noline)
+                     args.pow_for_X, args.pow_for_Y, args.multiplier_for_X, args.multiplier_for_Y, args.fontsize, args.linewidth, args.xlim, args.ylim, args.data_marker, args.legends, args.noline, args.colorful, args.multiplier_for_time)

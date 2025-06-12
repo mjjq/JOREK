@@ -59,7 +59,7 @@ if __name__ == "__main__":
     # plt.plot(rho_p, zk_perp_old, linestyle='-', label = 'old (kg/ms)')
     plt.plot(rho_p, kap_perp_old, linestyle='-', label = 'old (m$^2$/s)')
 
-    for scale_ratio in [0.8, 0.6, 0.4, 0.2, 0.1]:
+    for scale_ratio in [2.5, 2.0, 1.5, 1.2, 1.1, 0.8, 0.6, 0.4, 0.2, 0.1]:
         zk_perp_new = zk_perp_old * scale_ratio * (1 - weight_func) + zk_perp_old * weight_func
         kap_perp_new = zk_perp_new / density
 

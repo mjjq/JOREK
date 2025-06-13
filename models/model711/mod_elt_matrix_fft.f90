@@ -8405,9 +8405,9 @@ subroutine add_vms_to_rhs()
   res = 0.d0
   
   ! viscosity terms in strong form
-  vsR = UR0 / R + UR0_RR + UR0_ZZ + UR0_pp / R**2 - 2.d0 * Up0_p / R - UR0 / R**2
-  vsZ = UZ0 / R + UZ0_RR + UZ0_ZZ + UZ0_pp / R**2 
-  vsp = Up0 / R + Up0_RR + Up0_ZZ + Up0_pp / R**2 + 2.d0 * UR0_p / R - Up0 / R**2
+  vsR = UR0_R / R + UR0_RR + UR0_ZZ + UR0_pp / R**2 - 2.d0 * Up0_p / R**2 - UR0 / R**2
+  vsZ = UZ0_R / R + UZ0_RR + UZ0_ZZ + UZ0_pp / R**2 
+  vsp = Up0_R / R + Up0_RR + Up0_ZZ + Up0_pp / R**2 + 2.d0 * UR0_p / R**2 - Up0 / R**2
   
   ! residual in A
   res(var_AR) = -     (UZ0 * Bp0 - Up0 * BZ0) - tauIC_ARAZ * tau_IC * F0/rho0_corr/BB2 * BR0  * BgradPe &
@@ -8433,6 +8433,11 @@ subroutine add_vms_to_rhs()
               + particle_source(ms,mt) * Up0                                                    &
 #endif
               + p0_p/R - visco_T * vsp
+#ifdef VISCOSITY_INSIDE_LAPLACIAN
+  res(var_UR) = res(var_UR) - Qvisc_gradmu_dot_grad_vecV_UR_p
+  res(var_UZ) = res(var_UZ) - Qvisc_gradmu_dot_grad_vecV_UZ_p
+  res(var_Up) = res(var_Up) - Qvisc_gradmu_dot_grad_vecV_Up_p
+#endif
   
   ! residual in density equation
 #ifndef FIX_DENSITY
@@ -8576,7 +8581,7 @@ subroutine add_vms_to_elm()
 
   res_jac__p = 0.d0 ; res_jac__n = 0.d0 ; res_jac__nn = 0.d0
   
-  vsR_UR__p = UR / R + UR_RR + UR_ZZ - UR / R**2 + UR / R**2
+  vsR_UR__p = UR_R / R + UR_RR + UR_ZZ - UR / R**2
   vsR_UR__n = 0.d0
   vsR_UR__nn= UR_pp / R**2
   
@@ -8585,14 +8590,14 @@ subroutine add_vms_to_elm()
   vsR_UZ__nn= 0.d0
   
   vsR_Up__p = 0.d0
-  vsR_Up__n = - 2.d0 * Up_p__n / R
+  vsR_Up__n = - 2.d0 * Up_p__n / R**2
   vsR_Up__nn= 0.d0
   
   vsZ_UR__p = 0.d0
   vsZ_UR__n = 0.d0
   vsZ_UR__nn= 0.d0
   
-  vsZ_UZ__p = UZ / R + UZ_RR + UZ_ZZ
+  vsZ_UZ__p = UZ_R / R + UZ_RR + UZ_ZZ
   vsZ_UZ__n = 0.d0
   vsZ_UZ__nn= UZ_pp / R**2
   
@@ -8601,14 +8606,14 @@ subroutine add_vms_to_elm()
   vsZ_Up__nn= 0.d0
   
   vsp_UR__p = 0.d0
-  vsp_UR__n = 2.d0 * UR_p__n / R
+  vsp_UR__n = 2.d0 * UR_p__n / R**2
   vsp_UR__nn= 0.d0
   
   vsp_UZ__p = 0.d0
   vsp_UZ__n = 0.d0
   vsp_UZ__nn= 0.d0
   
-  vsp_Up__p = Up / R + Up_RR + Up_ZZ - Up / R**2
+  vsp_Up__p = Up_R / R + Up_RR + Up_ZZ - Up / R**2
   vsp_Up__n = 0.d0
   vsp_Up__nn= Up_pp / R**2
   
@@ -8774,7 +8779,15 @@ subroutine add_vms_to_elm()
   res_jac__n (var_UR,var_Ti ) = rho0 * VdiaGradUR_Ti__n  - rho0 * VdiaP0_Ti__n * Up0 / R &
                                                                     - PneoR_Ti__n 
   
-  res_jac__p (var_UR,var_Te ) =  (rho0_R*Te     + rho0*Te_R       ) + visco_T_T * vsR 
+  res_jac__p (var_UR,var_Te ) =  (rho0_R*Te     + rho0*Te_R       ) - visco_T_T * vsR 
+
+#ifdef VISCOSITY_INSIDE_LAPLACIAN
+  res_jac__p(var_UR, var_UR) = res_jac__p(var_UR, var_UR) - Qvisc_gradmu_dot_grad_vecV_UR__UR__p
+  res_jac__n(var_UR, var_UR) = res_jac__n(var_UR, var_UR) - Qvisc_gradmu_dot_grad_vecV_UR__UR__n
+  res_jac__p(var_UR, var_Up) = res_jac__p(var_UR, var_Up) - Qvisc_gradmu_dot_grad_vecV_UR__Up__p
+  res_jac__p(var_UR, var_Te) = res_jac__p(var_UR, var_Te) - Qvisc_gradmu_dot_grad_vecV_UR__Te__p
+  res_jac__n(var_UR, var_Te) = res_jac__n(var_UR, var_Te) - Qvisc_gradmu_dot_grad_vecV_UR__Te__n
+#endif
   
   ! UZ equation:
   res_jac__p(var_UZ,var_AR ) =  rho0 * VdiaGradUZ_AR__p - PneoZ_AR__p
@@ -8811,6 +8824,13 @@ subroutine add_vms_to_elm()
   
   res_jac__p (var_UZ,var_Te ) =  (rho0_Z*Te     + rho0*Te_Z       ) - visco_T_T * vsZ
   
+#ifdef VISCOSITY_INSIDE_LAPLACIAN
+  res_jac__p(var_UZ, var_UZ) = res_jac__p(var_UZ, var_UZ) - Qvisc_gradmu_dot_grad_vecV_UZ__UZ__p
+  res_jac__n(var_UZ, var_UZ) = res_jac__n(var_UZ, var_UZ) - Qvisc_gradmu_dot_grad_vecV_UZ__UZ__n
+  res_jac__p(var_UZ, var_Te) = res_jac__p(var_UZ, var_Te) - Qvisc_gradmu_dot_grad_vecV_UZ__Te__p
+  res_jac__n(var_UZ, var_Te) = res_jac__n(var_UZ, var_Te) - Qvisc_gradmu_dot_grad_vecV_UZ__Te__n
+#endif
+
   ! Up equation:
   res_jac__p(var_Up,var_AR ) =  rho0 * (VdiaGradUp_AR__p  + VdiaP0_AR__p * UR0 / R) - PneoR_AR__p
   res_jac__n(var_Up,var_AR ) =  rho0 * (VdiaGradUp_AR__n  + VdiaP0_AR__n * UR0 / R) - PneoR_AR__n
@@ -8850,6 +8870,14 @@ subroutine add_vms_to_elm()
   
   res_jac__p (var_Up,var_Te ) =  - visco_T_T * vsp
   res_jac__n (var_Up,var_Te ) =  (rho0_p * Te   + rho0 * Te_p__n   ) / R - visco_T_T * vsp 
+
+#ifdef VISCOSITY_INSIDE_LAPLACIAN
+  res_jac__p(var_Up, var_UR) = res_jac__p(var_Up, var_UR) - Qvisc_gradmu_dot_grad_vecV_Up__UR__p
+  res_jac__p(var_Up, var_Up) = res_jac__p(var_Up, var_Up) - Qvisc_gradmu_dot_grad_vecV_Up__Up__p
+  res_jac__n(var_Up, var_Up) = res_jac__n(var_Up, var_Up) - Qvisc_gradmu_dot_grad_vecV_Up__Up__n
+  res_jac__p(var_Up, var_Te) = res_jac__p(var_Up, var_Te) - Qvisc_gradmu_dot_grad_vecV_Up__Te__p
+  res_jac__n(var_Up, var_Te) = res_jac__n(var_Up, var_Te) - Qvisc_gradmu_dot_grad_vecV_Up__Te__n
+#endif
   
   ! rho equation
   res_jac__p(var_rho, var_UR) =  UR * rho0_R + rho0 * divU_UR

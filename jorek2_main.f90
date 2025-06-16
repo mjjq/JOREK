@@ -655,6 +655,8 @@ mpi_required = 0
     ! Build the matrix 
     call clck_time_barrier(t0)
 
+    if (associated(a_mat%val)) write(*,*) "amat pre-construction", a_mat%val(1:3)
+
     !--------- Constructing Global Matrix
     mhd_sim%es => es ! assign pointer to the equilibrium state
     call construct_matrix(mhd_sim, mhd_sim%local_elms, mhd_sim%n_local_elms, a_mat, rhs_vec, harmonic_matrix=.false.)

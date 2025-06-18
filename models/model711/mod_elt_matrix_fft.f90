@@ -904,6 +904,53 @@ len1 = sqrt( (midp_edge1(1)-midp_edge3(1))**2 + (midp_edge1(2)-midp_edge3(2))**2
 len2 = sqrt( (midp_edge2(1)-midp_edge4(1))**2 + (midp_edge2(2)-midp_edge4(2))**2)
 h_e = dmin1(len1, len2)
 
+if (use_vms) then
+  do mp = 1, n_plane
+    do ms=1, n_gauss
+    do mt=1, n_gauss
+      wst  = wgauss(ms)*wgauss(mt)
+      xjac = x_s(ms,mt)*y_t(ms,mt) - x_t(ms,mt)*y_s(ms,mt)
+      R = x_g(ms,mt)
+
+      AR0_p = eq_p(mp,var_AR,ms,mt)
+      AR0_s = eq_s(mp,var_AR,ms,mt)
+      AR0_t = eq_t(mp,var_AR,ms,mt)
+      AR0_R = (   y_t(ms,mt) * AR0_s  - y_s(ms,mt) * AR0_t ) / xjac
+      AR0_Z = ( - x_t(ms,mt) * AR0_s  + x_s(ms,mt) * AR0_t ) / xjac
+
+      AZ0_p = eq_p(mp,var_AZ,ms,mt)
+      AZ0_s = eq_s(mp,var_AZ,ms,mt)
+      AZ0_t = eq_t(mp,var_AZ,ms,mt)
+      AZ0_R = (   y_t(ms,mt) * AZ0_s  - y_s(ms,mt) * AZ0_t ) / xjac
+      AZ0_Z = ( - x_t(ms,mt) * AZ0_s  + x_s(ms,mt) * AZ0_t ) / xjac
+
+      A30_p = eq_p(mp,var_A3,ms,mt)
+      A30_s = eq_s(mp,var_A3,ms,mt)
+      A30_t = eq_t(mp,var_A3,ms,mt)
+      A30_R = (   y_t(ms,mt) * A30_s  - y_s(ms,mt) * A30_t ) / xjac
+      A30_Z = ( - x_t(ms,mt) * A30_s  + x_s(ms,mt) * A30_t ) / xjac
+
+      BR0 = ( A30_Z - AZ0_p )/ R
+      BZ0 = ( AR0_p - A30_R )/ R
+      Bp0 = ( AZ0_R - AR0_Z )    + Fprofile(ms,mt) / R
+
+      BB2 = Bp0**2 + BR0**2 + BZ0**2
+
+      UR0    = eq_g(mp,var_UR,ms,mt)
+      UZ0    = eq_g(mp,var_UZ,ms,mt)
+      Up0    = eq_g(mp,var_Up,ms,mt)
+      rho0   = eq_g(mp,var_rho,ms,mt)
+
+      p0    = rho0 * (eq_g(mp,var_Ti,ms,mt) + eq_g(mp,var_Te,ms,mt))
+
+      speed(mp,ms,mt) = sqrt(abs((gamma*p0 + BB2)/dmax1(rho0, 1d-3) )) + sqrt(UR0*UR0 + UZ0*UZ0 + Up0*Up0)
+  enddo
+  enddo
+  enddo
+  tscale = h_e/maxval(speed(:,:,:))
+endif
+
+
 ! --- Sources
 ! --- Note about the current sources:
 ! --- The toroidal current source can be taken from the routine current.f90, as usual.

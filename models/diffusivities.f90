@@ -75,7 +75,7 @@ module diffusivities
     else
 
       ! Maximize D_par at the boundary
-      get_dpar1 = D_par_coeff(1) * (tanh((dsqrt(psin) - D_par_coeff(2)) / D_par_coeff(3)) + 1.d0) / 2.d0
+      get_dpar1 = D_par_coeff(1) * (tanh((dsqrt(psin) - D_par_coeff(2)) / D_par_coeff(3)) + 1.d0) / 2.d0 + D_par_coeff(4)
       
       !! Maximize D_par at the core
       ! get_dpar1 = D_par_coeff(1) * ( (1.d0-D_par_coeff(2)) +                                                 &

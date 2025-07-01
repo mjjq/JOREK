@@ -113,6 +113,8 @@ if __name__ == "__main__":
                         help="Set different colors for lines.")
     parser.add_argument("-png", "--png_output", type=lambda x: (str(x).lower() in ['true', '1', 'yes']), default=False,
                         help="Save results into figures.")
+    parser.add_argument('-xylim', nargs=4, type=float, metavar=('xmin', 'xmax', 'ymin', 'ymax'),
+                        help='Specify xmin, xmax, ymin, ymax for the plot.')
     args = parser.parse_args()
 
     filenames = args.file_paths
@@ -140,5 +142,10 @@ if __name__ == "__main__":
             print(figure_name + " is saved.")
             plt.close()    
     
+    if args.xylim:
+        xmin, xmax, ymin, ymax = args.xylim
+        plt.xlim(xmin, xmax)
+        plt.ylim(ymin, ymax)
+
     if(not args.png_output):
         plt.show()

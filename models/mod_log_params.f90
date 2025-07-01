@@ -495,6 +495,14 @@ write(*,'(1x,a)',advance='no') ' RTREE_H               : '
   write(*,*) 'off'
 #endif
 
+write(*,'(1x,a)',advance='no') ' ENABLE_VISCO_PAR_AND_PARPAR : '
+#ifdef ENABLE_VISCO_PAR_AND_PARPAR
+  write(*,*) 'on'
+#else
+  write(*,*) 'off'
+#endif
+
+
   write(*,*)
   write(*,200)
   write(*,*) '* Hard-Coded Parameters:                                                      *'

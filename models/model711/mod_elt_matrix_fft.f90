@@ -40,6 +40,7 @@ real*8,  intent(in)    :: R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint(2), Z_xpoi
 #define MOMENTUM_UPHI_IN_PARALLEL
 #define TEMPERATURE_DEPENDENT_UPDATE
 #define ENABLE_PARTICLE_SOURCE_IN_MOMENTUM_EQUATION
+! #define ADD_DIAMAGNETIC_DRIFT_IN_SC_FOR_DENSITY_EQU
 
 #define FULL_THERMALIZATION
 ! #define FIX_DENSITY # this will leads to the stabilization of n = 1 quasi-interchange mode
@@ -158,6 +159,11 @@ real*8     :: BgradVstar_A3__p, BgradVstar_A3__k
 real*8     :: UgradRho, UgradRho_UR, UgradRho_UZ, UgradRho_Up, UgradRho_rho__p, UgradRho_rho__n
 real*8     :: UgradTi,  UgradTi_UR,  UgradTi_UZ,  UgradTi_Up,  UgradTi_Ti__p,   UgradTi_Ti__n
 real*8     :: UgradTe,  UgradTe_UR,  UgradTe_UZ,  UgradTe_Up,  UgradTe_Te__p,   UgradTe_Te__n
+
+real*8     :: VdiaGradRho, rhoDivVdia
+real*8     :: rho0_sp, rho0_tp, Ti0_sp, Ti0_tp
+real*8     :: rho0_Rp, rho0_Zp, Ti0_Rp, Ti0_Zp, pi0_Rp, pi0_RZ, pi0_Zp
+real*8     :: VdiaR0_R, VdiaZ0_Z, VdiaP0_p
 
 real*8     :: UgradVstar__p, UgradVstar__k, UgradVstar_UR, UgradVstar_UZ, UgradVstar_Up__k
 
@@ -1793,7 +1799,16 @@ do j=1,n_degrees
 
           ! For shock capturing stabilization
           tau_sc = 0.d0
-          if (use_sc) call calculate_sc_quantities()
+          if (use_sc) then
+#ifdef ADD_DIAMAGNETIC_DRIFT_IN_SC_FOR_DENSITY_EQU
+            rho0_sp = eq_sp(mp,var_rho,ms,mt)
+            rho0_tp = eq_tp(mp,var_rho,ms,mt)
+          
+            Ti0_sp = eq_sp(mp,var_Ti,ms,mt)
+            Ti0_tp = eq_tp(mp,var_Ti,ms,mt)
+#endif
+            call calculate_sc_quantities()
+          endif
 
           do im=n_tor_start, n_tor_end
 
@@ -8390,6 +8405,59 @@ subroutine calculate_sc_quantities()
   R_rho    = rho0 * divU + UgradRho
   R_Ti     = 0.d0
   R_Te     = 0.d0
+
+#ifdef ADD_DIAMAGNETIC_DRIFT_IN_SC_FOR_DENSITY_EQU
+  rho0_Rp = (   y_t(ms,mt) * rho0_sp  - y_s(ms,mt) * rho0_tp ) / xjac
+  rho0_Zp = ( - x_t(ms,mt) * rho0_sp  + x_s(ms,mt) * rho0_tp ) / xjac
+  rho0_RZ = (- rho0_ss * y_t(ms,mt)*x_t(ms,mt) - rho0_tt * x_s(ms,mt)*y_s(ms,mt)                     &
+         + rho0_st * (y_s(ms,mt)*x_t(ms,mt)  + y_t(ms,mt)*x_s(ms,mt)  ) &
+         - rho0_s  * (x_st(ms,mt)*y_t(ms,mt) - x_tt(ms,mt)*y_s(ms,mt) ) &
+         - rho0_t * (x_st(ms,mt)*y_s(ms,mt)  - x_ss(ms,mt)*y_t(ms,mt) ) ) / xjac**2             &
+         - xjac_R * (- rho0_s * x_t(ms,mt) + rho0_t * x_s(ms,mt) )   / xjac**2
+
+
+  Ti0_Rp = (   y_t(ms,mt) * Ti0_sp  - y_s(ms,mt) * Ti0_tp ) / xjac
+  Ti0_Zp = ( - x_t(ms,mt) * Ti0_sp  + x_s(ms,mt) * Ti0_tp ) / xjac
+  Ti0_RZ = (- Ti0_ss * y_t(ms,mt)*x_t(ms,mt) - Ti0_tt * x_s(ms,mt)*y_s(ms,mt)                     &
+         + Ti0_st * (y_s(ms,mt)*x_t(ms,mt)  + y_t(ms,mt)*x_s(ms,mt)  ) &
+         - Ti0_s  * (x_st(ms,mt)*y_t(ms,mt) - x_tt(ms,mt)*y_s(ms,mt) ) &
+         - Ti0_t * (x_st(ms,mt)*y_s(ms,mt)  - x_ss(ms,mt)*y_t(ms,mt) ) ) / xjac**2             &
+         - xjac_R * (- Ti0_s * x_t(ms,mt) + Ti0_t * x_s(ms,mt) )   / xjac**2         
+
+  pi0_Rp = rho0_Rp * Ti0 + rho0 * Ti0_Rp + rho0_R * Ti0_p + rho0_p * Ti0_R
+  pi0_RZ = rho0_RZ * Ti0 + rho0 * Ti0_RZ + rho0_R * Ti0_Z + rho0_Z * Ti0_R
+  pi0_Zp = rho0_Zp * Ti0 + rho0 * Ti0_Zp + rho0_Z * Ti0_p + rho0_p * Ti0_Z
+  
+  VdiaR0_R = tau_IC * F0 * (-(1.0 / (R**2 * rho0_corr * BB2) + &
+                              1.0 / (R * rho0_corr**2 * BB2) * rho0_R +  &
+                              2.0 / (R * rho0_corr * BB2**2) * &
+                              (BR0 * BR0_R + BZ0 * BZ0_R + Bp0 * Bp0_R)) * &
+                            (BZ0 * pi0_p - R * Bp0 * pi0_Z) + &
+                            1.0 / (R * rho0_corr * BB2) * &
+                            (BZ0_R * pi0_p + BZ0 * pi0_Rp - &
+                             Bp0 * pi0_Z - R * Bp0_R * pi0_Z - &
+                             R * Bp0 * pi0_RZ))
+  
+  VdiaZ0_Z = tau_IC * F0 * (-(1.0 / (R * rho0_corr**2 * BB2) * rho0_Z + &
+                              2.0 / (R * rho0_corr * BB2**2) * &
+                              (BR0 * BR0_Z + BZ0 * BZ0_Z + Bp0 * Bp0_Z)) * &
+                            (R * Bp0 * pi0_R - BR0 * pi0_p) + &
+                            1.0 / (R * rho0_corr * BB2) * &
+                            (R * Bp0_Z * pi0_R + R * Bp0 * pi0_RZ - &
+                            BR0_Z * pi0_p - BR0 * pi0_Zp) )
+
+  VdiaP0_p = tau_IC * F0 * (-(1.0 / (rho0_corr**2 * BB2) * rho0_p + &
+                              2.0 / (rho0_corr * BB2**2) * &
+                              (BR0 * BR0_p + BZ0 * BZ0_p + Bp0 * Bp0_p)) * &
+                            (BR0 * pi0_Z - BZ0 * pi0_R) + &
+                            1.0 / (rho0_corr * BB2) * &
+                            (BR0_p * pi0_Z + BR0 * pi0_Zp - &
+                            BZ0_p * pi0_R - BZ0 * pi0_Rp))
+
+  VdiaGradRho = VdiaR0 * rho0_R + VdiaZ0 * rho0_Z + VdiaP0 * rho0_p / R                                      
+  rhoDivVdia  = rho0 * (VdiaR0 / R + VdiaR0_R + VdiaZ0_Z + VdiaP0_p / R )
+  R_rho    = R_rho + VdiaGradRho + rhoDivVdia
+#endif
   
   ! total pressure including neutrals and impurities
   Ptot_corr= rho0_corr * (Ti0_corr + Te0_corr)

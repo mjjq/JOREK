@@ -287,6 +287,10 @@ ifeq (1, $(USE_STRUMPACK))
   EXTRA_FLAGS := $(EXTRA_FLAGS) -lstdc++ -std=c++14
 endif
 
+ifeq (1, $(ENABLE_VISCO_PAR_AND_PARPAR))
+  DEFINES  := $(DEFINES) -DENABLE_VISCO_PAR_AND_PARPAR
+endif
+
 ifeq (1, $(USE_BICGSTAB))
   DEFINES  := $(DEFINES) -DUSE_BICGSTAB
 else

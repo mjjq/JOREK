@@ -537,6 +537,13 @@ do i=1,element_list%n_elements
       else
         xyz(1:3,inode) = (/ R,    Z, 0.d0 /)
       endif
+
+! #define OUTPUT_MULTIPLE_SURFACES_3D
+#ifdef OUTPUT_MULTIPLE_SURFACES_3D
+      toroidal_angle = 2 * PI / n_plane * (i_plane - 1)
+      xyz(1:3,inode) = (/R * cos(toroidal_angle), Z, R * sin(toroidal_angle) /)
+#endif
+
       !====================== --- specific for axisymmetric quantities
       ! Put here all quantities that are axisymmetric (n=0 mode only) and should not be summed
       ! over all harmonics: for instance, to compute Vtheta, Er, Vneo, etc.

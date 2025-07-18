@@ -502,6 +502,13 @@ write(*,'(1x,a)',advance='no') ' ENABLE_VISCO_PAR_AND_PARPAR : '
   write(*,*) 'off'
 #endif
 
+write(*,'(1x,a)',advance='no') ' ENABLE_DIA_DRIFT_TEMPERATURE : '
+#ifdef ENABLE_DIA_DRIFT_TEMPERATURE
+  write(*,*) 'on'
+#else
+  write(*,*) 'off'
+#endif
+
 
   write(*,*)
   write(*,200)
@@ -1195,6 +1202,7 @@ write(*,'(1x,a)',advance='no') ' ENABLE_VISCO_PAR_AND_PARPAR : '
     write(*,LOGI_FMT) 'tauIC_AP_on           ', tauIC_AP_on
     write(*,LOGI_FMT) 'tauIC_rho_on          ', tauIC_rho_on
     write(*,LOGI_FMT) 'tauIC_tem_on          ', tauIC_tem_on
+    write(*,LOGI_FMT) 'tauIC_velocity_on     ', tauIC_velocity_on
     write(*,LOGI_FMT) 'tauIC_tanh            ', tauIC_tanh
     write(*,REAL_FMT) 'tauIC_shift           ', tauIC_shift
     write(*,REAL_FMT) 'tauIC_steep           ', tauIC_steep

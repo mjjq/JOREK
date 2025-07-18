@@ -693,6 +693,7 @@ subroutine preset_parameters
   tauIC_AP_on        = .true.               !< Full-MHD: to switch on/off diamagnetic terms for A_phi equation
   tauIC_rho_on       = .true.               !< Full-MHD: to switch on/off diamagnetic terms for rho equation
   tauIC_tem_on       = .true.               !< Full-MHD: to switch on/off diamagnetic terms for temperature equation
+  tauIC_velocity_on  = .true.               !< Full-MHD: to switch on/off diamagnetic terms for momentum equation
   tauIC_tanh         = .false.              !< Full-MHD: suppress the diamagnetic term near the boundary
   tauIC_shift        = 0.02                 !< Full-MHD: tau_IC = tauIC * (0.5e0 - 0.5e0 * np.tanh(-(distance_bnd - tauIC_shift)/tauIC_steep) )
   tauIC_steep        = 0.01                 !< Full-MHD: tau_IC = tauIC * (0.5e0 - 0.5e0 * np.tanh(-(distance_bnd - tauIC_shift)/tauIC_steep) )

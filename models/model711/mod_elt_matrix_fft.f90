@@ -93,7 +93,7 @@ real*8     :: Jb, Jb_0
 real*8     :: amu_neo_prof(n_gauss,n_gauss), aki_neo_prof(n_gauss,n_gauss)
 real*8     :: V_source(n_gauss,n_gauss), dV_dpsi_source(n_gauss,n_gauss),dV_dz_source(n_gauss,n_gauss)
 real*8     :: dV_dpsi2,dV_dz2,dV_dpsi_dz,dV_dpsi3,dV_dpsi_dz2, dV_dpsi2_dz
-real*8     :: eta_ARAZ, tauIC_ARAZ, tauIC_AP, tauIC_rho, tauIC_tem
+real*8     :: eta_ARAZ, tauIC_ARAZ, tauIC_AP, tauIC_rho, tauIC_tem, tauIC_velocity
 logical    :: use_fft
 
 
@@ -737,11 +737,13 @@ tauIC_ARAZ= 0.d0  ! =0.0 to switch off diamagnetic terms for AR and AZ equations
 tauIC_AP  = 0.d0  ! =0.0 to switch off diamagnetic terms for A_phi equation
 tauIC_rho = 0.d0
 tauIC_tem = 0.d0
+tauIC_velocity = 0.d0
 if (eta_ARAZ_on  ) eta_ARAZ   = 1.d0 ! switched on by default
 if (tauIC_ARAZ_on) tauIC_ARAZ = 1.d0 ! switched on by default
 if (tauIC_AP_on)   tauIC_AP   = 1.d0 ! switched on by default
 if (tauIC_rho_on)  tauIC_rho  = 1.d0 ! switched on by default
 if (tauIC_tem_on)  tauIC_tem  = 1.d0 ! switched on by default
+if (tauIC_velocity_on)  tauIC_velocity  = 1.d0 ! switched on by default
 
 ! --- Initialise
 ELM_p  = 0.d0
@@ -1850,9 +1852,9 @@ do j=1,n_degrees
             gradTe_gradVstar__k = (Te0_p / R) * (v_p__k  / R)
 
             ! --- (V.grad)V        normal part                       diamagnetic part
-            Qconv_UR = - v * rho0 * ( UgradUR - Up0**2  / R )    - v * rho0 * ( VdiaGradUR - VdiaP0*Up0 / R )
-            Qconv_UZ = - v * rho0 * UgradUZ                      - v * rho0 * VdiaGradUZ
-            Qconv_Up = - v * rho0 * ( UgradUp + UR0*Up0 / R )    - v * rho0 * ( VdiaGradUp + VdiaP0*UR0 / R )
+            Qconv_UR = - v * rho0 * ( UgradUR - Up0**2  / R )    - tauIC_velocity * v * rho0 * ( VdiaGradUR - VdiaP0*Up0 / R )
+            Qconv_UZ = - v * rho0 * UgradUZ                      - tauIC_velocity * v * rho0 * VdiaGradUZ
+            Qconv_Up = - v * rho0 * ( UgradUp + UR0*Up0 / R )    - tauIC_velocity * v * rho0 * ( VdiaGradUp + VdiaP0*UR0 / R )
 
             JxB_UR__p = - BR0 * BgradVstar__p - Bp0**2 * v / R + ( v_R + v / R ) * ( 0.5d0 * BB2 )
             JxB_UR__k = - BR0 * BgradVstar__k
@@ -2754,58 +2756,58 @@ do j=1,n_degrees
                     PneoR_UZ     = 0.d0 ; PneoZ_UZ     = 0.d0
                   endif
 
-                  Qconv_UR_AR__p  =                                           - v * rho0 * ( VdiaGradUR_AR__p  - VdiaP0_AR__p *Up0 / R )
-                  Qconv_UR_AR__n  =                                           - v * rho0 * ( VdiaGradUR_AR__n  - VdiaP0_AR__n *Up0 / R )
-                  Qconv_UR_AZ__p  =                                           - v * rho0 * ( VdiaGradUR_AZ__p  - VdiaP0_AZ__p *Up0 / R )
-                  Qconv_UR_AZ__n  =                                           - v * rho0 * ( VdiaGradUR_AZ__n  - VdiaP0_AZ__n *Up0 / R )
-                  Qconv_UR_A3__p  =                                           - v * rho0 * ( VdiaGradUR_A3__p  - VdiaP0_A3__p *Up0 / R )
-                  Qconv_UR_A3__n  =                                           - v * rho0 * ( VdiaGradUR_A3__n  - VdiaP0_A3__n *Up0 / R )
-                  Qconv_UR_rho__p = - v * rho  * ( UgradUR - Up0**2  / R )    - v * rho0 * ( VdiaGradUR_rho__p - VdiaP0_rho__p*Up0 / R ) &
-                                                                              - v * rho  * ( VdiaGradUR        - VdiaP0       *Up0 / R )
-                  Qconv_UR_rho__n =                                           - v * rho0 * ( VdiaGradUR_rho__n - VdiaP0_rho__n*Up0 / R )
-                  Qconv_UR_Ti__p  =                                           - v * rho0 * ( VdiaGradUR_Ti__p  - VdiaP0_Ti__p *Up0 / R )
-                  Qconv_UR_Ti__n  =                                           - v * rho0 * ( VdiaGradUR_Ti__n  - VdiaP0_Ti__n *Up0 / R )
-                  Qconv_UR_UR__p  = - v * rho0 * ( UgradUR_UR__p         )    - v * rho0 * ( VdiaGradUR_UR__p                          )
-                  Qconv_UR_UR__n  = - v * rho0 * ( UgradUR_UR__n         )    - v * rho0 * ( VdiaGradUR_UR__n                          )
+                  Qconv_UR_AR__p  =                                           - tauIC_velocity * v * rho0 * ( VdiaGradUR_AR__p  - VdiaP0_AR__p *Up0 / R )
+                  Qconv_UR_AR__n  =                                           - tauIC_velocity * v * rho0 * ( VdiaGradUR_AR__n  - VdiaP0_AR__n *Up0 / R )
+                  Qconv_UR_AZ__p  =                                           - tauIC_velocity * v * rho0 * ( VdiaGradUR_AZ__p  - VdiaP0_AZ__p *Up0 / R )
+                  Qconv_UR_AZ__n  =                                           - tauIC_velocity * v * rho0 * ( VdiaGradUR_AZ__n  - VdiaP0_AZ__n *Up0 / R )
+                  Qconv_UR_A3__p  =                                           - tauIC_velocity * v * rho0 * ( VdiaGradUR_A3__p  - VdiaP0_A3__p *Up0 / R )
+                  Qconv_UR_A3__n  =                                           - tauIC_velocity * v * rho0 * ( VdiaGradUR_A3__n  - VdiaP0_A3__n *Up0 / R )
+                  Qconv_UR_rho__p = - v * rho  * ( UgradUR - Up0**2  / R )    - tauIC_velocity * v * rho0 * ( VdiaGradUR_rho__p - VdiaP0_rho__p*Up0 / R ) &
+                                                                              - tauIC_velocity * v * rho  * ( VdiaGradUR        - VdiaP0       *Up0 / R )
+                  Qconv_UR_rho__n =                                           - tauIC_velocity * v * rho0 * ( VdiaGradUR_rho__n - VdiaP0_rho__n*Up0 / R )
+                  Qconv_UR_Ti__p  =                                           - tauIC_velocity * v * rho0 * ( VdiaGradUR_Ti__p  - VdiaP0_Ti__p *Up0 / R )
+                  Qconv_UR_Ti__n  =                                           - tauIC_velocity * v * rho0 * ( VdiaGradUR_Ti__n  - VdiaP0_Ti__n *Up0 / R )
+                  Qconv_UR_UR__p  = - v * rho0 * ( UgradUR_UR__p         )    - tauIC_velocity * v * rho0 * ( VdiaGradUR_UR__p                          )
+                  Qconv_UR_UR__n  = - v * rho0 * ( UgradUR_UR__n         )    - tauIC_velocity * v * rho0 * ( VdiaGradUR_UR__n                          )
                   Qconv_UR_UZ__p  = - v * rho0 * ( UgradUR_UZ            )
                   Qconv_UR_UZ__n  = 0.d0
-                  Qconv_UR_Up__p  = - v * rho0 * ( UgradUR_Up-2.0*Up*Up0**2/R)- v * rho0 * (                   - VdiaP0       *Up  / R )
+                  Qconv_UR_Up__p  = - v * rho0 * ( UgradUR_Up-2.0*Up*Up0**2/R)- tauIC_velocity * v * rho0 * (                   - VdiaP0       *Up  / R )
                   Qconv_UR_Up__n  = 0.d0
 
-                  Qconv_UZ_AR__p  =                                           - v * rho0 * VdiaGradUZ_AR__p 
-                  Qconv_UZ_AR__n  =                                           - v * rho0 * VdiaGradUZ_AR__n 
-                  Qconv_UZ_AZ__p  =                                           - v * rho0 * VdiaGradUZ_AZ__p 
-                  Qconv_UZ_AZ__n  =                                           - v * rho0 * VdiaGradUZ_AZ__n 
-                  Qconv_UZ_A3__p  =                                           - v * rho0 * VdiaGradUZ_A3__p 
-                  Qconv_UZ_A3__n  =                                           - v * rho0 * VdiaGradUZ_A3__n 
-                  Qconv_UZ_rho__p = - v * rho  * UgradUZ                      - v * rho0 * VdiaGradUZ_rho__p - v * rho  * VdiaGradUZ
-                  Qconv_UZ_rho__n =                                           - v * rho0 * VdiaGradUZ_rho__n
-                  Qconv_UZ_Ti__p  =                                           - v * rho0 * VdiaGradUZ_Ti__p
-                  Qconv_UZ_Ti__n  =                                           - v * rho0 * VdiaGradUZ_Ti__n
+                  Qconv_UZ_AR__p  =                                           - tauIC_velocity * v * rho0 * VdiaGradUZ_AR__p 
+                  Qconv_UZ_AR__n  =                                           - tauIC_velocity * v * rho0 * VdiaGradUZ_AR__n 
+                  Qconv_UZ_AZ__p  =                                           - tauIC_velocity * v * rho0 * VdiaGradUZ_AZ__p 
+                  Qconv_UZ_AZ__n  =                                           - tauIC_velocity * v * rho0 * VdiaGradUZ_AZ__n 
+                  Qconv_UZ_A3__p  =                                           - tauIC_velocity * v * rho0 * VdiaGradUZ_A3__p 
+                  Qconv_UZ_A3__n  =                                           - tauIC_velocity * v * rho0 * VdiaGradUZ_A3__n 
+                  Qconv_UZ_rho__p = - v * rho  * UgradUZ                      - tauIC_velocity * v * rho0 * VdiaGradUZ_rho__p - tauIC_velocity * v * rho  * VdiaGradUZ
+                  Qconv_UZ_rho__n =                                           - tauIC_velocity * v * rho0 * VdiaGradUZ_rho__n
+                  Qconv_UZ_Ti__p  =                                           - tauIC_velocity * v * rho0 * VdiaGradUZ_Ti__p
+                  Qconv_UZ_Ti__n  =                                           - tauIC_velocity * v * rho0 * VdiaGradUZ_Ti__n
                   Qconv_UZ_UR__p  = - v * rho0 * UgradUZ_UR
                   Qconv_UZ_UR__n  = 0.d0
-                  Qconv_UZ_UZ__p  = - v * rho0 * UgradUZ_UZ__p                - v * rho0 * VdiaGradUZ_UZ__p
-                  Qconv_UZ_UZ__n  = - v * rho0 * UgradUZ_UZ__n                - v * rho0 * VdiaGradUZ_UZ__n
+                  Qconv_UZ_UZ__p  = - v * rho0 * UgradUZ_UZ__p                - tauIC_velocity * v * rho0 * VdiaGradUZ_UZ__p
+                  Qconv_UZ_UZ__n  = - v * rho0 * UgradUZ_UZ__n                - tauIC_velocity * v * rho0 * VdiaGradUZ_UZ__n
                   Qconv_UZ_Up__p  = - v * rho0 * UgradUZ_Up
                   Qconv_UZ_Up__n  = 0.d0
 
-                  Qconv_Up_AR__p  =                                           - v * rho0 * ( VdiaGradUp_AR__p  + VdiaP0_AR__p *UR0 / R )
-                  Qconv_Up_AR__n  =                                           - v * rho0 * ( VdiaGradUp_AR__n  + VdiaP0_AR__n *UR0 / R )
-                  Qconv_Up_AZ__p  =                                           - v * rho0 * ( VdiaGradUp_AZ__p  + VdiaP0_AZ__p *UR0 / R )
-                  Qconv_Up_AZ__n  =                                           - v * rho0 * ( VdiaGradUp_AZ__n  + VdiaP0_AZ__n *UR0 / R )
-                  Qconv_Up_A3__p  =                                           - v * rho0 * ( VdiaGradUp_A3__p  + VdiaP0_A3__p *UR0 / R )
-                  Qconv_Up_A3__n  =                                           - v * rho0 * ( VdiaGradUp_A3__n  + VdiaP0_A3__n *UR0 / R )
-                  Qconv_Up_rho__p = - v * rho  * ( UgradUp + UR0*Up0 / R )    - v * rho0 * ( VdiaGradUp_rho__p + VdiaP0_rho__p*UR0 / R ) &
-                                                                              - v * rho  * ( VdiaGradUp        + VdiaP0       *UR0 / R )
-                  Qconv_Up_rho__n =                                           - v * rho0 * ( VdiaGradUp_rho__n + VdiaP0_rho__n*UR0 / R )
-                  Qconv_Up_Ti__p  =                                           - v * rho0 * ( VdiaGradUp_Ti__p  + VdiaP0_Ti__p *UR0 / R )
-                  Qconv_Up_Ti__n  =                                           - v * rho0 * ( VdiaGradUp_Ti__n  + VdiaP0_Ti__n *UR0 / R )
-                  Qconv_Up_UR__p  = - v * rho0 * ( UgradUp_UR    + UR*Up0 / R)- v * rho0 * (                   + VdiaP0       *UR  / R )
+                  Qconv_Up_AR__p  =                                           - tauIC_velocity * v * rho0 * ( VdiaGradUp_AR__p  + VdiaP0_AR__p *UR0 / R )
+                  Qconv_Up_AR__n  =                                           - tauIC_velocity * v * rho0 * ( VdiaGradUp_AR__n  + VdiaP0_AR__n *UR0 / R )
+                  Qconv_Up_AZ__p  =                                           - tauIC_velocity * v * rho0 * ( VdiaGradUp_AZ__p  + VdiaP0_AZ__p *UR0 / R )
+                  Qconv_Up_AZ__n  =                                           - tauIC_velocity * v * rho0 * ( VdiaGradUp_AZ__n  + VdiaP0_AZ__n *UR0 / R )
+                  Qconv_Up_A3__p  =                                           - tauIC_velocity * v * rho0 * ( VdiaGradUp_A3__p  + VdiaP0_A3__p *UR0 / R )
+                  Qconv_Up_A3__n  =                                           - tauIC_velocity * v * rho0 * ( VdiaGradUp_A3__n  + VdiaP0_A3__n *UR0 / R )
+                  Qconv_Up_rho__p = - v * rho  * ( UgradUp + UR0*Up0 / R )    - tauIC_velocity * v * rho0 * ( VdiaGradUp_rho__p + VdiaP0_rho__p*UR0 / R ) &
+                                                                              - tauIC_velocity * v * rho  * ( VdiaGradUp        + VdiaP0       *UR0 / R )
+                  Qconv_Up_rho__n =                                           - tauIC_velocity * v * rho0 * ( VdiaGradUp_rho__n + VdiaP0_rho__n*UR0 / R )
+                  Qconv_Up_Ti__p  =                                           - tauIC_velocity * v * rho0 * ( VdiaGradUp_Ti__p  + VdiaP0_Ti__p *UR0 / R )
+                  Qconv_Up_Ti__n  =                                           - tauIC_velocity * v * rho0 * ( VdiaGradUp_Ti__n  + VdiaP0_Ti__n *UR0 / R )
+                  Qconv_Up_UR__p  = - v * rho0 * ( UgradUp_UR    + UR*Up0 / R)- tauIC_velocity * v * rho0 * (                   + VdiaP0       *UR  / R )
                   Qconv_Up_UR__n  = 0.d0
                   Qconv_Up_UZ__p  = - v * rho0 * ( UgradUp_UZ                )
                   Qconv_Up_UZ__n  = 0.d0
-                  Qconv_Up_Up__p  = - v * rho0 * ( UgradUp_Up__p + UR0*Up / R)- v * rho0 * ( VdiaGradUp_Up__p                          )
-                  Qconv_Up_Up__n  = - v * rho0 * ( UgradUp_Up__n             )- v * rho0 * ( VdiaGradUp_Up__n                          )
+                  Qconv_Up_Up__p  = - v * rho0 * ( UgradUp_Up__p + UR0*Up / R)- tauIC_velocity * v * rho0 * ( VdiaGradUp_Up__p                          )
+                  Qconv_Up_Up__n  = - v * rho0 * ( UgradUp_Up__n             )- tauIC_velocity * v * rho0 * ( VdiaGradUp_Up__n                          )
 
                   BgradVstar_AR__p = BR0_AR    * v_R
                   BgradVstar_AR__n = BZ0_AR__n * v_Z

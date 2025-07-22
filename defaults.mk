@@ -97,7 +97,8 @@ ifeq ($(COMPILER_FAMILY), intel)
     # FLAGS += -fpe0
     FFLAGS += -check all,noarg_temp_created
     FFLAGS += -check bounds
-    FFLAGS += -check uninit
+    # FFLAGS += -check uninit
+    FFLAGS += -warn uninitialized
     FFLAGS += -init=snan
     FFLAGS += -gen-interfaces -warn-interfaces
     F90FLAGS += -implicitnone

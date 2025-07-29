@@ -494,7 +494,7 @@ subroutine bootstrap_get_averaged_j_spline(my_id, node_list, element_list, psi_a
 
     ! --- Call the routine
     do i=1,flux_list%n_psi
-      flux_list%psi_values(i) = psi_axis + 1.2*(psi_bnd - psi_axis) * float(i)/float(flux_list%n_psi)
+      flux_list%psi_values(i) = psi_axis + bootstrap_psin_cutoff*(psi_bnd - psi_axis) * float(i)/float(flux_list%n_psi)
     enddo
     call find_flux_surfaces(my_id,xpoint,xcase,node_list,element_list,flux_list)
 
@@ -709,7 +709,7 @@ subroutine bootstrap_get_q_and_ft_splines(my_id, node_list, element_list, psi_ax
 
     ! --- Call the routine
     do i=1,flux_list%n_psi
-      flux_list%psi_values(i) = psi_axis + 1.2*(psi_bnd - psi_axis) * float(i)/float(flux_list%n_psi)
+      flux_list%psi_values(i) = psi_axis + bootstrap_psin_cutoff*(psi_bnd - psi_axis) * float(i)/float(flux_list%n_psi)
     enddo
     call find_flux_surfaces(my_id,xpoint,xcase,node_list,element_list,flux_list)
 

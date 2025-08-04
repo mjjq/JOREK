@@ -712,8 +712,6 @@ subroutine construct_matrix(mhd_sim, local_elms, n_local_elms, a_mat, rhs_vec, h
   !$omp end parallel
 
 
-  write(*,*) "amat during-construction", a_mat%val(1:3)
- 
   ! --- Memory tracking
   call tr_vnorms("cm_A_bef_bc", a_mat%val, a_mat%nnz)
   

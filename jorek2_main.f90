@@ -582,6 +582,12 @@ mpi_required = 0
 
   index_now = index_start  ! index_now: Index of current timestep
 
+  if (adaptive_timestep .and. (adaptive_timestep_threshold .ge. gmres_max_iter)) then
+    adaptive_timestep_threshold = int(gmres_max_iter/2)
+    if ( ( my_id == 0 )) write(*,*) "Adaptive timestepping enabled. Setting adaptive timestep threshold to"
+    if ( ( my_id == 0 )) write(*,*) "Setting adaptive timestep threshold to", adaptive_timestep_threshold
+  endif
+
   jstep_loop: do jstep = 1, 10 ! Go through the different values of the tstep_n and nstep_n arrays
 
   tstep = tstep_n(jstep)
@@ -596,9 +602,6 @@ mpi_required = 0
 
     index_now = index_now + 1
     
-    if (associated(rhs_vec%val)) write(*,*) "rhs_vals begin: ", rhs_vec%val(1:3)
-    if (associated(deltas%val)) write(*,*) "deltas begin: ", deltas%val(1:3)
-
     ! start from t=0 
     if (index_now <= 1) tstep_prev = tstep
     
@@ -642,13 +645,9 @@ mpi_required = 0
     ! Build the matrix 
     call clck_time_barrier(t0)
 
-    if (associated(a_mat%val)) write(*,*) "amat pre-construction", a_mat%val(1:3)
-
     !--------- Constructing Global Matrix
     mhd_sim%es => es ! assign pointer to the equilibrium state
     call construct_matrix(mhd_sim, mhd_sim%local_elms, mhd_sim%n_local_elms, a_mat, rhs_vec, harmonic_matrix=.false.)
-
-    write(*,*) "amat post construction", a_mat%val(1:3)
 
     call clck_time_barrier(t1); call clck_ldiff(t0,t1,tsecond)
     if (my_id.eq.0) write(*,FMT_TIMING) my_id, '# Elapsed time in construct global matrix :',tsecond
@@ -699,8 +698,9 @@ mpi_required = 0
       ! save previous time step
       tstep_prev = tstep
 
-      if ( (solver%iter_gmres .ge. adaptive_timestep_threshold) & 
-      .and. (tstep/adaptive_time_factor .ge. adaptive_time_min) ) then
+      if ( adaptive_timestep .and. &
+           (solver%iter_gmres .ge. adaptive_timestep_threshold) .and.  & 
+           (tstep/adaptive_time_factor .ge. adaptive_time_min)) then
           
         tstep = tstep/adaptive_time_factor
 

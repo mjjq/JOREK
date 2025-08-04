@@ -79,7 +79,9 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 fix_axis_nodes,                                     &
                 grid_to_wall, RZ_grid_inside_wall, eqdsk_psi_fact,  &
                 RZ_grid_jump_thres,                                 &
-                adaptive_time, equil, bench_without_plot,           &
+                adaptive_timestep, adaptive_time_factor,            &
+                adaptive_timestep_threshold, adaptive_time_min,     &
+                equil, bench_without_plot,                          &
                 eta_T_dependent, visco_T_dependent,                 &
                 zkpar_T_dependent, use_strumpack,                   & 
                 heatsource_psin, heatsource_sig,                    &

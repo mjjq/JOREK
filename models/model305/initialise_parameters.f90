@@ -77,7 +77,9 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 use_pastix, use_murge, use_murge_element, use_wsmp, &
                 refinement, force_central_node,                     &
                 fix_axis_nodes,                                     &
-                adaptive_time, equil, bench_without_plot,           &
+                adaptive_timestep, adaptive_time_factor,            &
+                adaptive_timestep_threshold, adaptive_time_min,     &
+                equil, bench_without_plot,                          &
                 eta_T_dependent, visco_T_dependent,                 &
                 zkpar_T_dependent, use_strumpack,                   & 
                 heatsource_psin, heatsource_sig,                    &

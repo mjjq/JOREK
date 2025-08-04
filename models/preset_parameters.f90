@@ -634,7 +634,7 @@ subroutine preset_parameters
   manipulate_psi_map(:,4) = 0.1
   manipulate_psi_map(:,5) = 0.1
   
-  adaptive_time      = .false.
+  adaptive_timestep_threshold = 51 ! By default, set to larger than gmres_iter, i.e. disable adaptive timestepping
   adaptive_time_min  = 1.d0
   adaptive_time_factor = 2.d0  
 

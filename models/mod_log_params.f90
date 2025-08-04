@@ -793,7 +793,7 @@ write(*,'(1x,a)',advance='no') ' USE_CATALYST : '
   write(*,LOGI_FMT) 'refinement            ', refinement
   write(*,LOGI_FMT) 'force_central_node    ', force_central_node
   write(*,LOGI_FMT) 'grid_to_wall          ', grid_to_wall
-  write(*,LOGI_FMT) 'adaptive_time         ', adaptive_time
+  write(*,INTG_FMT) 'adaptive_timestep_threshold', adaptive_timestep_threshold
   write(*,REAL_FMT) 'adaptive_time_min     ', adaptive_time_min
   write(*,REAL_FMT) 'adaptive_time_factor  ', adaptive_time_factor
   write(*,LOGI_FMT) 'equil                 ', equil

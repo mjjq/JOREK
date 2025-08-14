@@ -41,6 +41,7 @@ real*8,  intent(in)    :: R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint(2), Z_xpoi
 #define TEMPERATURE_DEPENDENT_UPDATE
 #define ENABLE_PARTICLE_SOURCE_IN_MOMENTUM_EQUATION
 ! #define ADD_DIAMAGNETIC_DRIFT_IN_SC_FOR_DENSITY_EQU
+! #define CASTOR3D_METHOD_AT_VI_REFERENCE_FRAME
 
 #define FULL_THERMALIZATION
 ! #define FIX_DENSITY # this will leads to the stabilization of n = 1 quasi-interchange mode
@@ -583,6 +584,12 @@ real*8     :: grad_BR_AR__phi, grad_BZ_AR__phi__nn, grad_Bp_AR__phi__n
 real*8     :: grad_BR_AZ__phi__nn, grad_BZ_AZ__phi, grad_Bp_AZ__phi__n
 real*8     :: grad_BR_A3__phi__n, grad_BZ_A3__phi__n, grad_Bp_A3__phi
 
+#ifdef CASTOR3D_METHOD_AT_VI_REFERENCE_FRAME
+real*8     :: BgradPi, BgradPi_AR__p, BgradPi_AR__n, BgradPi_AZ__p, BgradPi_AZ__n, BgradPi_A3, BgradPi_rho__p, &
+              BgradPi_rho__n, BgradPi_Ti__p, BgradPi_Ti__n
+real*8     :: pi0_R_Ti__p, pi0_R_rho__p, pi0_Z_Ti__p, pi0_Z_rho__p, pi0_p_Ti__p, pi0_p_Ti__n, pi0_p_rho__p, pi0_p_rho__n
+#endif
+
 !  --- For visco_par and visco_par_par
 #ifdef ENABLE_VISCO_PAR_AND_PARPAR
 real*8, dimension(n_var,n_var)                     :: Qjac_knn
@@ -744,6 +751,12 @@ if (tauIC_AP_on)   tauIC_AP   = 1.d0 ! switched on by default
 if (tauIC_rho_on)  tauIC_rho  = 1.d0 ! switched on by default
 if (tauIC_tem_on)  tauIC_tem  = 1.d0 ! switched on by default
 if (tauIC_velocity_on)  tauIC_velocity  = 1.d0 ! switched on by default
+
+#ifdef CASTOR3D_METHOD_AT_VI_REFERENCE_FRAME
+tauIC_rho = 0.d0
+tauIC_tem = 0.d0
+tauIC_velocity = -1.d0
+#endif
 
 ! --- Initialise
 ELM_p  = 0.d0
@@ -1270,6 +1283,7 @@ do j=1,n_degrees
           ! --- UR
           UR0   = eq_g(mp,var_UR,ms,mt)
           UR0_p = eq_p(mp,var_UR,ms,mt)
+          UR0_pp= eq_pp(mp,var_UR,ms,mt)
           UR0_s = eq_s(mp,var_UR,ms,mt)
           UR0_t = eq_t(mp,var_UR,ms,mt)
           UR0_R = (   y_t(ms,mt) * UR0_s  - y_s(ms,mt) * UR0_t ) / xjac
@@ -1291,6 +1305,7 @@ do j=1,n_degrees
           ! --- UZ
           UZ0   = eq_g(mp,var_UZ,ms,mt)
           UZ0_p = eq_p(mp,var_UZ,ms,mt)
+          UZ0_pp= eq_pp(mp,var_UZ,ms,mt)
           UZ0_s = eq_s(mp,var_UZ,ms,mt)
           UZ0_t = eq_t(mp,var_UZ,ms,mt)
           UZ0_R = (   y_t(ms,mt) * UZ0_s  - y_s(ms,mt) * UZ0_t ) / xjac
@@ -1312,6 +1327,7 @@ do j=1,n_degrees
           ! --- Up is defined u0_phi : V = .. + Up0 * e_phi (physical component)
           Up0   = eq_g(mp,var_Up,ms,mt)
           Up0_p = eq_p(mp,var_Up,ms,mt)
+          Up0_pp= eq_pp(mp,var_Up,ms,mt)
           Up0_s = eq_s(mp,var_Up,ms,mt)
           Up0_t = eq_t(mp,var_Up,ms,mt)
           Up0_R = (   y_t(ms,mt) * Up0_s  - y_s(ms,mt) * Up0_t ) / xjac
@@ -1727,6 +1743,10 @@ do j=1,n_degrees
           UgradRho = UR0 * rho0_R + UZ0 * rho0_Z + Up0 * rho0_p / R
           BgradPe  = rho0*BgradTe + Te0*BgradRho
 
+#ifdef CASTOR3D_METHOD_AT_VI_REFERENCE_FRAME
+          BgradPi  = rho0*BgradTi + Ti0*BgradRho
+#endif
+
           ! --- V.grad.V
           UgradUR  = UR0 * UR0_R + UZ0 * UR0_Z + Up0 * UR0_p / R
           UgradUZ  = UR0 * UZ0_R + UZ0 * UZ0_Z + Up0 * UZ0_p / R
@@ -2071,6 +2091,10 @@ do j=1,n_degrees
 
             Qvec_p(var_AR) = + v * (UZ0 * Bp0 - Up0 * BZ0)                             &
                              + tauIC_ARAZ * v * tau_IC*F0/rho0_corr/BB2 * BR0 * BgradPe&
+#ifdef CASTOR3D_METHOD_AT_VI_REFERENCE_FRAME
+                             + tauIC_ARAZ * v * tau_IC*F0/rho0_corr/BB2 * BR0 * BgradPi&
+                             - tauIC_ARAZ * v * tau_IC*F0/rho0_corr * pi0_R            &
+#endif
                              + eta_ARAZ * v * (eta_Z * Bp00 - eta_p * BZ0 / R )        &
                              - eta_ARAZ * eta_T * ( - v_Z * Bp00)                      &
                              - eta_ARAZ_const   * ( - v_Z * Bp00)                      &
@@ -2085,6 +2109,10 @@ do j=1,n_degrees
 
             Qvec_p(var_AZ) = + v * (Up0 * BR0 - UR0 * Bp0)                             &
                              + tauIC_ARAZ * v * tau_IC*F0/rho0_corr/BB2 * BZ0 * BgradPe&
+#ifdef CASTOR3D_METHOD_AT_VI_REFERENCE_FRAME
+                             + tauIC_ARAZ * v * tau_IC*F0/rho0_corr/BB2 * BZ0 * BgradPi&
+                             - tauIC_ARAZ * v * tau_IC*F0/rho0_corr * pi0_Z            &
+#endif
                              + eta_ARAZ * v * (eta_p / R * BR0 - eta_R * Bp00)         &
                              - eta_ARAZ * eta_T * ( + v_R * Bp00)                      &
                              - eta_ARAZ_const   * ( + v_R * Bp00)                      &
@@ -2099,6 +2127,10 @@ do j=1,n_degrees
 
             Qvec_p(var_A3) = + R * v * (UR0 * BZ0 - UZ0 * BR0)              &
                              + tauIC_AP * v * tau_IC*F0/rho0_corr/BB2 * R*Bp0 * BgradPe&
+#ifdef CASTOR3D_METHOD_AT_VI_REFERENCE_FRAME
+                             + tauIC_AP * v * tau_IC*F0/rho0_corr/BB2 * R*Bp0 * BgradPi&
+                             - tauIC_AP * v * tau_IC*F0/rho0_corr * R * pi0_p / R      &
+#endif
                              - eta_T * v_Z * R                * BR0         &
                              + eta_T * ( 2.d0 * v + R * v_R ) * BZ0         &
                              + R * v * (eta_R * BZ0 - eta_Z * BR0)          &
@@ -2501,6 +2533,29 @@ do j=1,n_degrees
                   BgradPe_rho__n =                    + Te0*BgradRho_rho__n
                   BgradPe_Te__p  = rho0*BgradTe_Te__p + Te *BgradRho
                   BgradPe_Te__n  = rho0*BgradTe_Te__n
+
+#ifdef CASTOR3D_METHOD_AT_VI_REFERENCE_FRAME
+                  BgradPi_AR__p  = rho0*BgradTi_AR__p + Ti0*BgradRho_AR__p
+                  BgradPi_AR__n  = rho0*BgradTi_AR__n + Ti0*BgradRho_AR__n
+                  BgradPi_AZ__p  = rho0*BgradTi_AZ__p + Ti0*BgradRho_AZ__p
+                  BgradPi_AZ__n  = rho0*BgradTi_AZ__n + Ti0*BgradRho_AZ__n
+                  BgradPi_A3     = rho0*BgradTi_A3    + Ti0*BgradRho_A3   
+                  BgradPi_rho__p = rho*BgradTi        + Ti0*BgradRho_rho__p
+                  BgradPi_rho__n =                    + Ti0*BgradRho_rho__n
+                  BgradPi_Ti__p  = rho0*BgradTi_Ti__p + Ti *BgradRho
+                  BgradPi_Ti__n  = rho0*BgradTi_Ti__n
+
+                  pi0_R_Ti__p     = rho0_R * Ti + rho0 * Ti_R
+                  pi0_R_rho__p    = rho_R * Ti0 + rho * Ti0_R
+
+                  pi0_Z_Ti__p     = rho0_Z * Ti + rho0 * Ti_Z
+                  pi0_Z_rho__p    = rho_Z * Ti0 + rho * Ti0_Z
+
+                  pi0_p_Ti__p     = rho0_p * Ti
+                  pi0_p_Ti__n     = rho0 * Ti_p__n
+                  pi0_p_rho__p    = rho * Ti0_p
+                  pi0_p_rho__n    = rho_p__n * Ti0
+#endif
 
                   UgradUR_UR__p = UR  * UR0_R + UR0 * UR_R + UZ0 * UR_Z
                   UgradUR_UR__n = Up0 * UR_p__n  / R
@@ -5912,6 +5967,10 @@ do j=1,n_degrees
                   Qjac_p (var_AR,var_AR) = + v * (UZ0   * Bp0_AR ) &
                                            + tauIC_ARAZ * v * tau_IC*F0/rho0_corr/BB2    * BR0 * BgradPe_AR__p &
                                            - tauIC_ARAZ * v * tau_IC*F0/rho0_corr/BB2**2 * BR0 * BgradPe * BB2_AR__p &
+#ifdef CASTOR3D_METHOD_AT_VI_REFERENCE_FRAME
+                                           + tauIC_ARAZ * v * tau_IC*F0/rho0_corr/BB2    * BR0 * BgradPi_AR__p &
+                                           - tauIC_ARAZ * v * tau_IC*F0/rho0_corr/BB2**2 * BR0 * BgradPi * BB2_AR__p &
+#endif
                                            + eta_ARAZ * v * (eta_Z * Bp0_AR ) &
                                            - eta_ARAZ * eta_T * ( - v_Z * Bp0_AR ) &
                                            - eta_ARAZ_const   * ( - v_Z * Bp0_AR ) &
@@ -5919,24 +5978,43 @@ do j=1,n_degrees
                   Qjac_n (var_AR,var_AR) = + v * (- Up0   * BZ0_AR__n     ) &
                                            + tauIC_ARAZ * v * tau_IC*F0/rho0_corr/BB2    * BR0 * BgradPe_AR__n &
                                            - tauIC_ARAZ * v * tau_IC*F0/rho0_corr/BB2**2 * BR0 * BgradPe * BB2_AR__n &
+#ifdef CASTOR3D_METHOD_AT_VI_REFERENCE_FRAME
+                                           + tauIC_ARAZ * v * tau_IC*F0/rho0_corr/BB2    * BR0 * BgradPi_AR__n &
+                                           - tauIC_ARAZ * v * tau_IC*F0/rho0_corr/BB2**2 * BR0 * BgradPi * BB2_AR__n &
+#endif
                                            + eta_ARAZ * v * (- eta_p * BZ0_AR__n / R )
                   Qjac_kn(var_AR,var_AR) = - eta_ARAZ * eta_T * ( + v_p__k * BZ0_AR__n / R)
 
                   Qjac_p (var_AR,var_AZ) = + v * (UZ0 * Bp0_AZ - Up0 * BZ0_AZ)          &
                                            + tauIC_ARAZ * v * tau_IC*F0/rho0_corr/BB2    * BR0 * BgradPe_AZ__p &
                                            - tauIC_ARAZ * v * tau_IC*F0/rho0_corr/BB2**2 * BR0 * BgradPe * BB2_AZ__p &
+#ifdef CASTOR3D_METHOD_AT_VI_REFERENCE_FRAME
+                                           + tauIC_ARAZ * v * tau_IC*F0/rho0_corr/BB2    * BR0 * BgradPi_AZ__p &
+                                           - tauIC_ARAZ * v * tau_IC*F0/rho0_corr/BB2**2 * BR0 * BgradPi * BB2_AZ__p &
+#endif
                                            + eta_ARAZ * v * (eta_Z * Bp0_AZ - eta_p * BZ0_AZ / R ) &
                                            - eta_ARAZ * eta_T * ( - v_Z * Bp0_AZ ) &
                                            - eta_ARAZ_const   * ( - v_Z * Bp0_AZ )
                   Qjac_n (var_AR,var_AZ) = + tauIC_ARAZ * v * tau_IC*F0/rho0_corr/BB2    * BR0_AZ__n * BgradPe &
                                            + tauIC_ARAZ * v * tau_IC*F0/rho0_corr/BB2    * BR0       * BgradPe_AZ__n &
                                            - tauIC_ARAZ * v * tau_IC*F0/rho0_corr/BB2**2 * BR0       * BgradPe * BB2_AZ__n
+#ifdef CASTOR3D_METHOD_AT_VI_REFERENCE_FRAME
+                  Qjac_n (var_AR,var_AZ) = Qjac_n (var_AR,var_AZ) + &
+                                             tauIC_ARAZ * v * tau_IC*F0/rho0_corr/BB2    * BR0_AZ__n * BgradPi &
+                                           + tauIC_ARAZ * v * tau_IC*F0/rho0_corr/BB2    * BR0       * BgradPi_AZ__n &
+                                           - tauIC_ARAZ * v * tau_IC*F0/rho0_corr/BB2**2 * BR0       * BgradPi * BB2_AZ__n
+#endif
                   Qjac_k (var_AR,var_AZ) = - eta_ARAZ * eta_T * ( + v_p__k * BZ0_AZ / R)
 
                   Qjac_p (var_AR,var_A3) = + v * (UZ0 * Bp0_A3 - Up0 * BZ0_A3)          &
                                            + tauIC_ARAZ * v * tau_IC*F0/rho0_corr/BB2    * BR0_A3 * BgradPe &
                                            + tauIC_ARAZ * v * tau_IC*F0/rho0_corr/BB2    * BR0    * BgradPe_A3 &
                                            - tauIC_ARAZ * v * tau_IC*F0/rho0_corr/BB2**2 * BR0    * BgradPe * BB2_A3 &
+#ifdef CASTOR3D_METHOD_AT_VI_REFERENCE_FRAME
+                                           + tauIC_ARAZ * v * tau_IC*F0/rho0_corr/BB2    * BR0_A3 * BgradPi &
+                                           + tauIC_ARAZ * v * tau_IC*F0/rho0_corr/BB2    * BR0    * BgradPi_A3 &
+                                           - tauIC_ARAZ * v * tau_IC*F0/rho0_corr/BB2**2 * BR0    * BgradPi * BB2_A3 &
+#endif
                                            + eta_ARAZ * v * (eta_Z * Bp0_A3 - eta_p * BZ0_A3 / R ) &
                                            - eta_ARAZ * eta_T * ( - v_Z * Bp0_A3 ) &
                                            - eta_ARAZ_const   * ( - v_Z * Bp0_A3 )
@@ -5949,6 +6027,16 @@ do j=1,n_degrees
                                            - tauIC_ARAZ * v * tau_IC*F0/rho0_corr**2/BB2 * BR0 * BgradPe * rho
                   Qjac_n (var_AR,var_rho)= - tauIC_ARAZ * v * tau_IC*F0/rho0_corr   /BB2 * BR0 * BgradPe_rho__n
 
+#ifdef CASTOR3D_METHOD_AT_VI_REFERENCE_FRAME
+                  Qjac_p (var_AR,var_rho)= Qjac_p (var_AR,var_rho) + &
+                                             tauIC_ARAZ * v * tau_IC*F0/rho0_corr   /BB2 * BR0 * BgradPi_rho__p &
+                                           - tauIC_ARAZ * v * tau_IC*F0/rho0_corr**2/BB2 * BR0 * BgradPi * rho  &
+                                           - tauIC_ARAZ * v * tau_IC*F0/rho0_corr * pi0_R_rho__p                &
+                                           + tauIC_ARAZ * v * tau_IC*F0/rho0_corr**2 * pi0_R * rho
+                  Qjac_n (var_AR,var_rho)= Qjac_n (var_AR,var_rho) - &
+                                             tauIC_ARAZ * v * tau_IC*F0/rho0_corr   /BB2 * BR0 * BgradPi_rho__n
+#endif
+
                   Qjac_p (var_AR,var_Te )= + tauIC_ARAZ * v * tau_IC*F0/rho0_corr/BB2 * BR0 * BgradPe_Te__p &
                                            + eta_ARAZ * v * (eta_Z_T * Bp00 - eta_p_T__p * BZ0 / R ) &
                                            - eta_ARAZ * eta_T_T * ( - v_Z * Bp00 )                   &
@@ -5956,6 +6044,12 @@ do j=1,n_degrees
                   Qjac_n (var_AR,var_Te )= + tauIC_ARAZ * v * tau_IC*F0/rho0_corr/BB2 * BR0 * BgradPe_Te__n &
                                            + eta_ARAZ * v * (              - eta_p_T__n * BZ0 / R )
                   Qjac_k (var_AR,var_Te )= - eta_ARAZ * eta_T_T * ( + v_p__k * BZ0 / R)
+
+#ifdef CASTOR3D_METHOD_AT_VI_REFERENCE_FRAME
+                  Qjac_p (var_AR,var_Ti )= + tauIC_ARAZ * v * tau_IC*F0/rho0_corr/BB2 * BR0 * BgradPi_Ti__p &
+                                           - tauIC_ARAZ * v * tau_IC*F0/rho0_corr * pi0_R_Ti__p
+                  Qjac_n (var_AR,var_Ti )= + tauIC_ARAZ * v * tau_IC*F0/rho0_corr/BB2 * BR0 * BgradPi_Ti__n
+#endif
 
                   !###################################################################################################
                   !#  equation 2   (Z component induction equation)                                                  #
@@ -5965,17 +6059,30 @@ do j=1,n_degrees
                   Qjac_p (var_AZ,var_AR) = + v * (Up0 * BR0_AR - UR0 * Bp0_AR)         &
                                            + tauIC_ARAZ * v * tau_IC*F0/rho0_corr/BB2    * BZ0 * BgradPe_AR__p &
                                            - tauIC_ARAZ * v * tau_IC*F0/rho0_corr/BB2**2 * BZ0 * BgradPe * BB2_AR__p &
+#ifdef CASTOR3D_METHOD_AT_VI_REFERENCE_FRAME
+                                           + tauIC_ARAZ * v * tau_IC*F0/rho0_corr/BB2    * BZ0 * BgradPi_AR__p &
+                                           - tauIC_ARAZ * v * tau_IC*F0/rho0_corr/BB2**2 * BZ0 * BgradPi * BB2_AR__p &
+#endif
                                            + eta_ARAZ * v * (eta_p / R * BR0_AR - eta_R * Bp0_AR) &
                                            - eta_ARAZ * eta_T * ( + v_R * Bp0_AR ) &
                                            - eta_ARAZ_const   * ( + v_R * Bp0_AR )
                   Qjac_n (var_AZ,var_AR) = + tauIC_ARAZ * v * tau_IC*F0/rho0_corr/BB2    * BZ0_AR__n * BgradPe &
                                            + tauIC_ARAZ * v * tau_IC*F0/rho0_corr/BB2    * BZ0       * BgradPe_AR__n &
                                            - tauIC_ARAZ * v * tau_IC*F0/rho0_corr/BB2**2 * BZ0       * BgradPe * BB2_AR__n
+#ifdef CASTOR3D_METHOD_AT_VI_REFERENCE_FRAME
+                  Qjac_n (var_AZ,var_AR) = + tauIC_ARAZ * v * tau_IC*F0/rho0_corr/BB2    * BZ0_AR__n * BgradPi &
+                                           + tauIC_ARAZ * v * tau_IC*F0/rho0_corr/BB2    * BZ0       * BgradPi_AR__n &
+                                           - tauIC_ARAZ * v * tau_IC*F0/rho0_corr/BB2**2 * BZ0       * BgradPi * BB2_AR__n
+#endif
                   Qjac_k (var_AZ,var_AR) = - eta_ARAZ * eta_T * ( - v_p__k * BR0_AR / R)
 
                   Qjac_p (var_AZ,var_AZ) = + v * (- UR0   * Bp0_AZ) &
                                            + tauIC_ARAZ * v * tau_IC*F0/rho0_corr/BB2    * BZ0 * BgradPe_AZ__p &
                                            - tauIC_ARAZ * v * tau_IC*F0/rho0_corr/BB2**2 * BZ0 * BgradPe * BB2_AZ__p &
+#ifdef CASTOR3D_METHOD_AT_VI_REFERENCE_FRAME
+                                           + tauIC_ARAZ * v * tau_IC*F0/rho0_corr/BB2    * BZ0 * BgradPi_AZ__p &
+                                           - tauIC_ARAZ * v * tau_IC*F0/rho0_corr/BB2**2 * BZ0 * BgradPi * BB2_AZ__p &
+#endif
                                            + eta_ARAZ * v * (- eta_R * Bp0_AZ) &
                                            - eta_ARAZ * eta_T * ( + v_R * Bp0_AZ ) &
                                            - eta_ARAZ_const   * ( + v_R * Bp0_AZ ) &
@@ -5983,6 +6090,10 @@ do j=1,n_degrees
                   Qjac_n (var_AZ,var_AZ) = + v * (Up0 * BR0_AZ__n)       &
                                            + tauIC_ARAZ * v * tau_IC*F0/rho0_corr/BB2    * BZ0 * BgradPe_AZ__n &
                                            - tauIC_ARAZ * v * tau_IC*F0/rho0_corr/BB2**2 * BZ0 * BgradPe * BB2_AZ__n &
+#ifdef CASTOR3D_METHOD_AT_VI_REFERENCE_FRAME
+                                           + tauIC_ARAZ * v * tau_IC*F0/rho0_corr/BB2    * BZ0 * BgradPi_AZ__n &
+                                           - tauIC_ARAZ * v * tau_IC*F0/rho0_corr/BB2**2 * BZ0 * BgradPi * BB2_AZ__n &
+#endif
                                            + eta_ARAZ * v * (eta_p / R * BR0_AZ__n)
                   Qjac_kn(var_AZ,var_AZ) = - eta_ARAZ * eta_T * ( - v_p__k * BR0_AZ__n / R)
 
@@ -5990,6 +6101,11 @@ do j=1,n_degrees
                                            + tauIC_ARAZ * v * tau_IC*F0/rho0_corr/BB2    * BZ0_A3 * BgradPe &
                                            + tauIC_ARAZ * v * tau_IC*F0/rho0_corr/BB2    * BZ0    * BgradPe_A3 &
                                            - tauIC_ARAZ * v * tau_IC*F0/rho0_corr/BB2**2 * BZ0    * BgradPe * BB2_A3 &
+#ifdef CASTOR3D_METHOD_AT_VI_REFERENCE_FRAME
+                                           + tauIC_ARAZ * v * tau_IC*F0/rho0_corr/BB2    * BZ0_A3 * BgradPi &
+                                           + tauIC_ARAZ * v * tau_IC*F0/rho0_corr/BB2    * BZ0    * BgradPi_A3 &
+                                           - tauIC_ARAZ * v * tau_IC*F0/rho0_corr/BB2**2 * BZ0    * BgradPi * BB2_A3 &
+#endif
                                            + eta_ARAZ * v * (eta_p / R * BR0_A3 - eta_R * Bp0_A3) &
                                            - eta_ARAZ * eta_T * ( + v_R * Bp0_A3 ) &
                                            - eta_ARAZ_const   * ( + v_R * Bp0_A3 )
@@ -6002,6 +6118,14 @@ do j=1,n_degrees
                                            - tauIC_ARAZ * v * tau_IC*F0/rho0_corr**2/BB2 * BZ0 * BgradPe * rho
                   Qjac_n (var_AZ,var_rho)= + tauIC_ARAZ * v * tau_IC*F0/rho0_corr   /BB2 * BZ0 * BgradPe_rho__n
 
+#ifdef CASTOR3D_METHOD_AT_VI_REFERENCE_FRAME
+                  Qjac_p (var_AZ,var_rho)= + tauIC_ARAZ * v * tau_IC*F0/rho0_corr   /BB2 * BZ0 * BgradPi_rho__p &
+                                           - tauIC_ARAZ * v * tau_IC*F0/rho0_corr**2/BB2 * BZ0 * BgradPi * rho  &
+                                           - tauIC_ARAZ * v * tau_IC*F0/rho0_corr * pi0_Z_rho__p                &
+                                           + tauIC_ARAZ * v * tau_IC*F0/rho0_corr**2 * pi0_Z * rho
+                  Qjac_n (var_AZ,var_rho)= + tauIC_ARAZ * v * tau_IC*F0/rho0_corr   /BB2 * BZ0 * BgradPi_rho__n
+#endif
+
                   Qjac_p (var_AZ,var_Te )= + tauIC_ARAZ * v * tau_IC*F0/rho0_corr/BB2 * BZ0 * BgradPe_Te__p &
                                            + eta_ARAZ * v * (eta_p_T__p / R * BR0 - eta_R_T * Bp00) &
                                            - eta_ARAZ * eta_T_T * ( + v_R * Bp00 )                  &
@@ -6009,6 +6133,12 @@ do j=1,n_degrees
                   Qjac_n (var_AZ,var_Te )= + tauIC_ARAZ * v * tau_IC*F0/rho0_corr/BB2 * BZ0 * BgradPe_Te__n &
                                            + eta_ARAZ * v * (eta_p_T__n / R * BR0 )
                   Qjac_k (var_AZ,var_Te )= - eta_ARAZ * eta_T_T * ( - v_p__k * BR0 / R)
+
+#ifdef CASTOR3D_METHOD_AT_VI_REFERENCE_FRAME
+                  Qjac_p (var_AZ,var_Ti )= + tauIC_ARAZ * v * tau_IC*F0/rho0_corr/BB2 * BZ0 * BgradPi_Ti__p &
+                                           - tauIC_ARAZ * v * tau_IC*F0/rho0_corr * pi0_Z_Ti__p
+                  Qjac_n (var_AZ,var_Ti )= + tauIC_ARAZ * v * tau_IC*F0/rho0_corr/BB2 * BZ0 * BgradPi_Ti__n
+#endif
 
                   !###################################################################################################
                   !#  equation 3   (Phi component induction equation)                                                #
@@ -6019,11 +6149,20 @@ do j=1,n_degrees
                                            + tauIC_AP * v * tau_IC*F0/rho0_corr/BB2    * R*Bp0_AR * BgradPe &
                                            + tauIC_AP * v * tau_IC*F0/rho0_corr/BB2    * R*Bp0    * BgradPe_AR__p &
                                            - tauIC_AP * v * tau_IC*F0/rho0_corr/BB2**2 * R*Bp0    * BgradPe * BB2_AR__p &
+#ifdef CASTOR3D_METHOD_AT_VI_REFERENCE_FRAME
+                                           + tauIC_AP * v * tau_IC*F0/rho0_corr/BB2    * R*Bp0_AR * BgradPi &
+                                           + tauIC_AP * v * tau_IC*F0/rho0_corr/BB2    * R*Bp0    * BgradPi_AR__p &
+                                           - tauIC_AP * v * tau_IC*F0/rho0_corr/BB2**2 * R*Bp0    * BgradPi * BB2_AR__p &
+#endif
                                            - eta_T * v_Z * R                * BR0_AR &
                                            + R * v * (- eta_Z * BR0_AR)
                   Qjac_n (var_A3,var_AR) = + R * v * (UR0 * BZ0_AR__n)                  &
                                            + tauIC_AP * v * tau_IC*F0/rho0_corr/BB2    * R*Bp0    * BgradPe_AR__n &
                                            - tauIC_AP * v * tau_IC*F0/rho0_corr/BB2**2 * R*Bp0    * BgradPe * BB2_AR__n &
+#ifdef CASTOR3D_METHOD_AT_VI_REFERENCE_FRAME
+                                           + tauIC_AP * v * tau_IC*F0/rho0_corr/BB2    * R*Bp0    * BgradPi_AR__n &
+                                           - tauIC_AP * v * tau_IC*F0/rho0_corr/BB2**2 * R*Bp0    * BgradPi * BB2_AR__n &
+#endif
                                            + eta_T * ( 2.d0 * v + R * v_R ) * BZ0_AR__n &
                                            + R * v * (eta_R * BZ0_AR__n)
 
@@ -6031,17 +6170,30 @@ do j=1,n_degrees
                                            + tauIC_AP * v * tau_IC*F0/rho0_corr/BB2    * R*Bp0_AZ * BgradPe &
                                            + tauIC_AP * v * tau_IC*F0/rho0_corr/BB2    * R*Bp0    * BgradPe_AZ__p &
                                            - tauIC_AP * v * tau_IC*F0/rho0_corr/BB2**2 * R*Bp0    * BgradPe * BB2_AZ__p &
+#ifdef CASTOR3D_METHOD_AT_VI_REFERENCE_FRAME
+                                           + tauIC_AP * v * tau_IC*F0/rho0_corr/BB2    * R*Bp0_AZ * BgradPi &
+                                           + tauIC_AP * v * tau_IC*F0/rho0_corr/BB2    * R*Bp0    * BgradPi_AZ__p &
+                                           - tauIC_AP * v * tau_IC*F0/rho0_corr/BB2**2 * R*Bp0    * BgradPi * BB2_AZ__p &
+#endif
                                            + eta_T * ( 2.d0 * v + R * v_R ) * BZ0_AZ &
                                             + R * v * (eta_R * BZ0_AZ)
                   Qjac_n (var_A3,var_AZ) = + R * v * (- UZ0 * BR0_AZ__n)                &
                                            + tauIC_AP * v * tau_IC*F0/rho0_corr/BB2    * R*Bp0    * BgradPe_AZ__n &
                                            - tauIC_AP * v * tau_IC*F0/rho0_corr/BB2**2 * R*Bp0    * BgradPe * BB2_AZ__n &
+#ifdef CASTOR3D_METHOD_AT_VI_REFERENCE_FRAME
+                                           + tauIC_AP * v * tau_IC*F0/rho0_corr/BB2    * R*Bp0    * BgradPi_AZ__n &
+                                           - tauIC_AP * v * tau_IC*F0/rho0_corr/BB2**2 * R*Bp0    * BgradPi * BB2_AZ__n &
+#endif
                                            - eta_T * v_Z * R                * BR0_AZ__n &
                                            + R * v * (- eta_Z * BR0_AZ__n)
 
                   Qjac_p (var_A3,var_A3) = + R * v * (UR0 * BZ0_A3 - UZ0 * BR0_A3)   &
                                            + tauIC_AP * v * tau_IC*F0/rho0_corr/BB2    * R*Bp0    * BgradPe_A3 &
                                            - tauIC_AP * v * tau_IC*F0/rho0_corr/BB2**2 * R*Bp0    * BgradPe * BB2_A3 &
+#ifdef CASTOR3D_METHOD_AT_VI_REFERENCE_FRAME
+                                           + tauIC_AP * v * tau_IC*F0/rho0_corr/BB2    * R*Bp0    * BgradPi_A3 &
+                                           - tauIC_AP * v * tau_IC*F0/rho0_corr/BB2**2 * R*Bp0    * BgradPi * BB2_A3 &
+#endif
                                            - eta_T * v_Z * R                * BR0_A3 &
                                            + eta_T * ( 2.d0 * v + R * v_R ) * BZ0_A3 &
                                            + R * v * (eta_R * BZ0_A3 - eta_Z * BR0_A3) &
@@ -6052,7 +6204,16 @@ do j=1,n_degrees
 
                   Qjac_p (var_A3,var_rho)= + tauIC_AP * v * tau_IC*F0/rho0_corr   /BB2 * R*Bp0 * BgradPe_rho__p &
                                            - tauIC_AP * v * tau_IC*F0/rho0_corr**2/BB2 * R*Bp0 * BgradPe * rho
-                  Qjac_n (var_A3,var_rho)= + tauIC_AP * v * tau_IC*F0/rho0_corr/BB2 * R*Bp0 * BgradPe_rho__n
+                  Qjac_n (var_A3,var_rho)= + tauIC_AP * v * tau_IC*F0/rho0_corr   /BB2 * R*Bp0 * BgradPe_rho__n
+
+#ifdef CASTOR3D_METHOD_AT_VI_REFERENCE_FRAME
+                  Qjac_p (var_A3,var_rho)= + tauIC_AP * v * tau_IC*F0/rho0_corr   /BB2 * R*Bp0 * BgradPi_rho__p &
+                                           - tauIC_AP * v * tau_IC*F0/rho0_corr**2/BB2 * R*Bp0 * BgradPi * rho  &
+                                           - tauIC_AP * v * tau_IC*F0/rho0_corr * R * pi0_p_rho__p / R      &
+                                           + tauIC_AP * v * tau_IC*F0/rho0_corr**2 * R * pi0_p / R * rho
+                  Qjac_n (var_A3,var_rho)= + tauIC_AP * v * tau_IC*F0/rho0_corr   /BB2 * R*Bp0 * BgradPi_rho__n &
+                                           - tauIC_AP * v * tau_IC*F0/rho0_corr * R * pi0_p_rho__n / R
+#endif
 
                   Qjac_p (var_A3,var_Te )= + tauIC_AP * v * tau_IC*F0/rho0_corr/BB2 * R*Bp0 * BgradPe_Te__p &
                                            - eta_T_T * v_Z * R                * BR0 &
@@ -6060,6 +6221,13 @@ do j=1,n_degrees
                                            + eta_T_T * v * current_source_Jp(ms,mt) &
                                            + R * v * (eta_R_T * BZ0 - eta_Z_T * BR0)
                   Qjac_n (var_A3,var_Te )= + tauIC_AP * v * tau_IC*F0/rho0_corr/BB2 * R*Bp0 * BgradPe_Te__n
+
+#ifdef CASTOR3D_METHOD_AT_VI_REFERENCE_FRAME
+                  Qjac_p (var_A3,var_Ti )= + tauIC_AP * v * tau_IC*F0/rho0_corr/BB2 * R*Bp0 * BgradPi_Ti__p &
+                                           - tauIC_AP * v * tau_IC*F0/rho0_corr * R * pi0_p_Ti__p / R
+                  Qjac_n (var_A3,var_Ti )= + tauIC_AP * v * tau_IC*F0/rho0_corr/BB2 * R*Bp0 * BgradPi_Ti__n &
+                                           - tauIC_AP * v * tau_IC*F0/rho0_corr * R * pi0_p_Ti__n / R
+#endif
 
                   !###################################################################################################
                   !#  equation 4   (R component momentum equation)                                                   #

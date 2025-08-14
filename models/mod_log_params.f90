@@ -509,6 +509,12 @@ write(*,'(1x,a)',advance='no') ' ENABLE_DIA_DRIFT_TEMPERATURE : '
   write(*,*) 'off'
 #endif
 
+write(*,'(1x,a)',advance='no') ' CASTOR3D_METHOD_AT_VI_REFERENCE_FRAME : '
+#ifdef CASTOR3D_METHOD_AT_VI_REFERENCE_FRAME
+  write(*,*) 'on'
+#else
+  write(*,*) 'off'
+#endif
 
   write(*,*)
   write(*,200)

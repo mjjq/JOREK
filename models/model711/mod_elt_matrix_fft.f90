@@ -1355,6 +1355,7 @@ do j=1,n_degrees
           drho0_corr_dn = 0.d0!dcorr_neg_dens_drho(rho0)
 #endif
           rho0_p    = eq_p(mp,var_rho,ms,mt)
+          rho0_pp   = eq_pp(mp,var_rho,ms,mt)
           rho0_s    = eq_s(mp,var_rho,ms,mt)
           rho0_t    = eq_t(mp,var_rho,ms,mt)
           rho0_R    = (   y_t(ms,mt) * rho0_s  - y_s(ms,mt) * rho0_t ) / xjac
@@ -1382,6 +1383,7 @@ do j=1,n_degrees
           dTi0_corr_dT = 0.d0 !dcorr_neg_temp_dT(Ti0) ! Improve the correction
 #endif
           Ti0_p    = eq_p(mp,var_Ti,ms,mt)
+          Ti0_pp   = eq_pp(mp,var_Ti,ms,mt)
           Ti0_s    = eq_s(mp,var_Ti,ms,mt)
           Ti0_t    = eq_t(mp,var_Ti,ms,mt)
           Ti0_R    = (   y_t(ms,mt) * Ti0_s  - y_s(ms,mt) * Ti0_t ) / xjac
@@ -1409,6 +1411,7 @@ do j=1,n_degrees
           dTe0_corr_dT = 0.d0 !dcorr_neg_temp_dT(Te0) ! Improve the correction
 #endif
           Te0_p    = eq_p(mp,var_Te,ms,mt)
+          Te0_pp   = eq_pp(mp,var_Te,ms,mt)
           Te0_s    = eq_s(mp,var_Te,ms,mt)
           Te0_t    = eq_t(mp,var_Te,ms,mt)
           Te0_R    = (   y_t(ms,mt) * Te0_s  - y_s(ms,mt) * Te0_t ) / xjac

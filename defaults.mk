@@ -91,16 +91,16 @@ ifeq ($(COMPILER_FAMILY), intel)
   ifeq ($(DEBUG_MAKE), 1)
     # Debug flags for ifort, see http://www.nas.nasa.gov/hecc/support/kb/recommended-intel-compiler-debugging-options_92.html
     FLAGS += -O0 -g -traceback
-    # FLAGS += -ftrapuv
     FLAGS += -debug all -debug-parameters
     FLAGS += -fstack-security-check
-    # FLAGS += -fpe0
     FFLAGS += -check all,noarg_temp_created
     FFLAGS += -check bounds
     # FFLAGS += -check uninit
+    # FFLAGS += -fsanitize=memory -fno-optimize-sibling-calls
     FFLAGS += -warn uninitialized
-    FFLAGS += -init=snan
     FFLAGS += -gen-interfaces -warn-interfaces
+    FFLAGS += -init=snan
+    F90FLAGS += -ftrapuv -fpe0
     F90FLAGS += -implicitnone
   endif
 
@@ -130,10 +130,10 @@ $(OBJDIR)/%.o:: $(1)%.f
 	$$(FC) $$(FLAGS) $$(FFLAGS) $$(F77FLAGS) $$(DEFINES) $$(INCLUDES) $$(EXTRA_FLAGS) -c $$< -o $(OBJDIR)/$$*.o
 
 $(OBJDIR)/%.o:: $(1)%.c
-	$$(CC) $$(FLAGS) $$(CFLAGS) $$(DEFINES) $$(INCLUDES) $$(EXTRA_FLAGS) -c $$< -o $(OBJDIR)/$$*.o
+	$$(CC) $$(FLAGS) $$(CFLAGS) $$(DEFINES) $$(INCLUDES) $$(EXTRA_FLAGS) $$(EXTRA_CPPFLAGS) -c $$< -o $(OBJDIR)/$$*.o
 
 $(OBJDIR)/%.o:: $(1)%.cpp
-	$$(CXX) $$(FLAGS) $$(CXXFLAGS) $$(DEFINES) $$(INCLUDES) $$(EXTRA_FLAGS) -c $$< -o $(OBJDIR)/$$*.o
+	$$(CXX) $$(FLAGS) $$(CXXFLAGS) $$(DEFINES) $$(INCLUDES) $$(EXTRA_FLAGS) $$(EXTRA_CPPFLAGS) -c $$< -o $(OBJDIR)/$$*.o
 endef
 # Template for generating dependencies from source file
 define F90_D_TEMPLATE
@@ -233,7 +233,8 @@ ifeq (1, $(USE_PASTIX6))
   DEFINES  := $(DEFINES) -DUSE_PASTIX6
   LIBS     := $(LIBS) $(LIB_PASTIX)
   INCLUDES := $(INCLUDES) $(INC_PASTIX)
-  EXTRA_FLAGS := $(EXTRA_FLAGS) -lstdc++ -std=c++14
+  EXTRA_FLAGS := $(EXTRA_FLAGS) -lstdc++
+  EXTRA_CPPFLAGS := -std=c++14
 endif
 
 ifeq (1, $(USE_WSMP))
@@ -285,7 +286,8 @@ ifeq (1, $(USE_STRUMPACK))
   DEFINES  := $(DEFINES) -DUSE_STRUMPACK
   LIBS     := $(LIBS) $(STRUMPACKLIB)
   INCLUDES := $(INCLUDES) $(STRUMPACKINC)
-  EXTRA_FLAGS := $(EXTRA_FLAGS) -lstdc++ -std=c++14
+  EXTRA_FLAGS := $(EXTRA_FLAGS) -lstdc++
+  EXTRA_CPPFLAGS := -std=c++14
 endif
 
 ifeq (1, $(ENABLE_VISCO_PAR_AND_PARPAR))

@@ -71,8 +71,9 @@ subroutine initialise_basis()
 
     phi = 2.d0*PI*float(k-1)/float(n_plane) / float(n_period)
 
-    HZ(1,k)   = 1.d0
-    HZ_p(1,k) = 0.d0
+    HZ(1,k)    = 1.d0
+    HZ_p(1,k)  = 0.d0
+    HZ_pp(1,k) = 0.d0
 
     do i=1,(n_tor-1)/2
 

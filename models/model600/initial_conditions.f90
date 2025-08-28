@@ -295,10 +295,10 @@ do in=2,n_tor
       node_list%node(i)%values(in,4,var_psi) = initial_pert_env_derivative/(ES%psi_bnd - ES%psi_axis) * node_list%node(i)%values(1,4,var_psi)
       
       if (xpoint2 .and. ((psi_n .gt. 1.d0) .or. ((Z .lt. ES%Z_xpoint(1)) .and. (xcase2 .ne. UPPER_XPOINT)) ) ) then
-        node_list%node(i)%values(in,1:4,var_w) = 0.d0
+        node_list%node(i)%values(in,1:4,var_psi) = 0.d0
       endif
       if (xpoint2 .and. ((psi_n .gt. 1.d0) .or. ((Z .gt. ES%Z_xpoint(2)) .and. (xcase2 .ne. LOWER_XPOINT)) ) ) then
-        node_list%node(i)%values(in,1:4,var_w) = 0.d0
+        node_list%node(i)%values(in,1:4,var_psi) = 0.d0
       endif
 
       node_list%node(i)%deltas = 0.d0

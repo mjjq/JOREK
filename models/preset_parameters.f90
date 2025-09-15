@@ -635,9 +635,9 @@ subroutine preset_parameters
   manipulate_psi_map(:,5) = 0.1
   
   adaptive_time = .false.                   ! Disable adaptive timestepping by default
-  adaptive_time_dec_iter = 1000000     ! By default, set to larger than gmres_max_iter so that this can be set to gmres_max_iter/2 if unspecified
+  adaptive_time_dec_iter = 25               ! By default, set to gmres_max_iter/2.
+  adaptive_time_dec_fac = 0.8d0               ! By default reduce timestep by factor of 0.8
   adaptive_time_min  = 1.d0                 ! Stop reducing timestep if tstep/adaptive_time_dec_fac less than 1.0
-  adaptive_time_dec_fac = 2.d0               ! Halve timestep by default
 
   equil              = .true.               ! compute equilibrium
   

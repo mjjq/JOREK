@@ -81,10 +81,10 @@ module phys_module
   logical :: RZ_grid_inside_wall  !< build the rectangular grid inside first wall
   real*8  :: RZ_grid_jump_thres   !< threshold to change R-resolution as RZ-grid gets sqeezed by limiter contour
   real*8  :: manipulate_psi_map(5,5) !< Option to manipulate Psi_boundary for the initial grid
-  logical :: adaptive_timestep    !< Flag to enable/disable adaptive timestepping
-  integer :: adaptive_timestep_threshold !< If number of solver iterations in previous timestep exceeds this value, timestep automatically halves
+  logical :: adaptive_time        !< Flag to enable/disable adaptive timestepping
+  integer :: adaptive_time_dec_iter !< If number of solver iterations in previous timestep exceeds this value, timestep automatically halves
   real*8  :: adaptive_time_min    !< Minimum adaptive timestep before simulation exits
-  real*8  :: adaptive_time_factor !< Adaptive timestep division factor. I.e. t_step_adapt = t_step/adaptive_time_factor
+  real*8  :: adaptive_time_dec_fac !< Adaptive timestep division factor. I.e. t_step_adapt = t_step/adaptive_time_dec_fac
   logical :: equil                !< compute equilibrium
   logical :: no_mach1_bc          !< Never apply Mach-1 BCs
   logical :: Mach1_openBC         !< Full-MHD: Apply Mach-1 BCs inside mod_boundary_matrix_open.f90 (or mod_boundary_conditions.f90)

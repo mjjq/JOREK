@@ -582,10 +582,10 @@ mpi_required = 0
 
   index_now = index_start  ! index_now: Index of current timestep
 
-  if (adaptive_timestep .and. (adaptive_timestep_threshold .ge. gmres_max_iter)) then
-    adaptive_timestep_threshold = int(gmres_max_iter/2)
+  if (adaptive_time .and. (adaptive_time_dec_iter .ge. gmres_max_iter)) then
+    adaptive_time_dec_iter = int(gmres_max_iter/2)
     if ( ( my_id == 0 )) write(*,*) "Adaptive timestepping enabled. Setting adaptive timestep threshold to"
-    if ( ( my_id == 0 )) write(*,*) "Setting adaptive timestep threshold to", adaptive_timestep_threshold
+    if ( ( my_id == 0 )) write(*,*) "Setting adaptive timestep threshold to", adaptive_time_dec_iter
   endif
 
   jstep_loop: do jstep = 1, 10 ! Go through the different values of the tstep_n and nstep_n arrays
@@ -698,11 +698,11 @@ mpi_required = 0
       ! save previous time step
       tstep_prev = tstep
 
-      if ( adaptive_timestep .and. &
-           (solver%iter_gmres .ge. adaptive_timestep_threshold) .and.  & 
-           (tstep/adaptive_time_factor .ge. adaptive_time_min)) then
+      if ( adaptive_time .and. &
+           (solver%iter_gmres .ge. adaptive_time_dec_iter) .and.  & 
+           (tstep/adaptive_time_dec_fac .ge. adaptive_time_min)) then
           
-        tstep = tstep/adaptive_time_factor
+        tstep = tstep/adaptive_time_dec_fac
 
         if ( my_id == 0 ) then
             write(*,*) 'ADAPTING TIMESTEP : ',tstep

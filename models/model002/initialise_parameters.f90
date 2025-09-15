@@ -102,8 +102,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 refinement, force_central_node,                     &
                 fix_axis_nodes,                                     &
                 equil, bench_without_plot,                          &
-                adaptive_timestep, adaptive_time_factor,            &
-                adaptive_timestep_threshold, adaptive_time_min,     &
+                adaptive_time, adaptive_time_dec_fac,            &
+                adaptive_time_dec_iter, adaptive_time_min,     &
                 eta_T_dependent, visco_T_dependent,                 &
                 zkpar_T_dependent, T_max_eta, T_max_eta_ohm,        & 
                 heatsource_psin, heatsource_sig,                    &

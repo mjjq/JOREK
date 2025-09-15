@@ -692,11 +692,14 @@ mpi_required = 0
       ! save previous time step
       tstep_prev = tstep
 
-      if ( adaptive_time .and. &
-           (solver%iter_gmres .ge. adaptive_time_dec_iter) .and.  & 
-           (tstep*adaptive_time_dec_fac .ge. adaptive_time_min)) then
-          
-        tstep = tstep*adaptive_time_dec_fac
+      if ( adaptive_time ) then
+        if ((solver%iter_gmres .ge. adaptive_time_dec_iter) .and. & 
+            (tstep*adaptive_time_dec_fac .ge. adaptive_time_min)) then
+          tstep = tstep*adaptive_time_dec_fac
+        else if ((solver%iter_gmres .lt. adaptive_time_inc_iter)) then
+          tstep = tstep*adaptive_time_inc_fac
+        endif
+
 
         if ( my_id == 0 ) then
             write(*,*) 'ADAPTING TIMESTEP : ',tstep

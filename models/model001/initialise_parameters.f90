@@ -59,8 +59,9 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 fix_axis_nodes,                                     &
                 grid_to_wall, use_strumpack,                        &
                 equil, bench_without_plot,                          &
-                adaptive_time, adaptive_time_dec_fac,            &
-                adaptive_time_dec_iter, adaptive_time_min,     &
+                adaptive_time, adaptive_time_dec_iter,              &
+                adaptive_time_dec_fac, adaptive_time_inc_iter,      &
+                adaptive_time_inc_fac, adaptive_time_min,           &
                 eta_T_dependent, visco_T_dependent,                 &
                 heatsource_psin, heatsource_sig,                    &
                 particlesource_psin, particlesource_sig,            &

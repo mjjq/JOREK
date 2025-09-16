@@ -99,7 +99,7 @@ ifeq ($(COMPILER_FAMILY), intel)
     # FFLAGS += -fsanitize=memory -fno-optimize-sibling-calls
     FFLAGS += -warn uninitialized
     FFLAGS += -gen-interfaces -warn-interfaces
-    FFLAGS += -init=snan
+    FFLAGS += -init=snan,arrays
     F90FLAGS += -ftrapuv -fpe0
     F90FLAGS += -implicitnone
   endif

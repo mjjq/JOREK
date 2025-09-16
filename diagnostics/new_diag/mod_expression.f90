@@ -282,6 +282,9 @@ module mod_expression
     call add(exprs_all, 'area        ', 'Poloidal cross section area inside psi_limit          ')
     call add(exprs_all, 'volume      ', 'Plasma volume, inside psi_limit                       ')
     call add(exprs_all, 'Ip_in       ', 'Plasma current, inside psi_limit                      ')
+    call add(exprs_all, 'beta_p      ', 'Poloidal beta, of the plasma inside LCFS              ')
+    call add(exprs_all, 'beta_t      ', 'Toroidal beta, of the plasma inside LCFS              ')
+    call add(exprs_all, 'beta_n      ', 'Normalized beta, of the plasma inside LCFS            ')
 #ifdef WITH_TiTe
     call add(exprs_all, 'Heat_srcin_e', 'Heat source for electron (inside  LCFS/givenPsi)      ')
     call add(exprs_all, 'Heat_srcin_i', 'Heat source for ion (inside  LCFS/givenPsi)           ')

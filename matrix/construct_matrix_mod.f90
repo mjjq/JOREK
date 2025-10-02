@@ -468,6 +468,7 @@ subroutine construct_matrix(mhd_sim, local_elms, n_local_elms, a_mat, rhs_vec, h
      enddo
   endif
   
+
 ! --- Loop over local elements
   !$omp do schedule(runtime)
   do ife = 1, n_local_elms
@@ -709,7 +710,8 @@ subroutine construct_matrix(mhd_sim, local_elms, n_local_elms, a_mat, rhs_vec, h
   !$omp end do
 
   !$omp end parallel
- 
+
+
   ! --- Memory tracking
   call tr_vnorms("cm_A_bef_bc", a_mat%val, a_mat%nnz)
   

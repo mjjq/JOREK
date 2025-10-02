@@ -605,7 +605,9 @@ mpi_required = 0
   !***********************************************************************
   !***********************************************************************
   
-  if (nstep > 0) call update_deltas(mhd_sim%node_list, deltas) ! create list of delta values in local_matrix module
+  if (nstep > 0) then 
+    call update_deltas(mhd_sim%node_list, deltas) ! create list of delta values in local_matrix module
+  endif
 
   call solver%setup() ! set sparse solver parameters
 
@@ -617,6 +619,9 @@ mpi_required = 0
   index_now = index_start  ! index_now: Index of current timestep
 
   jstep_loop: do jstep = 1, 10 ! Go through the different values of the tstep_n and nstep_n arrays
+
+  tstep = tstep_n(jstep)
+
   istep_loop: do istep = 1, nstep_n(jstep)
 
     call clck_time_barrier(t_itstart)
@@ -627,8 +632,6 @@ mpi_required = 0
 
     index_now = index_now + 1
     
-    tstep = tstep_n(jstep)
-
     ! start from t=0 
     if (index_now <= 1) tstep_prev = tstep
     
@@ -675,7 +678,7 @@ mpi_required = 0
     !--------- Constructing Global Matrix
     mhd_sim%es => es ! assign pointer to the equilibrium state
     call construct_matrix(mhd_sim, mhd_sim%local_elms, mhd_sim%n_local_elms, a_mat, rhs_vec, harmonic_matrix=.false.)
-  
+
     call clck_time_barrier(t1); call clck_ldiff(t0,t1,tsecond)
     if (my_id.eq.0) write(*,FMT_TIMING) my_id, '# Elapsed time in construct global matrix :',tsecond
       
@@ -725,14 +728,31 @@ mpi_required = 0
       ! save previous time step
       tstep_prev = tstep
 
+      if ( adaptive_time ) then
+        if ((solver%iter_gmres .ge. adaptive_time_dec_iter) .and. & 
+            (tstep*adaptive_time_dec_fac .ge. adaptive_time_min)) then
+          tstep = tstep*adaptive_time_dec_fac
+        else if ((solver%iter_gmres .lt. adaptive_time_inc_iter)) then
+          tstep = tstep*adaptive_time_inc_fac
+        endif
+
+
+        if ( my_id == 0 ) then
+            write(*,*) 'ADAPTING TIMESTEP : ',tstep
+            write(*,*)
+        endif
+
+      endif
+
     else
     
       if ( my_id == 0 ) then
         write(*,*)
-        write(*,'(a,i6.6,a)') '>>>>> NO CONVERGENCE AFTER ', solver%iter_gmres, ' ITERATIONS. ABORTING <<<<<'
-        write(*,*)
+        write(*,'(a,i6.6,a)') '>>>>> NO CONVERGENCE AFTER ', solver%iter_gmres, ' ITERATIONS. ABORTING. <<<<<'
       end if
+
       index_now = index_now - 1 ! Undo the time step
+
       exit jstep_loop
       
     endif

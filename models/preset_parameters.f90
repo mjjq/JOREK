@@ -588,7 +588,7 @@ subroutine preset_parameters
     gmres            = .true.
   end if
   
-  gmres_max_iter     = 200                  ! Max number of GMRES iterations
+  gmres_max_iter     = 50                  ! Max number of GMRES iterations
   gmres_tol          = 1.d-8                ! converge tolerance GMRES
   gmres_4            = 1.d3                 ! error estimate GMRES (ratio preconditioned versus non-preconditioned error
   gmres_m            = 20                   ! gmres restart parameter
@@ -644,8 +644,13 @@ subroutine preset_parameters
   manipulate_psi_map(:,4) = 0.1
   manipulate_psi_map(:,5) = 0.1
   
-  adaptive_time      = .false.              ! requires no_mpi for Pastix library
-  
+  adaptive_time = .false.                   ! Disable adaptive timestepping by default
+  adaptive_time_dec_iter = 25               ! Decrease timestep if gmres_iter exceeds this value
+  adaptive_time_dec_fac = 0.8d0             ! If so, decrease timestep by factor of 0.8
+  adaptive_time_inc_iter = 5               ! Increase timestep if gmres_iter falls below this value
+  adaptive_time_inc_fac = 1.2d0             ! If so, increase timestep by factor of 1.2
+  adaptive_time_min  = 1.d0                 ! Stop reducing timestep if tstep*adaptive_time_dec_fac less than 1.0
+
   equil              = .true.               ! compute equilibrium
   
   no_mach1_bc        = .false.              ! Never apply Mach-1 BCs

@@ -76,6 +76,7 @@ real*8  :: psi_axisym(n_gauss,n_gauss)
 
 real*8  :: x_g_1D(n_gauss),  x_s_1D(n_gauss),   x_t_1D(n_gauss)
 real*8  :: y_g_1D(n_gauss),  y_s_1D(n_gauss),   y_t_1D(n_gauss)
+real*8  :: psi_axisym_1D(n_gauss)
 real*8  :: eq_g_1D(n_plane,0:n_var,n_gauss), eq_s_1D(n_plane,0:n_var,n_gauss)
 real*8  :: delta_g_1D(n_plane,0:n_var,n_gauss)
 real*8  :: eq_t_1D(n_plane,0:n_var,n_gauss), eq_p_1D(n_plane,0:n_var,n_gauss)
@@ -727,7 +728,7 @@ do ife = ife_min, ife_max
         !dPdy = r0 * dTdy + T0 * drhody
 
 #ifdef WITH_TiTe
-        call sources(xpoint, xcase, y_g(ms,mt), Z_xpoint, ps0, psi_axis, psi_bnd, &
+        call sources(xpoint, xcase, y_g(ms,mt), Z_xpoint, psi_as_coord, psi_axis, psi_bnd, &
                      particle_source,heat_source_i,heat_source_e)
         heat_source = heat_source_i + heat_source_e
 #else
@@ -1390,6 +1391,8 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
   x_g_1D(:)  = 0.d0; x_s_1D(:)  = 0.d0;  x_t_1D(:)    = 0.d0;
   y_g_1D(:)  = 0.d0; y_s_1D(:)  = 0.d0;  y_t_1D(:)    = 0.d0;
 
+  psi_axisym_1D(:) = 0.d0
+
   eq_g_1D(:,:,:) = 0.d0; eq_s_1D(:,:,:) = 0.d0; delta_g_1D(:,:,:) = 0.d0;
 
   do k_vertex = 1, 2
@@ -1403,6 +1406,10 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
       y_g_1D(:)   = y_g_1D(:)  + node_k%x(1,k_dir,2) * k_size * H1  (k_vertex,k_dof,:)
       x_s_1D(:)   = x_s_1D(:)  + node_k%x(1,k_dir,1) * k_size * H1_s(k_vertex,k_dof,:)
       y_s_1D(:)   = y_s_1D(:)  + node_k%x(1,k_dir,2) * k_size * H1_s(k_vertex,k_dof,:)
+
+#ifdef fullmhd
+      psi_axisym_1D(:) = psi_axisym_1D(:) + node_k%values(1,k_dir,var_A3) * k_size * H1(k_vertex,k_dof,:)
+#endif
 
       do k=1,n_var
         do mp=1, n_plane 
@@ -1462,8 +1469,11 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
     grad_t = (/ -y_s_1D(ms) , x_s_1D(ms) /)   ! --- normal vector to the boundary 
 
     do mp=1, n_plane
-
+#ifdef fullmhd
+      ps0      = psi_axisym_1D(ms)
+#else
       ps0      = eq_g_1D(mp,var_psi ,ms)  !--- here sbnd is the direction along the boundary!!
+#endif
       ps0_sbnd = eq_s_1D(mp,var_psi ,ms)
       u0_sbnd  = eq_s_1D(mp,var_u   ,ms)
       zj0      = eq_g_1D(mp,var_Zj  ,ms) 

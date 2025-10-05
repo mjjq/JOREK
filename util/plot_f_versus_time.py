@@ -154,10 +154,10 @@ if __name__ == "__main__":
         contour = plt.contourf(times_2d, radial_2d, data_2d_plt, n_level, cmap='PiYG_r')
 
     cbar = plt.colorbar(contour)
-    # formatter = ticker.FormatStrFormatter('%.2e')  # 保留2位小数并使用科学计数法
+    # formatter = ticker.FormatStrFormatter('%.2e')
     # cbar.ax.yaxis.set_major_formatter(formatter)
-    # cbar.set_label(r'$\varepsilon_\parallel$ [V/m]')  # 添加单位
-    # cbar.locator = ticker.MaxNLocator(nbins=5)  # 设置最多5个刻度
+    # cbar.set_label(r'$\varepsilon_\parallel$ [V/m]')
+    # cbar.locator = ticker.MaxNLocator(nbins=5)
 
     plt.title(r'radial distribution of ' + variable_name + ' versus time' if args.title == "" else args.title, fontsize=font_size)
     plt.xlabel(r'normalized time' if args.xlabel == "" else args.xlabel, fontsize=font_size)        

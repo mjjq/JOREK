@@ -805,20 +805,23 @@ mpi_required = 0
     !-------------------------------------------------------- adapt time step (in progress...)
     mindelta = minval(deltas%val(1:deltas%n)); maxdelta = maxval(deltas%val(1:deltas%n));
     !
-    !if (gmres .and. adaptive_time) then        ! experimental
-    !   if (iter_gmres .ge. iter_big) then
-    !      tstep = tstep /2.d0
-    !      write(*,*) my_id,' REDUCTION TIMESTEP : ',tstep
-    !   elseif (max(abs(mindelta),abs(maxdelta)) .gt. 0.05) then
-    !      !	 tstep = tstep /2.d0
-    !      !	 iter_gmres = 99999
-    !      !	 write(*,*) my_id,' REDUCTION TIMESTEP : ',tstep
-    !   elseif (max(abs(mindelta),abs(maxdelta)) .lt. 0.001) then
-    !      !	 tstep = tstep * 2.d0
-    !      !	 iter_gmres = 99999
-    !      !	 write(*,*) my_id,' INCREASE TIMESTEP : ',tstep
+    ! if (gmres .and. adaptive_time) then        ! experimental
+    !   if (solver%iter_gmres .ge. solver%iter_precon) then
+    !      tstep = tstep / 2.d0
+    !      write(*,*) my_id, 'iter_gmres: ', solver%iter_gmres, ', REDUCTION TIMESTEP TO: ',tstep
+    !   elseif (solver%iter_gmres .le. (solver%iter_precon/2)) then
+    !      tstep = tstep * 2.d0
+    !      write(*,*) my_id, 'iter_gmres: ', solver%iter_gmres, ', INCREASE TIMESTEP TO: ',tstep
+    !   ! elseif (max(abs(mindelta),abs(maxdelta)) .gt. 0.05) then
+    !   !    	 tstep = tstep /2.d0
+    !   !    	 solver%iter_gmres = 99999
+    !   !    	 write(*,*) my_id, 'iter_gmres: ', solver%iter_gmres, ', REDUCTION TIMESTEP TO: ',tstep
+    !   ! elseif (max(abs(mindelta),abs(maxdelta)) .lt. 0.001) then
+    !   !    	 tstep = tstep * 2.d0
+    !   !    	 solver%iter_gmres = 99999
+    !   !    	 write(*,*) my_id, 'iter_gmres: ', solver%iter_gmres, ', INCREASE TIMESTEP TO: ',tstep
     !   endif
-    !endif
+    ! endif
 
     !--------------------------------------------------------- energies
     if ( (my_id == 0) .and. (.not. bench_without_plot) ) then

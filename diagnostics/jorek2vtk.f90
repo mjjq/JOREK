@@ -83,7 +83,7 @@ real*8                :: BR, BR_R, BR_Z, BR_p
 real*8                :: BZ, BZ_R, BZ_Z, BZ_p
 real*8                :: BP, BP_R, BP_Z, BP_p
 real*8                :: JxB_R,   JxB_Z,   JxB_p,   JxB_pol
-real*8                :: GradP_R, GradP_Z, GradP_p, GradP_pol
+real*8                :: GradP_R, GradP_Z, GradP_p, GradP_pol, JxB_GradP_r, JxB_GradP_p
 real*8                :: psi_axis,      R_axis,      Z_axis,      s_axis,      t_axis
 real*8                :: psi_xpoint(2), R_xpoint(2), Z_xpoint(2), s_xpoint(2), t_xpoint(2)
 real*8                :: psi_norm, psi_bnd, grad_psi
@@ -116,7 +116,7 @@ real*8                :: T0_corr, r0_corr, rn0_corr, ne_JOREK, T_or_Te, T_or_Te_
 integer               :: i_imp, offset_bgimp, i_bg     ! Loop for more than one background impurity
 integer               :: i_proj
 integer               :: i_psin, i_test, iimp(6), i_ne, ineu(7), ibg_tot, i_pellet(2), i_flux(8), i_neo(10), i_boot(2)
-integer               :: i_full(24), i_vec_B, i_vec_V, i_vec_E, i_vec_Jpol
+integer               :: i_full(26), i_vec_B, i_vec_V, i_vec_E, i_vec_Jpol
 integer, allocatable  :: iibg(:), iproj(:)
 character*36          :: imp_label, proj_label
 
@@ -422,6 +422,8 @@ endif
   call add_vtk_entry('Pres        ', 'Pres        ',    i_full(22), n_scalars, si_units, scalar_names) 
   call add_vtk_entry('dBphidt     ', 'dBphidt     ',    i_full(23), n_scalars, si_units, scalar_names)
   call add_vtk_entry('n_charge_SI ', 'n_charge_SI ',    i_full(24), n_scalars, si_units, scalar_names)
+  call add_vtk_entry('JxB_GradP_r ', 'JxB_GradP_r ',    i_full(25), n_scalars, si_units, scalar_names)
+  call add_vtk_entry('JxB_GradP_p ', 'JxB_GradP_p ',    i_full(26), n_scalars, si_units, scalar_names)
 #endif /*fullmhd*/
 ! --- end adding scalars
 
@@ -1031,7 +1033,10 @@ do i=1,element_list%n_elements
         GradP_Z    = rho_y*TT + rho*TT_y
         GradP_p    = rho_p*TT + rho*TT_p
         GradP_pol  = (GradP_R**2 + GradP_Z**2)**0.5
-        
+
+        JxB_GradP_r = ((JxB_R - GradP_R)**2 + (JxB_Z - GradP_Z)**2)**0.5
+        JxB_GradP_p = JxB_p - GradP_p
+
         scalars(inode,i_full(1)) = BR
         scalars(inode,i_full(2)) = BZ
         scalars(inode,i_full(3)) = BP
@@ -1044,6 +1049,9 @@ do i=1,element_list%n_elements
         ! --- Choose which direction
         scalars(inode,i_full(9)) = GradP_pol ! GradP_p ! GradP_Z  ! GradP_R !
         scalars(inode,i_full(10))= JxB_pol   ! JxB_p   ! JxB_Z    ! JxB_R   !
+
+        scalars(inode,i_full(25))= JxB_GradP_r
+        scalars(inode,i_full(26))= JxB_GradP_p
 
         ! --- V_parallel
         scalars(inode,i_full(11))= (VR*BR + VZ*BZ + Vp*Bp)  / sqrt(BR**2 + BZ**2 + Bp**2)

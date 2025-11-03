@@ -200,7 +200,10 @@ def plot_ascii_files(file_paths, xscaleType, yscaleType, title, xlabel, ylabel, 
                 print("file_path: ", file_path)
                 exit(-2)
 
-    plt.xlabel(column_names[column_plot_for_X] if xlabel == "" else xlabel, fontsize=font_size)  # Set the x-axis label based on the first file
+    if pow_for_X != 1.0:
+        plt.xlabel(f'{column_names[column_plot_for_X]}^{pow_for_X}' if xlabel == "" else xlabel, fontsize=font_size)  # Set the x-axis label based on the first file
+    else:
+        plt.xlabel(column_names[column_plot_for_X] if xlabel == "" else xlabel, fontsize=font_size)  # Set the x-axis label based on the first file
     plt.ylabel('Y-axis Label' if ylabel == "" else ylabel, fontsize=font_size)  # Set the y-axis label (customize as needed)
     if colorful:
         import matplotlib.cm as cm

@@ -865,6 +865,7 @@ module mod_expression
           phi     = tor_pos%phi
           HZ(1)   = 1.d0
           HZ_p(1) = 0.d0
+          HZ_pp(1) = 0.d0
           do i = 1, (n_tor-1) / 2
             HZ(2*i)      =                           cos(mode(2*i)  *phi)
             HZ_p(2*i)    = - float(mode(2*i))      * sin(mode(2*i)  *phi)
@@ -1571,8 +1572,6 @@ module mod_expression
           BP_R = ( AZ0_RR - AR0_RZ ) + Fprofile_R/BigR - Fprofile/BigR**2
           BP_Z = ( AZ0_RZ - AR0_ZZ ) + Fprofile_Z/BigR
           Bp_p = ( AZ0_Rp - AR0_Zp )
-          B_R  = ( BR_R + BZ_R + Bp_R ) / Btot
-          B_Z  = ( BR_Z + BZ_Z + Bp_Z ) / Btot
 
           BR_1 = ( A30_1_Z - AZ0_1_p )/ BigR
           BZ_1 = ( AR0_1_p - A30_1_R )/ BigR
@@ -1588,6 +1587,8 @@ module mod_expression
           Btheta   = sqrt( BR*BR + BZ*BZ )
           BB2      = Btor**2 + BR**2 + BZ**2
           Btot     = sqrt(BB2)
+          B_R  = ( BR_R + BZ_R + Bp_R ) / Btot
+          B_Z  = ( BR_Z + BZ_Z + Bp_Z ) / Btot
           zj0      = - (BZ_R - BR_Z) * BigR
           JpolR    = (R*BP_Z - BZ_p) / R
           JpolZ    = (BR_p - R*BP_R - Btor) / R
@@ -1599,6 +1600,8 @@ module mod_expression
           else
             FFprime_loc = zj0 !--- not fully correct, but better than to put 0...
           endif
+
+          Bnorm    = BR*nmlR + BZ*nmlZ
 
 #else
           BB2      = (F0*F0 + ps0_R * ps0_R + ps0_Z * ps0_Z ) / BigR**2

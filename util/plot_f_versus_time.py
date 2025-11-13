@@ -24,7 +24,7 @@ def find_nearest(array, target):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Plot radial distribution of q (y-axis) versus time (x-axis) from postproc files.")
+        description="Plot radial distribution of a variable (y-axis) versus time (x-axis) from postproc files.")
     parser.add_argument("-fp", "--file_path", default="postproc/",
                         help="Directory contains ???????_sxxxxx.dat.")
     parser.add_argument("-fn", "--file_name", default="exprs_midplane_s",

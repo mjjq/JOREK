@@ -19,22 +19,27 @@ real*8,allocatable :: xx(:),yy(:),zc(:), r_bnd(:), z_bnd(:), psi_bnd(:)
 real*8,allocatable :: df2_ext(:),rho_ext(:),T_ext(:),psi_ext(:),p_ext(:)
 real*8,allocatable :: tx(:),ty(:),c(:,:),wrk(:)
 integer,allocatable :: iwrk(:)
-real*8             :: angle, ellip, tria_u, tria_l, quad_u, quad_l, r0, z0, a0, PI
+real*8             :: angle, ellip, tria_u, tria_l, quad_u, quad_l, r0, z0, a0, PI, uplowratio
 real*8             :: dummy(3), xdim,zdim,rzero,rgrid1,zmid,rmaxis,zmaxis,ssimag,ssibry,bcentr,a_minor
 real*8             :: xip,xdum1,xdum2,xdum3,xdum4,xdum5
 real*8             :: psi_sep, sig_sep, tanh1, zmu0, zn0, zmd, rho_bnd
-real*8             :: pres_bnd, sig_ext, dpdpsi_sep
+real*8             :: p_bnd, pres_bnd, sig_ext, dpdpsi_sep
 real*8             :: xb ,xe, yb, ye, smth, fp, fout
 real*8             :: B_scale, I_scale, R_scale, F_axis, factor, dfactor
 real*8             :: ellip_in,tria_up_in,tria_low_in,quad_up_in,quad_low_in,r0_in,z0_in,a0_in
+real*8             :: central_density   !< particle density at the magnetic axis (in units of \f$10^{20} m^{-3}\f$)
+real*8             :: rho_0             !< Central normalized density (usually 1)
+real*8             :: rho_1             !< SOL normalized density
+real*8             :: rho_coef(10)      !< Density profile coefficients
 integer            :: mx,my,kx,ky,nxest,nyest,lwrk,kwrk,ier,iopt,nx,ny, i1, j1,iostatus, str_id,ierr
 integer            :: nr, nz, n_psi, nbbs, limitr, i,j, nc, n_tht, n_sol, n_ext, ivtk, n_tht_in
-character          :: AA*52, tokamak_name*50,boundary_type*100
+character          :: AA*52, tokamak_name*50, boundary_type*50, line*100
 character          :: buffer*80, lf*1, str1*12, str2*24, string_in*250,eqdsk_string_r_min*250
-
+integer            :: start_idx, end_idx
 namelist /eqdsk2jorek_params/ tokamak_name,boundary_type,ellip_in,tria_up_in,&
                               tria_low_in,quad_up_in,quad_low_in,n_tht_in,r0_in,&
-                              z0_in,a0_in,pres_bnd,B_scale,I_scale,R_scale,smth,eqdsk_string_r_min
+                              z0_in,a0_in,pres_bnd,B_scale,I_scale,R_scale,smth,eqdsk_string_r_min, &
+                              central_density, rho_0, rho_1, rho_coef, smth, nxest, nyest, uplowratio
 
 B_scale = 1.d0/1.d0  ! scaling factor for the vacuum toroidal field 
 I_scale = 1.d0/1.d0  ! scaling factor for the toroidal current
@@ -48,7 +53,7 @@ tokamak_name  = 'ITER'
 !>   R = R_axis + r_minor*cos(theta+triangularity*sin(theta)+quadrangularity*sin(2*theta))
 !>   Z = Z_axis + r_minor*ellipticity*sin(theta)
 !> ITER: CLOSE_WALL_FIT, OUTSIDE_WALL (default)
-!> JET: OUTSIDE_WALL, OUTSIDE_WALL_SHORT_LEG, CIRCULAR
+!> JET: OUTSIDE_WALL, OUTSIDE_WALL_SHORT_LEG, CIRCULAR, LIMITER, INSIDE_LIMITER
 !> DIII-D: OUTSIDE_WALL, NIMROD_M3DC1
 !>
 !> eqdsk_string_r_min: string of the EQDSK file identifying the plasma minor radius
@@ -63,20 +68,52 @@ pres_bnd    = 1.d1 ! default to 10 Pa
 smth = 1.d-6 ! Controls the tradeoff between closeness of fit and smoothness of fit. When too small, can lead to noise pick-up. When too large, can lead to inaccurate fit.
              ! May need hand tuning, based on a visual inspection of the output.
              ! For more details, see the documentation of regrid.f in libdierckx or the "Tips and Tricks" section of the Wiki page https://www.jorek.eu/wiki/doku.php?id=eqdsk2jorek.f90. 
+
+central_density = 1.d0
+rho_0           = 1.d0 
+rho_1           = 1.d0
+rho_coef        = 0.d0
+rho_coef(1)     = 0.d0
 write(*,*) ' EQDSK to JOREK2 '
 
 ! --- Read parameters from namelist file 'eqdsk2jorek.nml' if it exists
 open(42, file='eqdsk2jorek.nml', action='read', status='old', iostat=ierr)
 if ( ierr == 0 ) then
-  write(*,*) 'Reading parameters from eqdsk2jorek.nml namelist.'
-  read(42,eqdsk2jorek_params)
-  close(42)
+    ! Read lines until reaching the end of the file
+    do
+        read(42, '(a)', iostat=ierr) line
+        if (ierr /= 0) exit ! Exit loop if end of file or read error
+        if (index(line, 'tokamak_name') > 0) then    ! Check if tokamak_name is specified in the namelist file
+            if (index(line, '!') > 0 .and. index(line, '!') < index(line,'tokamak_name')) exit ! Check if the line is commented out
+            start_idx = index(line, "'") +1
+            end_idx = index(line(start_idx:), "'") + start_idx-2
+            tokamak_name = line(start_idx:end_idx) ! Extract the tokamak name value
+            if (tokamak_name == 'JET') then
+                boundary_type = 'OUTSIDE_WALL_SHORT_LEG' 
+                write(*,*) 'Changed the default boundary for JET'
+            end if
+        end if
+    end do
+    rewind(42)
+    write(*,*) 'Reading parameters from eqdsk2jorek.nml namelist.'
+    read(42,eqdsk2jorek_params)
+    close(42)
+else
+    write(*,*) '!!!NOTE: No/Could not open namelist file!!!!'
 end if 
+ 
 
 write(*,*) '   Tokamak = ', tokamak_name
 write(*,*) '   Boundary type = ',boundary_type
 write(*,*) '   EQDSK minor radius string = ',eqdsk_string_r_min
 write(*,*) '   pres_bnd = ',pres_bnd,' Pa'
+
+if (rho_1 .ne. 1.d0 ) then
+  write(*,"(1X,A, ' = ', 99ES12.4)") 'central_density       ', central_density
+  write(*,"(1X,A, ' = ', 99ES12.4)") 'rho_0                 ', rho_0
+  write(*,"(1X,A, ' = ', 99ES12.4)") 'rho_1                 ', rho_1
+  write(*,"(1X,A, ' = ', 99ES12.4)") 'rho_coef              ', rho_coef(1:5)
+endif 
 
 read(5,'(A52,2i4)') AA,nr,nz
 
@@ -114,6 +151,7 @@ open(21,file='profiles_eqdsk')
 do i=1,n_psi
   psi(i) = real(i-1)/real(n_psi-1)
   write(21,'(6e14.6)') psi(i),f(i),p(i),df2(i),dpr(i),q(i)
+  p(i) = p(i) + pres_bnd
 enddo
 close(21)
 
@@ -136,7 +174,7 @@ close(21)
 ! write boundary
 open(21,file='boundary.dat')
   do j=1,nbbs
-    write(21,'(2e16.8)') rbnd(j), zbnd(j)
+    write(21,'(3e16.8)') rbnd(j), zbnd(j), ssibry
   enddo
 close(21)
 
@@ -301,7 +339,7 @@ else if (tokamak_name == 'JET') then
     z0     = 0.15 * R_scale
     a0     = 1.1  * R_scale
 
-  !-------------------- try circular plasmas
+ !-------------------- try circular plasmas
   else if(boundary_type == 'CIRCULAR') then
     ellip  = 1.
     tria_u = 0.
@@ -312,6 +350,32 @@ else if (tokamak_name == 'JET') then
     r0     = rmaxis * R_scale
     z0     = zmaxis * R_scale
     a0     = a_minor * R_scale
+
+ !-------------------- contour that has same shape as limiter without the legs
+  else if(boundary_type == 'LIMITER') then
+    ellip  = 1.7264
+    tria_u = 0.276
+    tria_l = 0.2497
+    quad_u = -0.07
+    quad_l = 0.1274
+    n_tht  = 257
+    r0     = 2.875 * R_scale
+    z0     = 0.2213 * R_scale
+    a0     = 1.026 * R_scale
+
+ !-------------------- contour that fits inside the limiter and includes part of limiter leg
+  else if(boundary_type == 'INSIDE_LIMITER') then
+    ellip  = 1.785
+    tria_u = 0.26
+    tria_l = 0.2497
+    quad_u = -0.03
+    quad_l = 0.29
+    n_tht  = 257
+    r0     = 2.865 * R_scale
+    z0     = 0.19 * R_scale
+    a0     = 0.999 * R_scale
+
+
   else
     write(*,*) 'JOREK boundary not or wrongly specified, stopping' 
     stop
@@ -387,8 +451,8 @@ yb = yy(1)
 ye = yy(nz)
 kx = 3
 ky = 3
-nxest = 3*nr/4 ! Upper bound for the number of knots used for the splines. We set it a bit smaller than nr to test the quality of the fit.
-nyest = 3*nz/4
+!nxest = 3*nr/4 ! Upper bound for the number of knots used for the splines. We set it a bit smaller than nr to test the quality of the fit.
+!nyest = 3*nz/4
 lwrk  = 4+nxest*(my+2*kx+5)+nyest*(2*ky+5)+mx*(kx+1)+my*(ky+1)+my+nxest
 kwrk  = 3+mx+my+nxest+nyest
 write(*,*) ' Interpolation smoothing parameter = ',smth
@@ -422,7 +486,7 @@ allocate(wrk(lwrk),iwrk(kwrk))
 do i=1,n_tht/2
   angle = 2.d0 * PI * float(i-1)/float(n_tht-1)
   r_bnd(i) = r0 + a0 * cos(angle + tria_u*sin(angle) + quad_u*sin(2.d0*angle))
-  z_bnd(i) = z0 + a0 * ellip * sin(angle)
+  z_bnd(i) = z0 + a0 * ellip*uplowratio * sin(angle)
   call bispev(tx,nx,ty,ny,c,kx,ky,r_bnd(i),1,z_bnd(i),1,psi_bnd(i),wrk,lwrk,iwrk,kwrk,ier)
 enddo
 do i=n_tht/2+1,n_tht
@@ -431,6 +495,13 @@ do i=n_tht/2+1,n_tht
   z_bnd(i) = z0 + a0 * ellip * sin(angle)
   call bispev(tx,nx,ty,ny,c,kx,ky,r_bnd(i),1,z_bnd(i),1,psi_bnd(i),wrk,lwrk,iwrk,kwrk,ier)
 enddo
+
+! write r_bnd(j), z_bnd(j)                     
+open(21,file='JOREK_bnd.dat')
+  do j=1,n_tht
+    write(21,'(2e16.8)') r_bnd(j), z_bnd(j)
+  enddo
+close(21)
 
 
 write(*,*) ' plotting results'  
@@ -465,10 +536,19 @@ write(*,*) ' n_psi, n_sol, n_ext : ',n_psi, n_sol, n_ext
 allocate(df2_ext(n_ext),rho_ext(n_ext),T_ext(n_ext),psi_ext(n_ext),p_ext(n_ext))
 
 df2_ext(1:n_psi) = df2(1:n_psi)
-rho_ext(1:n_psi) = 1.d0
+if (rho_1 .ne. 1.d0) then
+  rho_ext(1:n_psi) = (rho_0 - rho_1) * &
+                     ( 1. + rho_coef(1)*psi(1:n_psi) + rho_coef(2)*psi(1:n_psi)**2. &
+                          + rho_coef(3)*psi(1:n_psi)**3. ) &
+                     * 0.5*( 1. - tanh((psi(1:n_psi) - rho_coef(5))/rho_coef(4)) )  + rho_1 
+else
+  rho_ext(1:n_psi) = 1.d0
+end if
 
 df2_ext(n_psi-1:n_ext) = df2_ext(n_psi)
-rho_ext(n_psi-1:n_ext) = rho_ext(n_psi)
+if (rho_1 .eq. 1.d0) then
+  rho_ext(n_psi-1:n_ext) = rho_ext(n_psi)
+end if
 
 psi_sep = 1.0d0     ! in normalised psi units
 sig_sep = 0.005     ! in normalised psi units
@@ -480,26 +560,55 @@ do i=n_psi+1,n_ext
 enddo
 
 zmu0 = 4.d-7 * PI
+ !!!!! extend the pressure profile (ends at psin=1) towards the SOL
+ !!!!! by considering a tanh decay of the following type:
+ !!!!! p_ext(psi) = (p(n_psi)-p_bnd)*( 1 - tanh((psi-psi_ext(n_psi))/sig_ext) ) + p_bnd
+ !!!!!
+ !!!!! where sig_ext = (p_bnd - p(n_psi)) / (dpdpsi_sep)
+ !!!!! with dpdpsi_sep = (p(n_psi)-p(n_psi-1))/(psi(n_psi)-psi(n_psi-1))
+ !!!!!
+ !!!!! the equation above matches p(n_psi) at psi(n_psi) and it goes down to p_bnd with 
+ !!!!! a slope sig_ext that matches dp/dpsi at psi(n_psi)
+ !!!!
+ !!!!p_bnd      =  p(n_psi) * 1.e-2 ! make p_bnd 100 times smaller than p_sep
+ !!!!!!maybe needed!!p_bnd      =  p(n_psi) * 1.e-1 ! make p_bnd 100 times smaller than p_sep
+ !!!!dpdpsi_sep = (p(n_psi)-p(n_psi-1))/(psi(n_psi)-psi(n_psi-1))
+ !!!!sig_ext    = (p_bnd - p(n_psi)) / dpdpsi_sep
+ !!!!
+ !!!!p_ext(      1:n_psi) = p(1:n_psi)
+ !!!!p_ext(n_psi+1:n_ext) = (p(n_psi)-p_bnd)*( 1 - tanh((psi_ext(n_psi+1:n_ext)-psi_ext(n_psi))/sig_ext) ) + p_bnd
+
+
 ! extend the pressure profile (ends at psin=1) towards the SOL
-! by considering a tanh decay of the following type:
-! p_ext(psi) = (p(n_psi)-pres_bnd)*( 1 - tanh((psi-psi_ext(n_psi))/sig_ext) ) + pres_bnd
+! by considering an exponential decay of the following type:
+! p_ext(psi) = p_bnd - a*exp(-(psi-psi_ext(n_psi))/sig_ext)
 !
-! where sig_ext = (pres_bnd - p(n_psi)) / (dpdpsi_sep)
+! where       a =   p(n_psi) - p_bnd
+! and   sig_ext = -(p(n_psi) - p_bnd) / (dpdpsi_sep)
 ! with dpdpsi_sep = (p(n_psi)-p(n_psi-1))/(psi(n_psi)-psi(n_psi-1))
 !
 ! the equation above matches p(n_psi) at psi(n_psi) and it goes down to pres_bnd with 
 ! a slope sig_ext that matches dp/dpsi at psi(n_psi)
 
-dpdpsi_sep = (p(n_psi)-p(n_psi-1))/(psi(n_psi)-psi(n_psi-1))
-sig_ext    = (pres_bnd - p(n_psi)) / dpdpsi_sep
+p_bnd      =  p(n_psi) * 1.e-2 ! make p_bnd 100 times smaller than p_sep
+!!maybe needed!!p_bnd      =  p(n_psi) * 1.e-1 ! make p_bnd 100 times smaller than p_sep
+dpdpsi_sep =   (p(n_psi)-p(n_psi-1))/(psi(n_psi)-psi(n_psi-1))
+sig_ext    = - (p(n_psi)-p_bnd) / dpdpsi_sep
 
 p_ext(      1:n_psi) = p(1:n_psi)
-p_ext(n_psi+1:n_ext) = (p(n_psi)-pres_bnd)*( 1 - tanh((psi_ext(n_psi+1:n_ext)-psi_ext(n_psi))/sig_ext) ) + pres_bnd
+p_ext(n_psi+1:n_ext) = p_bnd + (p(n_psi)-p_bnd) * exp(-(psi_ext(n_psi+1:n_ext)-psi_ext(n_psi))/sig_ext)
 
 do i=1,n_ext
   tanh1 = tanh((psi_ext(i) - psi_sep)/sig_sep)
   df2_ext(i) = df2_ext(i) * (0.5d0 - 0.5d0*tanh1)
-  rho_ext(i) = (rho_ext(i) - rho_bnd) * (0.5d0 - 0.5d0*tanh1) + rho_bnd
+  IF (RHO_1 .NE. 1.D0) THEn
+    rho_ext(i) = (rho_0 - rho_1) * &
+                 ( 1. + rho_coef(1)*psi_ext(i) + rho_coef(2)*psi_ext(i)**2. &
+                      + rho_coef(3)*psi_ext(i)**3. ) &
+                 * 0.5*( 1. - tanh((psi_ext(i) - rho_coef(5))/rho_coef(4)) ) + rho_1
+  else
+    rho_ext(i) = (rho_ext(i) - rho_bnd) * (0.5d0 - 0.5d0*tanh1) + rho_bnd
+  end if
 enddo
 T_ext(1:n_ext) = p_ext(1:n_ext)*zmu0 / rho_ext(1:n_ext)
 
@@ -545,28 +654,22 @@ close(21)
 
 open(21,file='jorek_namelist')
 
-write(21,*)             '***************************************'
-write(21,'(A)')        '*  namelist produced by eqdsk2jorek   *'
-write(21,*)             '***************************************'
+write(21,*)             '!***************************************'
+write(21,'(A)')         '!*  namelist produced by eqdsk2jorek   *'
+write(21,*)             '!***************************************'
 write(21,*) AA
-write(21,'(A,f8.3,A)') '   magnetic field   : ',Bcentr,' [T]'
-write(21,'(A,f8.3,A)') '   current          : ',xip/1d6,' [MA]'
-write(21,'(A,e14.6,A)')'   central pressure : ',p(1), '[Pa]'
-write(21,*)             '***************************************'
+write(21,'(A,f8.3,A)')  '!  magnetic field   : ',Bcentr,' [T]'
+write(21,'(A,f8.3,A)')  '!  current          : ',xip/1d6,' [MA]'
+write(21,'(A,e14.6,A)') '!  central pressure : ',p(1), '[Pa]'
+write(21,*)             '!**************************************'
 write(21,*)
 write(21,*) ' &in1'
 write(21,*) ' restart = .f.'
-write(21,*) ' regrid  = .f.'
 write(21,*) ' tstep   = 5.' 
 write(21,*) ' nstep   = 0' 
 write(21,*) ' nout = 1'
 write(21,*)
 write(21,*) ' time_evol_scheme= "Gears"'
-write(21,*)  
-write(21,*) ' tgnum(2) = 0.'
-write(21,*) ' tgnum(5) = 0.'
-write(21,*) ' tgnum(6) = 0.'
-write(21,*) ' tgnum(7) = 0.'
 write(21,*)
 write(21,*) ' gmres_4     = 1.d0'
 write(21,*) ' iter_precon = 21'
@@ -575,6 +678,7 @@ write(21,*) ' gmres_m     = 20'
 write(21,*)
 write(21,*) ' !use_mumps =.true.'
 write(21,*) ' !use_pastix = .false.'
+write(21,*) ' use_mumps_prj =.false.'
 write(21,*) ' write_ps = .false.'
 write(21,*)
 write(21,*) ' !_____________________________________boundary definition'
@@ -653,16 +757,14 @@ write(21,*)
 write(21,*) ' bc_natural_open = .false.'
 write(21,*) ' gamma_sheath = 2'
 write(21,*)
+if (rho_1 .ne. 1.d0 ) then
+  write(21,*) ' central_density =', central_density
+endif
 write(21,*) ' rho_file     = "jorek_density"'
 write(21,*) ' T_file       = "jorek_temperature"'
 write(21,*) ' ffprime_file = "jorek_ffprime"'
 write(21,*)
 write(21,*) ' D_par     = 0.d0'
-write(21,*) ' D_par_coeff(1) = 0.d0'
-write(21,*) ' D_par_coeff(2) = 0.d0'
-write(21,*) ' D_par_coeff(3) = 0.d0'
-write(21,*) ' D_par_coeff(4) = 0.d0'
-write(21,*) ' D_par_coeff(5) = 0.d0'
 write(21,*) ' D_perp(1) = 1.d-5'
 write(21,*) ' D_perp(2) = 0.85d0'
 write(21,*) ' D_perp(3) = 0.d0'
@@ -682,6 +784,22 @@ write(21,*)
 write(21,*) ' &end'
 
 close(21)
+
+
+open(21,file='RZpsi_boundary.dat')
+! We change or not the sign of psi_bnd depending on the sign of Ip because (we assume that) in EQDSK files, 
+! psi_axis is always < psi_boundary, whatever the direction of Ip.
+if (xip>0) then
+  do j=1,n_tht
+    write(21,'(3e16.8)') r_bnd(j), z_bnd(j), psi_bnd(j)
+  enddo
+else
+  do j=1,n_tht
+    write(21,'(3e16.8)') r_bnd(j), z_bnd(j), -psi_bnd(j)
+  enddo
+end if
+close(21)
+
 
 call finplt
 

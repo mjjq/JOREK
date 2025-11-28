@@ -4,9 +4,10 @@ import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 import plot_multiple_files as plmf
+import plot_poincare_all
 
 dynamo2si = 2170378.6432790086 # V/m
-
+time2si   = 4.607490970E-04    # ms
 
 parser = argparse.ArgumentParser(
     description=(
@@ -22,7 +23,6 @@ args = parser.parse_args()
 step = args.step
 # step = '080000'
 
-
 # The non-constant components (m/n != 0/0) in FFT should be multipled by 2, 
 # because there are two equivalent +k and -k counterparts, 
 # which is missed in JOREK (jorek2_four.f90). 
@@ -35,13 +35,15 @@ step = args.step
 ########################################################
 
 file_path = 'four_results/'
-file_U_radial   = file_path + 'U_radial_n001_m001_step'     + step
-file_B_radial   = file_path + 'B_radial_n001_m001_step'     + step
+file_U_radial   = file_path +   'U_radial_n001_m001_step'     + step
+file_B_radial   = file_path +   'B_radial_n001_m001_step'     + step
 file_U_poloidal = file_path + 'U_poloidal_n001_m001_step' + step
 file_B_poloidal = file_path + 'B_poloidal_n001_m001_step' + step
 
 column_names, data = plmf.read_ascii_file(file_U_radial, 1)
+print(f'x axis in {file_U_radial} is {column_names[0]}')
 psin  = data[:,0]; rhop = np.sqrt(psin)
+    
 am_Ur = data[:,1] * 2
 re_Ur = data[:,2] * 2
 im_Ur = data[:,3] * 2
@@ -119,11 +121,13 @@ dynamo00_ref = data[:,12]
 #                                                      #
 ########################################################
 
-dynamo11_method1 = 1/2 * (re_Ur * re_Bp + im_Ur * im_Bp - re_Up * re_Br - im_Up * im_Br)
-dynamo11_method2 = 1/2 * (am_Ur * am_Bp * np.cos(ph_Ur - ph_Bp) - am_Up * am_Br * np.cos(ph_Up - ph_Br))
-
 dynamo00_method1 = 1 * (re_Ur00 * re_Bp00 - re_Up00 * re_Br00)
 dynamo00_method2 = 1 * (am_Ur00 * am_Bp00 - am_Up00 * am_Br00)
+
+dynamo11_method1 = 1/2 * (re_Ur * re_Bp + im_Ur * im_Bp - re_Up * re_Br - im_Up * im_Br)
+dynamo11_method2 = 1/2 * (am_Ur * am_Bp * np.cos(ph_Ur - ph_Bp) - am_Up * am_Br * np.cos(ph_Up - ph_Br))
+dynamo11_method2_UrBp = 1/2 * (   am_Ur * am_Bp * np.cos(ph_Ur - ph_Bp))
+dynamo11_method2_UpBr = 1/2 * ( - am_Up * am_Br * np.cos(ph_Up - ph_Br))
 
 
 ########################################################
@@ -140,12 +144,18 @@ plt.plot(rhop, dynamo11_method1 * dynamo2si, 'g-', label = 'dynamo11_method1')
 plt.plot(rhop, dynamo11_method2 * dynamo2si, 'r+', label = 'dynamo11_method2')
 plt.plot(rhop_ref, dynamo11_ref * dynamo2si, 'k-', label = 'dynamo11_ref')
 
+plt.plot(rhop, dynamo11_method2_UrBp * dynamo2si, '--', label = 'dynamo11_method2_UrBp')
+plt.plot(rhop, dynamo11_method2_UpBr * dynamo2si, '--', label = 'dynamo11_method2_UpBr')
+
 # ph_Br2 = np.angle(re_Br + 1j * im_Br)
 # plt.plot(ph_Br2)
 # plt.plot(ph_Br, 'o')
+time = plot_poincare_all.get_time(int(step)) * time2si
+print(f'time = {time}')
+plt.title(f'time = {"{:.1f}".format(time)} [ms]')
 
 plt.grid()
-plt.xlim(0, 1)
+plt.xlim(0, 0.8)
 legend = plt.legend()
 legend.set_draggable(True)
 

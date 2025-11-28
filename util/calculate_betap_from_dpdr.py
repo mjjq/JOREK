@@ -69,7 +69,7 @@ if __name__ == "__main__":
         description="Plot radial distribution of beta_p (y-axis) versus time (x-axis) from postproc files.")
     parser.add_argument("-fp", "--file_path", default="postproc_with_Btheta/",
                         help="Directory contains ???????_sxxxxx.dat.")
-    parser.add_argument("-fn", "--file_name", default="exprs_midplane_s",
+    parser.add_argument("-fn", "--file_name", default="exprs_averaged_s",
                         help="Prefix of the files to be plotted.")
     parser.add_argument("-fz", "--fontsize", type=int, default=15,
                         help="Define the fontsize of figure.")

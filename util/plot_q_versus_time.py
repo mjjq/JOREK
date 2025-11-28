@@ -35,6 +35,8 @@ plt.rcParams.update({
 
 # Function to extract the number from the filename
 def extract_number(filename):
+    if "_step" in filename:
+        return int(filename.split('_step')[1])    
     return int(filename.split('_s')[1].split('.')[0])
 
 if __name__ == "__main__":

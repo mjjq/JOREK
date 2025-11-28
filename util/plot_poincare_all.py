@@ -26,7 +26,7 @@ def get_time(num, path = './'):
     return time
 
 # Define a function to read data from the file and create scatter plots for each group
-def read_and_plot_data(filename, xlabel_name, ylabel_name, lines_to_skip=1, font_size = 15, multiplier_for_time = 1.0, colorful = False):
+def read_and_plot_data(filename, xlabel_name, ylabel_name, lines_to_skip=1, font_size = 15, multiplier_for_time = 1.0, colorful = False, title = ''):
     fig = plt.figure(figsize=(7, 6))
     data = []
     current_group = []
@@ -94,6 +94,8 @@ def read_and_plot_data(filename, xlabel_name, ylabel_name, lines_to_skip=1, font
         title_str = title_str + ', '
         title_ext = r'normalized time = ' + time_str if multiplier_for_time == 1.0 else r'time = ' + time_str + '[ms]'
         plt.title(title_str + title_ext, fontsize = font_size)
+    if title:
+        plt.title(title)
     plt.tight_layout()
     # plt.legend()
     # plt.show()
@@ -107,6 +109,7 @@ if __name__ == "__main__":
                         help="filename contains the data.")
     parser.add_argument("-fz", "--fontsize", type=int, default=15,
                         help="Define the fontsize of figure.")
+    parser.add_argument("-ti", "--title", default="", help="Manually define the title.")
     parser.add_argument("-tm", "--multiplier_for_time", type=float, default=1.0,
                         help="Multiple the time-data with the specified value.")
     parser.add_argument("-cful", "--colorful", type=lambda x: (str(x).lower() in ['true', '1', 'yes']), default=False,
@@ -134,7 +137,7 @@ if __name__ == "__main__":
             xlabel_name = 'X'
             ylabel_name = 'Y'
 
-        fig = read_and_plot_data(filename, xlabel_name, ylabel_name, lines_to_skip, args.fontsize, args.multiplier_for_time, args.colorful)
+        fig = read_and_plot_data(filename, xlabel_name, ylabel_name, lines_to_skip, args.fontsize, args.multiplier_for_time, args.colorful, args.title)
         
         if(args.png_output):
             figure_name = filename[:-4] + ".png"

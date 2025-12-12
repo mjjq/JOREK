@@ -282,18 +282,15 @@ module diffusivities
       
     else
 
-      write(*,*) "WARNING, dzk_i_dpsi has not been implemented for analytical profile!"
-      call exit(-1)
+      get_dzk_i_dpsi_perp1 = - ZK_i_perp(1) * ZK_i_perp(2) / (2.d0 * ZK_i_perp(4)) * &
+                             ( 1.d0 - tanh((psin - ZK_i_perp(5)) / ZK_i_perp(4))**2 )
       
-      ! get_zk_iperp1 = ZK_i_perp(1) * ( (1.d0-ZK_i_perp(2)) +                                              &
-      !   ZK_i_perp(2) *(0.5d0 - 0.5d0*tanh((psin-ZK_i_perp(5))/ZK_i_perp(4))) )
-      
-      ! if ( jorek_model >= 300 ) then
-        
-      !   get_zk_iperp1 = get_zk_iperp1 + ZK_i_perp(6)*ZK_i_perp(2) *                                          &
-      !     ((0.5d0 - 0.5d0*tanh((-psin+ZK_i_perp(5)+ZK_i_perp(3)) /ZK_i_perp(4))))
-        
-      ! end if
+      if ( jorek_model >= 300 ) then
+        get_dzk_i_dpsi_perp1 = get_dzk_i_dpsi_perp1 + ZK_i_perp(6) * ZK_i_perp(2) / (2.d0 * ZK_i_perp(4)) * &
+                               ( 1.d0 - tanh(( -psin + ZK_i_perp(5) + ZK_i_perp(3) ) / ZK_i_perp(4))**2 )    
+      end if
+    
+      get_dzk_i_dpsi_perp1 = get_dzk_i_dpsi_perp1 / delta_psi
       
     end if
     
@@ -336,18 +333,15 @@ module diffusivities
       
     else
       
-      write(*,*) "WARNING, dzk_e_dpsi has not been implemented for analytical profile!"
-      call exit(-1)
-
-      ! get_zk_eperp1 = ZK_e_perp(1) * ( (1.d0-ZK_e_perp(2)) +                                              &
-      !   ZK_e_perp(2) *(0.5d0 - 0.5d0*tanh((psin-ZK_e_perp(5))/ZK_e_perp(4))) )
+      get_dzk_e_dpsi_perp1 = - ZK_e_perp(1) * ZK_e_perp(2) / (2.d0 * ZK_e_perp(4)) * &
+                             ( 1.d0 - tanh((psin - ZK_e_perp(5)) / ZK_e_perp(4))**2 )
       
-      ! if ( jorek_model >= 300 ) then
-        
-      !   get_zk_eperp1 = get_zk_eperp1 + ZK_e_perp(6)*ZK_e_perp(2) *                                          &
-      !     ((0.5d0 - 0.5d0*tanh((-psin+ZK_e_perp(5)+ZK_e_perp(3)) /ZK_e_perp(4))))
-        
-      ! end if
+      if ( jorek_model >= 300 ) then
+        get_dzk_e_dpsi_perp1 = get_dzk_e_dpsi_perp1 + ZK_e_perp(6) * ZK_e_perp(2) / (2.d0 * ZK_e_perp(4)) * &
+                               ( 1.d0 - tanh(( -psin + ZK_e_perp(5) + ZK_e_perp(3) ) / ZK_e_perp(4))**2 )    
+      end if
+    
+      get_dzk_e_dpsi_perp1 = get_dzk_e_dpsi_perp1 / delta_psi
       
     end if
     
@@ -389,19 +383,16 @@ module diffusivities
       ! get_dzk_dpsi_perp1  = ( num_zk_perp_y1(left) * aux2 + num_zk_perp_y1(right) * aux1 ) / delta_psi
       
     else
-
-      write(*,*) "WARNING, dzk_dpsi has not been implemented for analytical profile!"
-      call exit(-1)
       
-      ! get_zk_perp1 = ZK_perp(1) * ( (1.d0-ZK_perp(2)) +                                              &
-      !   ZK_perp(2) *(0.5d0 - 0.5d0*tanh((psin-ZK_perp(5))/ZK_perp(4))) )
+      get_dzk_dpsi_perp1 = - ZK_perp(1) * ZK_perp(2) / (2.d0 * ZK_perp(4)) * &
+                             ( 1.d0 - tanh((psin - ZK_perp(5)) / ZK_perp(4))**2 )
       
-      ! if ( jorek_model >= 300 ) then
-        
-      !   get_zk_perp1 = get_zk_perp1 + ZK_perp(6)*ZK_perp(2) *                                          &
-      !     ((0.5d0 - 0.5d0*tanh((-psin+ZK_perp(5)+ZK_perp(3)) /ZK_perp(4))))
-        
-      ! end if
+      if ( jorek_model >= 300 ) then
+        get_dzk_dpsi_perp1 = get_dzk_dpsi_perp1 + ZK_perp(6) * ZK_perp(2) / (2.d0 * ZK_perp(4)) * &
+                               ( 1.d0 - tanh(( -psin + ZK_perp(5) + ZK_perp(3) ) / ZK_perp(4))**2 )    
+      end if
+    
+      get_dzk_dpsi_perp1 = get_dzk_dpsi_perp1 / delta_psi
       
     end if
     

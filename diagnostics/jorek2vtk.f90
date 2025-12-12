@@ -281,7 +281,12 @@ enddo
 if ( SI_units ) then
 #ifdef fullmhd
    variable_names_si(var_rho)='ne20_m-3    '
-   variable_names_si(var_T  )='Te_keV      '
+   if (with_TiTe) then
+    variable_names_si(var_Ti)='Ti_keV      '
+    variable_names_si(var_Te)='Te_keV      '
+   else
+    variable_names_si(var_T  )='Te_keV      '
+   endif
    variable_names_si(var_UR )='VR_km/s     '
    variable_names_si(var_UZ )='VZ_km/s     '
    variable_names_si(var_Up )='Vp_km/s     '

@@ -644,6 +644,14 @@ open(21,file='jorek_temperature')
 do i=1,n_ext
   write(21,*) psi_ext(i),T_ext(i)
 enddo
+open(21,file='jorek_temperature_Ti')
+do i=1,n_ext
+  write(21,*) psi_ext(i),T_ext(i)/2
+enddo
+open(21,file='jorek_temperature_Te')
+do i=1,n_ext
+  write(21,*) psi_ext(i),T_ext(i)/2
+enddo
 close(21)
 open(21,file='jorek_pressure')
 do i=1,n_ext

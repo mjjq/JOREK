@@ -522,7 +522,7 @@ rho_ext(1:n_psi) = 1.d0
 df2_ext(n_psi-1:n_ext) = df2_ext(n_psi)
 rho_ext(n_psi-1:n_ext) = rho_ext(n_psi)
 
-psi_sep = 1.0d0     ! in normalised psi units
+psi_sep = 10.0d0     ! in normalised psi units
 sig_sep = 0.005     ! in normalised psi units
 rho_bnd = 0.01      ! in jorek units
 

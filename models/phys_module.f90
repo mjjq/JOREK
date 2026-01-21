@@ -313,6 +313,7 @@ module phys_module
   real*8  :: particlesource_fix_profile_tsteps           !< time-scale over which this is enforced (ideally >=2)
   real*8  :: particlesource_fix_profile_psi_max          !< max psi-norm where this is applied
   logical :: particlesource_fix_profile_const_Dperp      !< particle source to fix profile onto input Grad-Shafranov profile, only works with constant D_perp profile
+  logical :: particlesource_fix_profile_target_profile_const_Dperp      !< particle source to the target profile, only works with constant D_perp profile
   logical :: heatsource_fix_profile                      !< adaptive source to fix profile onto input Grad-Shafranov profile
   logical :: heatsource_fix_profile_allow_negative       !< allow a negative source
   real*8  :: heatsource_fix_profile_tsteps               !< time-scale over which this is enforced (ideally >=2)
@@ -732,6 +733,21 @@ module phys_module
   real*8, allocatable :: num_rho_y1(:)   !< First derivatives of density profile (\f$ d\rho/d\Psi_N \f$)
   real*8, allocatable :: num_rho_y2(:)   !< Second derivatives of density profile (\f$ d^2\rho/d\Psi_N^2 \f$)
   real*8, allocatable :: num_rho_y3(:)   !< Third derivatives of density profile (\f$ d^3\rho/d\Psi_N^3 \f$)
+
+  !> @name Analytical input profile for the target density
+  real*8  :: rho_target_0             !< Central normalized target density (usually 1)
+  real*8  :: rho_target_1             !< SOL normalized target density
+  real*8  :: rho_target_coef(10)      !< Density target profile coefficients
+
+  !> @name Numerical input profile for the target density
+  character(len=512)  :: rho_target_file        !< ASCII file the target density profile is read from.
+  logical             :: num_rho_target         !< automatically set true if rho_target_file /= 'none'
+  integer             :: num_rho_target_len     !< Number of points in target rho profile
+  real*8, allocatable :: num_rho_target_x(:)    !< Psi_N values of target rho profile points
+  real*8, allocatable :: num_rho_target_y0(:)   !< Density values of target rho profile
+  real*8, allocatable :: num_rho_target_y1(:)   !< First derivatives of target density profile (\f$ d\rho/d\Psi_N \f$)
+  real*8, allocatable :: num_rho_target_y2(:)   !< Second derivatives of target density profile (\f$ d^2\rho/d\Psi_N^2 \f$)
+  real*8, allocatable :: num_rho_target_y3(:)   !< Third derivatives of target density profile (\f$ d^3\rho/d\Psi_N^3 \f$)
 
   !> @name Analytical input profile for the temperature
   real*8  :: T_0            !< Central normalized temperature

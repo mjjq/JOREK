@@ -18,6 +18,15 @@ subroutine read_num_profiles(my_id)
     rho_0 = num_rho_y0(1)
     num_rho_y0 = num_rho_y0 - rho_1
   end if
+
+  num_rho_target = ( rho_target_file /= 'none' )
+  if ( num_rho_target .and. ( my_id == 0 ) ) then
+    call readProf(num_rho_target_x, num_rho_target_y0, num_rho_target_len, rho_target_file)
+    call check_num_prof(num_rho_target, num_rho_target_x, num_rho_target_y0, num_rho_target_len, 'rho_target', check_positive=.true.)
+    rho_target_1 = num_rho_target_y0(num_rho_target_len)
+    rho_target_0 = num_rho_target_y0(1)
+    num_rho_target_y0 = num_rho_target_y0 - rho_target_1
+  end if
   
   num_rhon = ( rhon_file /= 'none' )
   if ( num_rhon .and. ( my_id == 0 ) ) then

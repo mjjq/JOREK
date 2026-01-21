@@ -15,6 +15,12 @@ subroutine derive_num_profiles(my_id)
       call derivProf(num_rho_x, num_rho_y1, num_rho_len, num_rho_y2)
       call derivProf(num_rho_x, num_rho_y2, num_rho_len, num_rho_y3)
     end if
+
+    if ( num_rho_target ) then
+      call derivProf(num_rho_target_x, num_rho_target_y0, num_rho_target_len, num_rho_target_y1)
+      call derivProf(num_rho_target_x, num_rho_target_y1, num_rho_target_len, num_rho_target_y2)
+      call derivProf(num_rho_target_x, num_rho_target_y2, num_rho_target_len, num_rho_target_y3)
+    end if
     
     if ( num_T ) then
       call derivProf(num_T_x, num_T_y0, num_T_len, num_T_y1)

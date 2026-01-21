@@ -713,6 +713,16 @@ write(*,'(1x,a)',advance='no') ' CASTOR3D_METHOD_AT_VI_REFERENCE_FRAME : '
     write(*,REAL_FMT) 'rho_1                 ', rho_1
   end if
 
+  if ( .not. num_rho_target) then
+    write(*,REAL_FMT) 'rho_target_0          ', rho_target_0
+    write(*,REAL_FMT) 'rho_target_1          ', rho_target_1
+    write(*,REAL_FMT) 'rho_target_coef       ', rho_target_coef(1:5)
+  else
+    write(*,CHAR_FMT) 'rho_target_file       ', trim(rho_target_file)
+    write(*,REAL_FMT) 'rho_target_0          ', rho_target_0
+    write(*,REAL_FMT) 'rho_target_1          ', rho_target_1
+  end if
+
   if (with_neutrals) then
     if ( .not. num_rhon ) then
       write(*,REAL_FMT) 'rhon_0                ', rhon_0
@@ -865,6 +875,7 @@ write(*,'(1x,a)',advance='no') ' CASTOR3D_METHOD_AT_VI_REFERENCE_FRAME : '
   write(*,REAL_FMT) 'particlesource_fix_profile_tsteps        ',particlesource_fix_profile_tsteps
   write(*,REAL_FMT) 'particlesource_fix_profile_psi_max       ',particlesource_fix_profile_psi_max
   write(*,LOGI_FMT) 'particlesource_fix_profile_const_Dperp   ',particlesource_fix_profile_const_Dperp
+  write(*,LOGI_FMT) 'particlesource_fix_profile_target_profile_const_Dperp   ',particlesource_fix_profile_target_profile_const_Dperp
   write(*,LOGI_FMT) 'heatsource_fix_profile                   ',heatsource_fix_profile
   write(*,LOGI_FMT) 'heatsource_fix_profile_allow_negative    ',heatsource_fix_profile_allow_negative
   write(*,REAL_FMT) 'heatsource_fix_profile_tsteps            ',heatsource_fix_profile_tsteps

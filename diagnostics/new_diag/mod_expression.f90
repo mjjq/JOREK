@@ -694,6 +694,8 @@ module mod_expression
     real*8  :: rho_compress_term, rho_convect_term, rho_diffusive_term, rho_source_term
     real*8  :: particle_source, heat_source, heat_source_i, heat_source_e
     real*8  :: rho_GS,dd1,dd2,dd3,dd4,dd5,dd6,dd7,dd8
+    real*8  :: rho_target_GS,dd1_target,dd2_target,dd3_target,dd4_target,dd5_target,dd6_target,     &
+      dd7_target,dd8_target
     real*8  :: ne_axisym, T_axisym, P_axisym, B_axisym2, P_all
     real*8  :: UR0_R, UR0_Z, UR0_p, UR0_s, UR0_t, UR0_RR, UR0_ZZ, UR0_pp, UR0_ss, UR0_tt, UR0_st
     real*8  :: UZ0_R, UZ0_Z, UZ0_p, UZ0_s, UZ0_t, UZ0_RR, UZ0_ZZ, UZ0_pp, UZ0_ss, UZ0_tt, UZ0_st
@@ -2063,6 +2065,10 @@ module mod_expression
           elseif (particlesource_fix_profile_const_Dperp) then
             call density    (eq%xpoint, eq%xcase, Z, eq%Z_xpoint, psi_norm,0.d0,1.d0, rho_GS,dd1,dd2,dd3,dd4,dd5,dd6,dd7,dd8)
             particle_source = - D_perp(1) * ( grad_psi_2 * dd3 + lap_psi * dd1 )
+          elseif (particlesource_fix_profile_target_profile_const_Dperp) then
+            call density_target(eq%xpoint, eq%xcase, Z, eq%Z_xpoint, psi_norm,0.d0,1.d0, rho_target_GS,dd1_target,dd2_target, &
+                                                            dd3_target,dd4_target,dd5_target,dd6_target,dd7_target,dd8_target)
+            particle_source = - D_perp(1) * ( grad_psi_2 * dd3_target + lap_psi * dd1_target )
           endif
           rho_compress_term = - r0 * (UR0 / R + UR0_R + UZ0_Z + Up0_p / R)
           rho_convect_term  = - (UR0 * r0_R + UZ0 * r0_Z + Up0 * r0_p / R)

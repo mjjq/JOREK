@@ -359,6 +359,7 @@ subroutine preset_parameters
   particlesource_fix_profile_tsteps         = 2.0
   particlesource_fix_profile_psi_max        = 0.9
   particlesource_fix_profile_const_Dperp    = .false.
+  particlesource_fix_profile_target_profile_const_Dperp = .false.
   heatsource_fix_profile                    = .false.
   heatsource_fix_profile_allow_negative     = .false.
   heatsource_fix_profile_tsteps             = 2.0
@@ -545,6 +546,10 @@ subroutine preset_parameters
   rhon_coef(4) = 0.01
   rhon_coef(8) = 0.01
 
+  rho_target_0 =  0.d0
+  rho_target_1 =  0.d0
+  rho_target_coef    = 0.d0
+
   pellet_amplitude  = 0.d0
   pellet_R          = 3.8d0
   pellet_Z          = 0.0d0
@@ -579,6 +584,7 @@ subroutine preset_parameters
 
   tokamak_device     = 'none'
   rho_file           = 'none'
+  rho_target_file    = 'none'
   rhon_file          = 'none'
   T_file             = 'none'
   Te_file            = 'none'

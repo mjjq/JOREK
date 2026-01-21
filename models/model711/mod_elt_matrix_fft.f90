@@ -81,6 +81,7 @@ real*8     :: in_fft(1:n_plane)
 complex*16 :: out_fft(1:n_plane)
 real*8     :: rho_axisym(n_gauss,n_gauss), Ti_axisym(n_gauss,n_gauss), Te_axisym(n_gauss,n_gauss)
 real*8     :: rho_GS,Ti_GS,Te_GS, dd1,dd2,dd3,dd4,dd5,dd6,dd7,dd8
+real*8     :: rho_target_GS,dd1_target,dd2_target,dd3_target,dd4_target,dd5_target,dd6_target,dd7_target,dd8_target
 real*8     :: psi_axisym(n_gauss,n_gauss), psi_axisym_s(n_gauss,n_gauss), psi_axisym_t(n_gauss,n_gauss)
 real*8     :: psi_axisym_ss(n_gauss,n_gauss), psi_axisym_tt(n_gauss,n_gauss), psi_axisym_st(n_gauss,n_gauss)
 real*8     ::                              psi_axisym_R(n_gauss,n_gauss), psi_axisym_Z(n_gauss,n_gauss)
@@ -1050,7 +1051,12 @@ do mt=1, n_gauss
       endif
     elseif (particlesource_fix_profile_const_Dperp) then
       call density    (xpoint2, xcase2, Z, Z_xpoint, psi_axisym(ms,mt),psi_axis,psi_bnd, rho_GS,dd1,dd2,dd3,dd4,dd5,dd6,dd7,dd8)
+      ! dd1 is dn_dpsi
+      ! dd3 is dn_dpsi2
       particle_source(ms,mt) = - D_perp(1) * ( (psi_axisym_R(ms,mt)**2 + psi_axisym_Z(ms,mt)**2) * dd3 + (psi_axisym_R(ms,mt) / R + psi_axisym_RR(ms,mt) + psi_axisym_ZZ(ms,mt)) * dd1 )
+    elseif (particlesource_fix_profile_target_profile_const_Dperp) then
+      call density_target(xpoint2, xcase2, Z, Z_xpoint, psi_axisym(ms,mt),psi_axis,psi_bnd, rho_target_GS,dd1_target,dd2_target,dd3_target,dd4_target,dd5_target,dd6_target,dd7_target,dd8_target)
+      particle_source(ms,mt) = - D_perp(1) * ( (psi_axisym_R(ms,mt)**2 + psi_axisym_Z(ms,mt)**2) * dd3_target + (psi_axisym_R(ms,mt) / R + psi_axisym_RR(ms,mt) + psi_axisym_ZZ(ms,mt)) * dd1_target )
     endif
     if (heatsource_i_fix_profile) then
       if (psi_norm .lt. heatsource_i_fix_profile_psi_max) then

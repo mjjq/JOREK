@@ -60,6 +60,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 loop_voltage, loop_voltage_prop,                    &
                 loop_voltage_der, loop_voltage_int, I_target,       &
                 rho_0, rho_1, rho_coef, rho_min,                    &
+                rho_target_0, rho_target_1, rho_target_coef,        &
                 T_0,   T_1,   T_coef, T_min,                        &
 				        T_min_neg,rho_min_neg,                              &
 				        corr_neg_temp_coef, corr_neg_dens_coef,             &
@@ -86,6 +87,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 particlesource, heatsource, tauIC,                  &
                 particlesource_fix_profile               ,          &
                 particlesource_fix_profile_const_Dperp   ,          &
+                particlesource_fix_profile_target_profile_const_Dperp, &
                 particlesource_fix_profile_allow_negative,          &
                 particlesource_fix_profile_tsteps        ,          &
                 particlesource_fix_profile_psi_max       ,          &
@@ -106,6 +108,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 xcase, time_evol_scheme,                            &
                 freeboundary_equil,                                 &
                 rho_file, T_file, ffprime_file, Fprofile_file,      &
+                rho_target_file,                                    &
                 intg_original_grids, Fprofile_psi_max,              &
                 Jsource_file, ZK_perp_file,                         &
                 ZK_i_perp_file, ZK_e_perp_file,                     &

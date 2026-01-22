@@ -884,10 +884,12 @@ write(*,'(1x,a)',advance='no') ' CASTOR3D_METHOD_AT_VI_REFERENCE_FRAME : '
   write(*,LOGI_FMT) 'heatsource_i_fix_profile_allow_negative  ',heatsource_i_fix_profile_allow_negative
   write(*,REAL_FMT) 'heatsource_i_fix_profile_tsteps          ',heatsource_i_fix_profile_tsteps
   write(*,REAL_FMT) 'heatsource_i_fix_profile_psi_max         ',heatsource_i_fix_profile_psi_max
+  write(*,LOGI_FMT) 'heatsource_i_fix_profile_const_ZKperp    ',heatsource_i_fix_profile_const_ZKperp
   write(*,LOGI_FMT) 'heatsource_e_fix_profile                 ',heatsource_e_fix_profile
   write(*,LOGI_FMT) 'heatsource_e_fix_profile_allow_negative  ',heatsource_e_fix_profile_allow_negative
   write(*,REAL_FMT) 'heatsource_e_fix_profile_tsteps          ',heatsource_e_fix_profile_tsteps
   write(*,REAL_FMT) 'heatsource_e_fix_profile_psi_max         ',heatsource_e_fix_profile_psi_max
+  write(*,LOGI_FMT) 'heatsource_e_fix_profile_const_ZKperp    ',heatsource_e_fix_profile_const_ZKperp
   write(*,REAL_FMT) 'particlesource_gauss  ', particlesource_gauss
   write(*,REAL_FMT) 'particlesource_gauss_psin', particlesource_gauss_psin
   write(*,REAL_FMT) 'particlesource_gauss_sig ', particlesource_gauss_sig

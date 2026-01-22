@@ -95,10 +95,12 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 heatsource_i_fix_profile_allow_negative  ,          &
                 heatsource_i_fix_profile_tsteps          ,          &
                 heatsource_i_fix_profile_psi_max         ,          &
+                heatsource_i_fix_profile_const_ZKperp    ,          &
                 heatsource_e_fix_profile                 ,          &
                 heatsource_e_fix_profile_allow_negative  ,          &
                 heatsource_e_fix_profile_tsteps          ,          &
                 heatsource_e_fix_profile_psi_max         ,          &
+                heatsource_e_fix_profile_const_ZKperp    ,          &
                 pellet_amplitude, pellet_R, pellet_Z, pellet_phi,   &
                 pellet_radius, pellet_sig, pellet_length,           &
                 pellet_psi, pellet_delta_psi,                       &

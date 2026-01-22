@@ -693,7 +693,7 @@ module mod_expression
     real*8  :: grad_psi_2, lap_psi
     real*8  :: rho_compress_term, rho_convect_term, rho_diffusive_term, rho_source_term
     real*8  :: particle_source, heat_source, heat_source_i, heat_source_e
-    real*8  :: rho_GS,dd1,dd2,dd3,dd4,dd5,dd6,dd7,dd8
+    real*8  :: rho_GS,Ti_GS,Te_GS,dd1,dd2,dd3,dd4,dd5,dd6,dd7,dd8
     real*8  :: rho_target_GS,dd1_target,dd2_target,dd3_target,dd4_target,dd5_target,dd6_target,     &
       dd7_target,dd8_target
     real*8  :: ne_axisym, T_axisym, P_axisym, B_axisym2, P_all
@@ -2052,6 +2052,14 @@ module mod_expression
 #ifdef fullmhd
 #ifdef WITH_TiTe
           call sources(eq%xpoint, eq%xcase, Z, eq%Z_xpoint, psi_norm,0.d0,1.d0,particle_source,heat_source_i,heat_source_e)
+          if (heatsource_i_fix_profile_const_ZKperp) then
+            call temperature_i(eq%xpoint, eq%xcase, Z, eq%Z_xpoint, psi_norm,0.d0,1.d0, Ti_GS  ,dd1,dd2,dd3,dd4,dd5,dd6,dd7,dd8)
+            heat_source_i = - ZK_i_perp(1) * ( grad_psi_2 * dd3 + lap_psi * dd1 )
+          endif
+          if (heatsource_e_fix_profile_const_ZKperp) then
+            call temperature_e(eq%xpoint, eq%xcase, Z, eq%Z_xpoint, psi_norm,0.d0,1.d0, Te_GS  ,dd1,dd2,dd3,dd4,dd5,dd6,dd7,dd8)
+            heat_source_e = - ZK_e_perp(1) * ( grad_psi_2 * dd3 + lap_psi * dd1 )
+          endif
 #else
           call sources(eq%xpoint, eq%xcase, Z, eq%Z_xpoint, psi_norm,0.d0,1.d0,particle_source,heat_source)
 #endif

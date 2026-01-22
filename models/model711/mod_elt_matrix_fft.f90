@@ -1064,6 +1064,9 @@ do mt=1, n_gauss
         if ( (Ti_axisym(ms,mt)   .lt. Ti_GS  ) .or. heatsource_i_fix_profile_allow_negative ) &
           heat_source_i(ms,mt)     = (1.0/heatsource_i_fix_profile_tsteps) * (Ti_GS  -Ti_axisym(ms,mt)  ) ! / tstep
       endif
+    elseif (heatsource_i_fix_profile_const_ZKperp) then
+      call temperature_i(xpoint2, xcase2, Z, Z_xpoint, psi_axisym(ms,mt),psi_axis,psi_bnd, Ti_GS  ,dd1,dd2,dd3,dd4,dd5,dd6,dd7,dd8)
+      heat_source_i(ms,mt) = - ZK_i_perp(1) * ( (psi_axisym_R(ms,mt)**2 + psi_axisym_Z(ms,mt)**2) * dd3 + (psi_axisym_R(ms,mt) / R + psi_axisym_RR(ms,mt) + psi_axisym_ZZ(ms,mt)) * dd1 )
     endif
     if (heatsource_e_fix_profile) then
       if (psi_norm .lt. heatsource_e_fix_profile_psi_max) then
@@ -1071,6 +1074,9 @@ do mt=1, n_gauss
         if ( (Te_axisym(ms,mt)   .lt. Te_GS  ) .or. heatsource_e_fix_profile_allow_negative ) &
           heat_source_e(ms,mt)     = (1.0/heatsource_e_fix_profile_tsteps) * (Te_GS  -Te_axisym(ms,mt)  ) ! / tstep
       endif
+    elseif (heatsource_e_fix_profile_const_ZKperp) then
+      call temperature_e(xpoint2, xcase2, Z, Z_xpoint, psi_axisym(ms,mt),psi_axis,psi_bnd, Te_GS  ,dd1,dd2,dd3,dd4,dd5,dd6,dd7,dd8)
+      heat_source_e(ms,mt) = - ZK_e_perp(1) * ( (psi_axisym_R(ms,mt)**2 + psi_axisym_Z(ms,mt)**2) * dd3 + (psi_axisym_R(ms,mt) / R + psi_axisym_RR(ms,mt) + psi_axisym_ZZ(ms,mt)) * dd1 )
     endif
 
 #ifndef TEMPERATURE_DEPENDENT_UPDATE

@@ -322,10 +322,12 @@ module phys_module
   logical :: heatsource_i_fix_profile_allow_negative     !< allow a negative source
   real*8  :: heatsource_i_fix_profile_tsteps             !< time-scale over which this is enforced (ideally >=2)
   real*8  :: heatsource_i_fix_profile_psi_max            !< max psi-norm where this is applied
+  logical :: heatsource_i_fix_profile_const_ZKperp       !< ion heating source to fix profile onto input Grad-Shafranov profile, only works with constant ZK_i_perp profile
   logical :: heatsource_e_fix_profile                    !< adaptive source to fix profile onto input Grad-Shafranov profile
   logical :: heatsource_e_fix_profile_allow_negative     !< allow a negative source
   real*8  :: heatsource_e_fix_profile_tsteps             !< time-scale over which this is enforced (ideally >=2)
   real*8  :: heatsource_e_fix_profile_psi_max            !< max psi-norm where this is applied
+  logical :: heatsource_e_fix_profile_const_ZKperp       !< electron heating source to fix profile onto input Grad-Shafranov profile, only works with constant ZK_e_perp profile
   real*8  :: constant_imp_source       !< Adds a constant impurity source
   
   !> @name Hyper-resistivity, -viscosity and -diffusivities

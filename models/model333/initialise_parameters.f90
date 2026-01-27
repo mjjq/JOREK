@@ -101,12 +101,12 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 V_0,V_1,V_coef, output_bnd_elements,                &
                 wall_file,                                          &
                 n_limiter, R_limiter, Z_limiter,                    &
-                first_target_point, last_target_point,		    &
+                first_target_point, last_target_point,              &
                 NEO, neo_file, aki_neo_const, amu_neo_const,        &
                 time_evol_scheme, corr_neg_temp_coef,               &
                 corr_neg_dens_coef, D_prof_neg, ZK_prof_neg,        &
                 D_prof_neg_thresh, ZK_prof_neg_thresh, T_min,rho_min,&
-				T_min_neg,rho_min_neg,                              &
+                T_min_neg,rho_min_neg,                              &
                 amix, amix_freeb, equil_accuracy,                   &
                 equil_accuracy_freeb, current_ref, FB_Ip_position,  &
                 FB_Ip_integral, Z_axis_ref, FB_Zaxis_position,      &
@@ -126,7 +126,9 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 weights_per_family, autodistribute_ranks,           &
                 ranks_per_family, cte_current_FB_fact, treat_axis,  &
                 CARIDDI_mode, use_newton, maxNewton, gamma_Newton,  &
-                alpha_Newton, treat_irregular_nodes, vacuum_min, strumpack_matching, fix_irregular_nodes
+                alpha_Newton, treat_irregular_nodes, vacuum_min,    &
+                strumpack_matching, fix_irregular_nodes,            &
+                more_outfile_digits
 
 
 if (my_id .eq. 0) then

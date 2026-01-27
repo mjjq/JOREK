@@ -137,7 +137,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 RMP_psi_cos_file, RMP_psi_sin_file,                 &
                 V_0,V_1,V_coef, output_bnd_elements,                &
                 n_limiter, R_limiter, Z_limiter,                    &
-                first_target_point, last_target_point,		    &
+                first_target_point, last_target_point,              &
                 R_Z_psi_bnd_file, wall_file,time_evol_scheme,       &
                 spi_tor_rot, tor_frequency, spi_num_vol,            &
                 NEO, neo_file, aki_neo_const, amu_neo_const,        &
@@ -210,8 +210,10 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 visco_par_heating, constant_imp_source,             &
                 T_min_ZKpar,Ti_min_ZKpar,Te_min_ZKpar,              &
                 CARIDDI_mode, use_newton, maxNewton, gamma_Newton,  &
-                alpha_Newton, treat_irregular_nodes, vacuum_min, strumpack_matching,       &
-                visco_old_setup, visco_heating, fix_irregular_nodes
+                alpha_Newton, treat_irregular_nodes, vacuum_min,    &
+                strumpack_matching,                                 &
+                visco_old_setup, visco_heating, fix_irregular_nodes,&
+                more_outfile_digits
 
 
 if (my_id .eq. 0) then

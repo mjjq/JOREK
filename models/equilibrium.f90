@@ -166,6 +166,12 @@ if (my_id == 0) then
     enddo  
     diff = diff / float(node_list%n_nodes)
     
+    ! Error handling, really is no point continuing if diff is NaN
+    if (ISNAN(diff)) then
+      write(*,*)'Equilibrium diff is NaN - stop here'
+      stop
+    end if
+
     write(*,'(A,I4,A,ES10.3)') ' Iteration ', iter, ': diff=', diff
     
     if ( (iter > 1) .and. (diff < equil_accuracy) ) then

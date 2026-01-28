@@ -39,6 +39,7 @@ subroutine find_RZ_all(node_list,element_list,R_find,Z_find,R_out,Z_out,ielm_out
   !-------------------------------------------------------------------------
   use data_structure
   use mod_element_rtree, only: elements_containing_point
+  use phys_module, only: n_tht, n_pol, n_R, n_Z
   implicit none
   
   type (type_node_list), intent(in)    :: node_list
@@ -56,19 +57,35 @@ subroutine find_RZ_all(node_list,element_list,R_find,Z_find,R_out,Z_out,ielm_out
   
   ielm_out = 0
   ielm_out_min = 0
+  minErrxAll = 1.d8
   call elements_containing_point(R_find, Z_find, i_elms)
   
   ! then loop through all
   do k=1,size(i_elms)
     call find_RZ_single(node_list,element_list,i_elms(k),R_find,Z_find,R_out,Z_out,ielm_out,s_out,t_out,ifail,minErrx)
+    if ((ifail .eq. 911) .and. (minErrx .le. minErrxAll)) then
+      minErrxAll = minErrx
+      R_out_min = R_out; Z_out_min = Z_out
+      s_out_min = s_out; t_out_min = t_out
+      ielm_out_min = ielm_out
+      ifail_min = ifail
+#ifdef DEBUG_MAKE
+      write(*,*) "!!!!!! ifail = ", ifail
+      write(*,*) "!!!!!! ielm_out = ", ielm_out, ", minErrx = ", minErrx, ", minErrxAll = ", minErrxAll
+      write(*,*) "!!!!!! R_find = ", R_find, ", Z_find = ", Z_find, ", s_out = ", s_out, ", t_out = ", t_out
+#endif
+    endif
     if (ifail .eq. 0) exit
   enddo
   
   if (ielm_out .eq. 0 .or. ifail .ne. 0) then
     ! then loop through the whole element_list
-    minErrxAll = 1.d8
     do k=1,element_list%n_elements
       call find_RZ_single(node_list,element_list,k,R_find,Z_find,R_out,Z_out,ielm_out,s_out,t_out,ifail,minErrx)
+#ifdef DEBUG_MAKE
+      write(*,*) ">>>>> ielm_out = ", ielm_out, ", minErrx = ", minErrx, ", minErrxAll = ", minErrxAll
+      write(*,*) ">>>>> R_find = ", R_find, ", Z_find = ", Z_find, ", s_out = ", s_out, ", t_out = ", t_out
+#endif
       if (ifail .eq. 0) exit
       if ((ifail .eq. 911) .and. (minErrx .le. minErrxAll)) then
         minErrxAll = minErrx
@@ -88,6 +105,23 @@ subroutine find_RZ_all(node_list,element_list,R_find,Z_find,R_out,Z_out,ielm_out
     ielm_out = ielm_out_min
     ifail = 0
     write(*,'(A, ES15.6)') " Approximated solution, please note! Error is: ", minErrxAll
+
+    if(n_R * n_Z .eq. 0) then
+      write(*,*) "Warning: find magnetic axis in find_RZ_all, increase s_out from 0 to 1.e-3"
+#ifdef DEBUG_MAKE
+      write(*,*) "Warning: ielm_out = ", ielm_out
+      write(*,*) "Warning: n_tht    = ", n_tht
+      write(*,*) "Warning: n_pol    = ", n_pol
+      write(*,*) "Warning: ielm_out = ", ielm_out
+      write(*,*) "Warning: element_list%n_elements = ", element_list%n_elements
+#endif
+      if(n_tht .ne. 0) then
+        if((ielm_out .le. n_tht).and.(s_out .le. 1.d-8)) s_out = 1.e-3
+      else
+        if((ielm_out .le. n_pol).and.(s_out .le. 1.d-8)) s_out = 1.e-3
+      endif
+    endif
+
   endif
   ! work anymore (and we don't always check ifail)
   end subroutine find_RZ_all
@@ -172,7 +206,7 @@ do istart = 1,5
       ielm_out  = i_elm
       R_out     = RRg1
       Z_out     = ZZg1
-      minErrx   = tolx
+      minErrx   = errf
 
 !        write(*,'(A,i3,4e16.8)') ' newton (1) : ',i,errf,errx,x
 
@@ -210,6 +244,7 @@ do istart = 1,5
       ielm_out  = i_elm
       R_out     = RRg1
       Z_out     = ZZg1
+      minErrx   = errx
 
 !        write(*,'(A,i3,4e16.8)') ' newton (2) : ',i,errf,errx,x
 

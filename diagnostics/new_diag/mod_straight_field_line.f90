@@ -439,6 +439,16 @@ module mod_straight_field_line
           if ( ifail /= 0 ) then
             write(*,*) 'ERROR in '//trim(THIS_ROUTINE_NAME)//' calling find_RZ (1). Field line: ', k
             write(*,*) 'Try to use approximate solutions from find_RZ_all (1). Field line: ', k
+#ifdef DEBUG_MAKE
+            write(*,*) ">>ifail = ", ifail
+            write(*,*) ">>i_elm_out = ", i_elm_out
+            write(*,*) ">>rn: ", rn
+            write(*,*) ">>zn: ", zn
+            write(*,*) ">>R_out: ", R_out
+            write(*,*) ">>Z_out: ", Z_out
+            write(*,*) ">>s_out: ", s_out
+            write(*,*) ">>t_out: ", t_out
+#endif
             call find_RZ_all(node_list,element_list,rn,zn,R_out,Z_out,i_elm_out,s_out,t_out,ifail)
             if( ifail /= 0 ) then
               write(*,*) 'ERROR in '//trim(THIS_ROUTINE_NAME)//' calling find_RZ_all (1). Field line: ', k
@@ -452,6 +462,30 @@ module mod_straight_field_line
           call interp_RZ(node_list,element_list,i_elm_out,s_out,t_out,x,x_s,x_t,y,y_s,y_t)
           ! - Determine derivatives of Psi with respect to R and Z.
           xjac     = x_s*y_t - x_t*y_s
+          if ((abs(xjac) < 1.0d-30 .or. xjac /= xjac) .or. (ifail .ne. 0)) then
+#ifdef DEBUG_MAKE
+            print *, "ifail = ", ifail
+            print *, "!!! CRITICAL ERROR at line 455 !!!"
+            print *, "Jacobian (xjac) is: ", xjac
+            print *, "rn: ", rn
+            print *, "zn: ", zn
+            print *, "R_out: ", R_out
+            print *, "Z_out: ", Z_out
+            print *, "i_elm_out: ", i_elm_out
+            print *, "s_out: ", s_out
+            print *, "t_out: ", t_out
+            print *, "y_t: ", y_t
+            print *, "y_s: ", y_s
+            print *, "x_t: ", x_t
+            print *, "x_s: ", x_s
+            print *, "P_s: ", P_s
+            print *, "P_t: ", P_t
+            ! Optional: print the local indices to see where in the grid we are
+            print *, "Grid indices likely near magnetic axis or X-point"
+#endif
+            if(dabs(xjac) < 1e-8) xjac = 1e-8
+          endif
+
           dpsi_dzn = ( - x_t*P_s + x_s*P_t ) / xjac
           dpsi_drn = ( + y_t*P_s - y_s*P_t ) / xjac
           ! - Advance a half step.
@@ -464,6 +498,16 @@ module mod_straight_field_line
           if ( ifail /= 0 ) then
             write(*,*) 'ERROR in '//trim(THIS_ROUTINE_NAME)//' calling find_RZ (2). Field line: ', k
             write(*,*) 'Try to use approximate solutions from find_RZ_all (2). Field line: ', k
+#ifdef DEBUG_MAKE
+            write(*,*) ">>ifail = ", ifail
+            write(*,*) ">>i_elm_out = ", i_elm_out
+            write(*,*) ">>rh: ", rh
+            write(*,*) ">>zh: ", zh
+            write(*,*) ">>R_out: ", R_out
+            write(*,*) ">>Z_out: ", Z_out
+            write(*,*) ">>s_out: ", s_out
+            write(*,*) ">>t_out: ", t_out
+#endif
             call find_RZ_all(node_list,element_list,rh,zh,R_out,Z_out,i_elm_out,s_out,t_out,ifail)
             if( ifail /= 0 ) then
               write(*,*) 'ERROR in '//trim(THIS_ROUTINE_NAME)//' calling find_RZ_all (2). Field line: ', k
@@ -477,6 +521,30 @@ module mod_straight_field_line
           call interp_RZ(node_list,element_list,i_elm_out,s_out,t_out,x,x_s,x_t,y,y_s,y_t)
           ! - Determine derivatives of Psi with respect to R and Z.
           xjac     = x_s*y_t - x_t*y_s
+          if ((abs(xjac) < 1.0d-30 .or. xjac /= xjac) .or. (ifail .ne. 0)) then
+#ifdef DEBUG_MAKE
+            print *, "ifail = ", ifail
+            print *, "!!! CRITICAL ERROR at line 505 !!!"
+            print *, "Jacobian (xjac) is: ", xjac
+            print *, "rh: ", rh
+            print *, "zh: ", zh
+            print *, "R_out: ", R_out
+            print *, "Z_out: ", Z_out
+            print *, "i_elm_out: ", i_elm_out
+            print *, "s_out: ", s_out
+            print *, "t_out: ", t_out
+            print *, "y_t: ", y_t
+            print *, "y_s: ", y_s
+            print *, "x_t: ", x_t
+            print *, "x_s: ", x_s
+            print *, "P_s: ", P_s
+            print *, "P_t: ", P_t
+            ! Optional: print the local indices to see where in the grid we are
+            print *, "Grid indices likely near magnetic axis or X-point"
+#endif
+            if(dabs(xjac) < 1e-8) xjac = 1e-8
+          endif
+
           dpsi_dzh = ( - x_t*P_s + x_s*P_t ) / xjac
           dpsi_drh = ( + y_t*P_s - y_s*P_t ) / xjac
           ! - Advance a full step.

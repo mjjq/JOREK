@@ -9,6 +9,9 @@ use mod_interp
 use phys_module, only:   SDN_threshold
 use mod_newton_methods
 use equil_info
+#ifdef DEBUG_MAKE
+use, intrinsic :: ieee_arithmetic, only : ieee_is_nan
+#endif
 
 implicit none
 
@@ -72,6 +75,8 @@ if (xpoint) then
     psi_xpoint(1) = (ES%psi_xpoint(1)+ES%psi_xpoint(2))/2.d0
     psi_xpoint(2) = psi_xpoint(1)
   endif
+else
+  psi_xpoint(:) = 0.d0
 endif
 
 
@@ -243,6 +248,21 @@ do i=1, element_list%n_elements
           itmp = itht(2); itht(2) = itht(3) ; itht(3) = itmp;
         endif
         
+#ifdef DEBUG_MAKE
+        if (ieee_is_nan(surface_list%psi_values(j)) .or. &
+            ieee_is_nan(psi_xpoint(1)) .or. &
+            ieee_is_nan(psi_xpoint(2))) then
+        
+          print *, "!!! NaN detected at find_flux_surfaces.f90 line 247 !!!"
+          print *, "j index: ", j
+          print *, "psi_value: ", surface_list%psi_values(j)
+          print *, "psi_xpoint(1): ", psi_xpoint(1)
+          print *, "psi_xpoint(2): ", psi_xpoint(2)
+          
+          ! Optional: Stop the program so it doesn't crash later
+          ! stop "Aborting due to NaN"
+        endif
+#endif
 
         if ((xpoint) .and. (     ((i .eq. ES%i_elm_xpoint(1)) .and. (xcase .ne. UPPER_XPOINT) .and. (surface_list%psi_values(j) .eq. psi_xpoint(1)) )  &
                             .or. ((i .eq. ES%i_elm_xpoint(2)) .and. (xcase .ne. LOWER_XPOINT) .and. (surface_list%psi_values(j) .eq. psi_xpoint(2)) )  ) ) then

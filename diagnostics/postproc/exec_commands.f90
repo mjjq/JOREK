@@ -958,10 +958,18 @@ module exec_commands
     integer, intent(in),    optional :: ok1, ok2, ok3, ok4
     
     ierr = 1
-    if ( present(ok1) .and. (nargs==ok1) ) ierr = 0
-    if ( present(ok2) .and. (nargs==ok2) ) ierr = 0
-    if ( present(ok3) .and. (nargs==ok3) ) ierr = 0
-    if ( present(ok4) .and. (nargs==ok4) ) ierr = 0
+    if (present(ok1)) then
+      if (nargs == ok1) ierr = 0
+    endif
+    if (present(ok2)) then
+      if (nargs == ok2) ierr = 0
+    endif
+    if (present(ok3)) then
+      if (nargs == ok3) ierr = 0
+    endif
+    if (present(ok4)) then
+      if (nargs == ok4) ierr = 0
+    endif
     if ( ierr /= 0 ) write(*,*) 'ERROR: Wrong number of parameters for command.'
   end subroutine check_args
   

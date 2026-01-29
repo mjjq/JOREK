@@ -2027,6 +2027,8 @@ module mod_expression
           if ( .not. with_impurities ) Z_eff = 1
           call resistivity(eta, T_or_Te, T_or_Te_corr, T_max_eta, T_or_Te_0, Z_eff, eta_T)     
 
+          if(neo_etaT) eta_T = eta_T * 1.d0 / (1-dsqrt(dsqrt(psi_norm) * neo_minor_radius / neo_major_radius))**2
+
           dpsi_dt   = BigR*(ps0_s*u0_t - ps0_t*u0_s)/xjac + eta_T*zj0 - F0*u0_p 
           ExB_norm  = -dpsi_dt * (ps0_R*nmlR + ps0_Z*nmlZ) / (BigR**2.d0) 
 

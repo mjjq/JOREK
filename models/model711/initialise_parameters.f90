@@ -171,7 +171,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 eta_ohmic, CARIDDI_mode, use_newton, maxNewton,     &
                 gamma_Newton, alpha_Newton, treat_irregular_nodes,  &
                 vacuum_min, strumpack_matching,                     &
-                fix_irregular_nodes, Fprofile_tolerance
+                fix_irregular_nodes, Fprofile_tolerance,            &
+                neo_etaT, neo_minor_radius, neo_major_radius
 
 if (my_id .eq. 0) then
 

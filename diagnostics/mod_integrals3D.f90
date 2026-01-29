@@ -419,6 +419,7 @@ Tie_min_neg = 0.5*T_min_neg
 !$omp          index_main_imp,                                                                 &
 #endif
 !$omp          T_1, T_max_eta, T_max_eta_ohm, eta_T_dependent,                                 &
+!$omp          neo_etaT, neo_minor_radius, neo_major_radius,                                   &
 !$omp          wgauss_copy, varmin, varmax)                                                    &
 !$omp   private(ife,iv,inode,element,nodes,i,j, k,in, mp, ms, mt,                              &
 !$omp           x_g, y_g, x_s, y_s, x_t, y_t, xjac, xjac_R, xjac_Z, eq_g, eq_s, eq_t, eq_p,    &
@@ -984,6 +985,8 @@ do ife = ife_min, ife_max
 #endif 
         call resistivity(eta,       T_or_Te, T_or_Te_corr, T_max_eta,     T_or_Te_0, Z_eff, eta_T    )           
         call resistivity(eta_ohmic, T_or_Te, T_or_Te_corr, T_max_eta_ohm, T_or_Te_0, Z_eff, eta_T_ohm)           
+
+        if(neo_etaT) eta_T = eta_T * 1.d0 / (1-dsqrt(dsqrt(psi_as_coord) * neo_minor_radius / neo_major_radius))**2
 
         ! --- Switch to use old viscosity model
         if (visco_old_setup) then

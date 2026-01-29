@@ -21,6 +21,9 @@ module phys_module
   real*8  :: eta_T_0              !< Initial resistivity
   real*8  :: eta_ohmic            !< Resistivity at core for the Ohmic heating term
   logical :: eta_T_dependent      !< Resistivity dependent on temperature? Otherwise constant
+  logical :: neo_etaT             !< Resistivity with neoclassical correction: https://www.jorek.eu/wiki/doku.php?id=spitzer_resistivity
+  real*8  :: neo_minor_radius     !< minor radius of the device to calculate the neoclassical correction
+  real*8  :: neo_major_radius     !< major radius of the device to calculate the neoclassical correction
   real*8  :: T_max_eta            !< Temperature above which the resistivity is truncated (use with care; only for numerical reasons)
   real*8  :: T_max_eta_ohm        !< Temperature above which the resistivity used in the Ohmic heating term is truncated (use with care; only for numerical reasons)
   real*8  :: T_max_visco          !< Temperature above which the viscosity is truncated; It is aimed for keeping the Prandtl number constant when T_max_eta is activated. 

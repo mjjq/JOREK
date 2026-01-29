@@ -33,6 +33,10 @@ subroutine preset_parameters
   visco_T_dependent = .true.
   ZKpar_T_dependent = .true.
 
+  neo_etaT          = .false.
+  neo_minor_radius  = 0.0
+  neo_major_radius  = 1.0
+
   eta_num_T_dependent   = .false.
   visco_num_T_dependent = .false.
   add_sources_in_sc     = .false.

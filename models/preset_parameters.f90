@@ -601,6 +601,7 @@ subroutine preset_parameters
   d_par_file         = 'none'
   d_perp_file        = 'none'
   d_perp_imp_file    = 'none'
+  neo_etaT_ratio_file= 'none'
   zk_perp_file       = 'none'
   zk_e_perp_file     = 'none'
   zk_i_perp_file     = 'none'

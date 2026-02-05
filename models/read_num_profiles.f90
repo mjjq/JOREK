@@ -132,12 +132,12 @@ subroutine read_num_profiles(my_id)
   end if
 #endif
 
-num_d_par = ( d_par_file /= 'none' )
-if ( num_d_par .and. ( my_id == 0 ) ) then
-  call readProf(num_d_par_x, num_d_par_y, num_d_par_len, d_par_file)
-  call check_num_prof(num_d_par, num_d_par_x, num_d_par_y, num_d_par_len, 'd_par',          &
-                      check_positive=.true.)
-end if
+  num_d_par = ( d_par_file /= 'none' )
+  if ( num_d_par .and. ( my_id == 0 ) ) then
+    call readProf(num_d_par_x, num_d_par_y, num_d_par_len, d_par_file)
+    call check_num_prof(num_d_par, num_d_par_x, num_d_par_y, num_d_par_len, 'd_par',          &
+                        check_positive=.true.)
+  end if
 
   num_d_perp = ( d_perp_file /= 'none' )
   if ( num_d_perp .and. ( my_id == 0 ) ) then
@@ -152,6 +152,14 @@ end if
     call check_num_prof(num_d_perp, num_d_perp_x_imp, num_d_perp_y_imp, num_d_perp_len_imp, &
                         'd_perp_imp', check_positive=.true.)
   end if
+  
+  num_neo_etaT_ratio = ( neo_etaT_ratio_file /= 'none' )
+  if ( num_neo_etaT_ratio .and. ( my_id == 0 ) ) then
+    call readProf(num_neo_etaT_ratio_x, num_neo_etaT_ratio_y, num_neo_etaT_ratio_len, neo_etaT_ratio_file)
+    call check_num_prof(num_neo_etaT_ratio, num_neo_etaT_ratio_x, num_neo_etaT_ratio_y, num_neo_etaT_ratio_len, 'neo_ratio',          &
+                        check_positive=.true.)
+  end if
+
 
   num_zk_perp = ( zk_perp_file /= 'none' )
   if ( num_zk_perp .and. ( my_id == 0 ) ) then

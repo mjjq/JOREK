@@ -14,7 +14,7 @@ use data_structure
 use gauss
 use basis_at_gaussian
 use phys_module
-use diffusivities, only: get_dpar, get_dperp, get_zk_iperp, get_zk_eperp
+use diffusivities, only: get_dpar, get_dperp, get_zk_iperp, get_zk_eperp, get_neo_etaT_ratio
 use equil_info, only : get_psi_n, ES
 use mod_F_profile
 use mod_bootstrap_functions
@@ -1484,12 +1484,7 @@ do j=1,n_degrees
           visco_pp_diff_prof = visco_pp_diff
 #endif
           if (neo_etaT) then
-            neo_fact_eta_T = 1.d0 / (1-dsqrt(dsqrt(psi_norm) * neo_minor_radius / neo_major_radius))**2
-            if ((sqrt(psi_norm) <= XL1NCETA) .and. (XL1NCETA > 0)) then
-              ! Smooth transition function (0 to 1)
-              aux_weight = 0.5 * (1 - cos(PI * sqrt(psi_norm) / XL1NCETA))
-              neo_fact_eta_T = (1 - aux_weight) * 1.0 + aux_weight * neo_fact_eta_T
-            endif
+            neo_fact_eta_T = get_neo_etaT_ratio(psi_norm)
           else
             neo_fact_eta_T = 1.d0
           endif

@@ -2030,12 +2030,7 @@ module mod_expression
           call resistivity(eta, T_or_Te, T_or_Te_corr, T_max_eta, T_or_Te_0, Z_eff, eta_T)     
 
           if(neo_etaT) then
-            neo_fact_eta_T = 1.d0 / (1-dsqrt(dsqrt(psi_norm) * neo_minor_radius / neo_major_radius))**2
-            if ((sqrt(psi_norm) <= XL1NCETA) .and. (XL1NCETA > 0)) then
-              ! Smooth transition function (0 to 1)
-              aux_weight = 0.5 * (1 - cos(PI * sqrt(psi_norm) / XL1NCETA))
-              neo_fact_eta_T = (1 - aux_weight) * 1.0 + aux_weight * neo_fact_eta_T
-            endif
+            neo_fact_eta_T = get_neo_etaT_ratio(psi_norm)
             eta_T = eta_T * neo_fact_eta_T
           endif
 

@@ -669,18 +669,21 @@ module phys_module
   character(len=512)  :: d_par_file         !< ASCII file with parallel particle diffusion profile
   character(len=512)  :: d_perp_file        !< ASCII file with perpendicular particle diffusion profile
   character(len=512)  :: d_perp_imp_file    !< ASCII file with perpendicular particle diffusion profile
+  character(len=512)  :: neo_etaT_ratio_file!< ASCII file with the ratio of eta_neo/eta_spz profile
   character(len=512)  :: zk_perp_file       !< ASCII file with perpendicular heat diffusion profile
   character(len=512)  :: zk_e_perp_file     !< ASCII file with perpendicular electron heat diffusion profile
   character(len=512)  :: zk_i_perp_file     !< ASCII file wtih perpendicular ion heat diffusion profile
   logical             :: num_d_par          !< automatically set true if d_par_file /= 'none'
   logical             :: num_d_perp         !< automatically set true if d_perp_file /= 'none'
   logical             :: num_d_perp_imp     !< automatically set true if d_perp_file /= 'none'
+  logical             :: num_neo_etaT_ratio !< automatically set true if neo_etaT_ratio_file /= 'none'
   logical             :: num_zk_perp        !< automatically set true if zk_perp_file /= 'none'
   logical             :: num_zk_e_perp      !< automatically set true if zk_e_perp_file /= 'none'
   logical             :: num_zk_i_perp      !< automatically set true if zk_i_perp_file /= 'none'
   integer             :: num_d_par_len      !< Number of datapoints in d_par profile
   integer             :: num_d_perp_len     !< Number of datapoints in d_perp profile
   integer             :: num_d_perp_len_imp !< Number of datapoints in d_perp profile for impurity
+  integer             :: num_neo_etaT_ratio_len     !< Number of datapoints in neo_etaT_ratio profile
   integer             :: num_zk_perp_len    !< Number of datapoints in zk_perp profile
   integer             :: num_zk_e_perp_len  !< Number of datapoints in zk_e_perp profile
   integer             :: num_zk_i_perp_len  !< Number of datapoints in zk_i_perp profile
@@ -690,6 +693,8 @@ module phys_module
   real*8, allocatable :: num_d_perp_y(:)    !< D_perp values of d_perp profile
   real*8, allocatable :: num_d_perp_x_imp(:)!< Psi_N values of d_perp  profile for impurity
   real*8, allocatable :: num_d_perp_y_imp(:)!< D_perp values of d_perp profile for impurity
+  real*8, allocatable :: num_neo_etaT_ratio_x(:)    !< Psi_N values of neo_etaT_ratio  profile
+  real*8, allocatable :: num_neo_etaT_ratio_y(:)    !< neo_etaT_ratio values of d_perp profile
   real*8, allocatable :: num_zk_perp_x(:)   !< Psi_N values of zk_perp profile
   real*8, allocatable :: num_zk_perp_y(:)   !< ZK_perp values of zk_perp profile
   real*8, allocatable :: num_zk_e_perp_x(:) !< Psi_N values of zk_e_perp profile

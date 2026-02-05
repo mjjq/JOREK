@@ -173,7 +173,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 vacuum_min, strumpack_matching,                     &
                 fix_irregular_nodes, Fprofile_tolerance,            &
                 neo_etaT, neo_minor_radius, neo_major_radius,       &
-                XL1NCETA
+                XL1NCETA, neo_etaT_ratio_file
 
 if (my_id .eq. 0) then
 

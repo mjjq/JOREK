@@ -802,6 +802,7 @@ write(*,'(1x,a)',advance='no') ' USE_CATALYST : '
   write(*,LOGI_FMT) 'grid_to_wall          ', grid_to_wall
   write(*,INTG_FMT) 'adaptive_time_dec_iter', adaptive_time_dec_iter
   write(*,REAL_FMT) 'adaptive_time_min     ', adaptive_time_min
+  write(*,REAL_FMT) 'adaptive_time_max     ', adaptive_time_max
   write(*,REAL_FMT) 'adaptive_time_dec_fac ', adaptive_time_dec_fac
   write(*,LOGI_FMT) 'equil                 ', equil
   write(*,LOGI_FMT) 'bench_without_plot    ', bench_without_plot

@@ -108,6 +108,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 adaptive_time, adaptive_time_dec_iter,              &
                 adaptive_time_dec_fac, adaptive_time_inc_iter,      &
                 adaptive_time_inc_fac, adaptive_time_min,           &
+                adaptive_time_max,                                  &
                 equil, bench_without_plot,                          &
                 eta_T_dependent, visco_T_dependent,                 &
                 zkpar_T_dependent, T_max_eta, T_max_eta_ohm,        & 

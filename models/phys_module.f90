@@ -22,6 +22,7 @@ module phys_module
   real*8  :: eta_ohmic            !< Resistivity at core for the Ohmic heating term
   logical :: eta_T_dependent      !< Resistivity dependent on temperature? Otherwise constant
   logical :: neo_etaT             !< Resistivity with neoclassical correction: https://www.jorek.eu/wiki/doku.php?id=spitzer_resistivity
+  real*8  :: XL1NCETA             !< Create a smoothed eta_neo that equals eta_spz within XL1NCETA and transitions to eta_neo outside, similiar to the TRANSP implementation
   real*8  :: neo_minor_radius     !< minor radius of the device to calculate the neoclassical correction
   real*8  :: neo_major_radius     !< major radius of the device to calculate the neoclassical correction
   real*8  :: T_max_eta            !< Temperature above which the resistivity is truncated (use with care; only for numerical reasons)

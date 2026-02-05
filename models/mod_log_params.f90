@@ -566,6 +566,7 @@ write(*,'(1x,a)',advance='no') ' CASTOR3D_METHOD_AT_VI_REFERENCE_FRAME : '
   write(*,LOGI_FMT) 'neo_etaT              ', neo_etaT
   write(*,REAL_FMT) 'neo_minor_radius      ', neo_minor_radius
   write(*,REAL_FMT) 'neo_major_radius      ', neo_major_radius
+  write(*,REAL_FMT) 'XL1NCETA              ', XL1NCETA
   write(*,REAL_FMT) 'eta_ohmic             ', eta_ohmic
   write(*,REAL_FMT) 'eta_Spitzer (not input parameter; printed for reference in JOREK units)', eta_Spitzer
   write(*,REAL_FMT) 'T_max_eta             ', T_max_eta

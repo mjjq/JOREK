@@ -154,6 +154,9 @@ real*8  :: varmin(n_var), varmax(n_var), V_min(n_var), V_max(n_var)
 real*8  :: R_curr_cent, Z_curr_cent, Zcurr_tmp, R2curr_tmp, R2curr
 real*8  :: heating_impl_in, heating_impl_out, H_impl_int, H_impl_ext,heating_impl_tot
 real*8  :: Tie_min_neg
+
+real*8  :: aux_weight, neo_fact_eta_T
+
 #if (defined WITH_Neutrals)
 real*8  :: source_neutral, source_neutral_drift
 real*8  :: source_neutral_arr(n_inj_max), source_neutral_drift_arr(n_inj_max)
@@ -389,6 +392,7 @@ Tie_min_neg = 0.5*T_min_neg
 !$omp          D_tot, D_int, D_Ext, P_tot, P_int, P_ext, Vol, C_intern, C_ext, VP_ext, VP_int, &
 !$omp          VK_ext, VK_int, VK_tot, VM_ext, VM_int, VM_tot, J2_tot, J2_ext, J2_int,         &
 !$omp          H_int, S_int, S_ext,psi_xpoint,  F0, VP_tot,eta, T_0, Te_0, T_min, H_ext,       &
+!$omp          aux_weight, neo_fact_eta_T, XL1NCETA,                                           &
 #ifdef WITH_TiTe
 !$omp          H_int_electron, H_int_ion, H_ext_electron, H_ext_ion,                    &
 #endif
@@ -986,7 +990,15 @@ do ife = ife_min, ife_max
         call resistivity(eta,       T_or_Te, T_or_Te_corr, T_max_eta,     T_or_Te_0, Z_eff, eta_T    )           
         call resistivity(eta_ohmic, T_or_Te, T_or_Te_corr, T_max_eta_ohm, T_or_Te_0, Z_eff, eta_T_ohm)           
 
-        if(neo_etaT) eta_T = eta_T * 1.d0 / (1-dsqrt(dsqrt(psi_as_coord) * neo_minor_radius / neo_major_radius))**2
+        if(neo_etaT) then
+          neo_fact_eta_T = 1.d0 / (1-dsqrt(dsqrt(psi_as_coord) * neo_minor_radius / neo_major_radius))**2 
+          if ((sqrt(psi_as_coord) <= XL1NCETA) .and. (XL1NCETA > 0)) then
+            ! Smooth transition function (0 to 1)
+            aux_weight = 0.5 * (1 - cos(PI * sqrt(psi_as_coord) / XL1NCETA))
+            neo_fact_eta_T = (1 - aux_weight) * 1.0 + aux_weight * neo_fact_eta_T
+          endif
+          eta_T = eta_T * neo_fact_eta_T
+        endif
 
         ! --- Switch to use old viscosity model
         if (visco_old_setup) then

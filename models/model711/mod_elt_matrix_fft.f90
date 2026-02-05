@@ -82,6 +82,7 @@ complex*16 :: out_fft(1:n_plane)
 real*8     :: rho_axisym(n_gauss,n_gauss), Ti_axisym(n_gauss,n_gauss), Te_axisym(n_gauss,n_gauss)
 real*8     :: rho_GS,Ti_GS,Te_GS, dd1,dd2,dd3,dd4,dd5,dd6,dd7,dd8
 real*8     :: rho_target_GS,dd1_target,dd2_target,dd3_target,dd4_target,dd5_target,dd6_target,dd7_target,dd8_target
+real*8     :: aux_weight
 real*8     :: psi_axisym(n_gauss,n_gauss), psi_axisym_s(n_gauss,n_gauss), psi_axisym_t(n_gauss,n_gauss)
 real*8     :: psi_axisym_ss(n_gauss,n_gauss), psi_axisym_tt(n_gauss,n_gauss), psi_axisym_st(n_gauss,n_gauss)
 real*8     ::                              psi_axisym_R(n_gauss,n_gauss), psi_axisym_Z(n_gauss,n_gauss)
@@ -1484,6 +1485,11 @@ do j=1,n_degrees
 #endif
           if (neo_etaT) then
             neo_fact_eta_T = 1.d0 / (1-dsqrt(dsqrt(psi_norm) * neo_minor_radius / neo_major_radius))**2
+            if ((sqrt(psi_norm) <= XL1NCETA) .and. (XL1NCETA > 0)) then
+              ! Smooth transition function (0 to 1)
+              aux_weight = 0.5 * (1 - cos(PI * sqrt(psi_norm) / XL1NCETA))
+              neo_fact_eta_T = (1 - aux_weight) * 1.0 + aux_weight * neo_fact_eta_T
+            endif
           else
             neo_fact_eta_T = 1.d0
           endif

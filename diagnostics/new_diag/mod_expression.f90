@@ -729,6 +729,8 @@ module mod_expression
     real*8  :: grad_P_R, grad_P_Z, grad_P_Phi
     real*8  :: visc_term_R, visc_term_Z, visc_term_Phi
 
+    real*8  :: aux_weight, neo_fact_eta_T
+
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
     real*8  :: Te_corr_eV, Te_eV
     real*8  :: LradDrays_T, LradDcont_T, Sion_T, Srec_T
@@ -2027,7 +2029,15 @@ module mod_expression
           if ( .not. with_impurities ) Z_eff = 1
           call resistivity(eta, T_or_Te, T_or_Te_corr, T_max_eta, T_or_Te_0, Z_eff, eta_T)     
 
-          if(neo_etaT) eta_T = eta_T * 1.d0 / (1-dsqrt(dsqrt(psi_norm) * neo_minor_radius / neo_major_radius))**2
+          if(neo_etaT) then
+            neo_fact_eta_T = 1.d0 / (1-dsqrt(dsqrt(psi_norm) * neo_minor_radius / neo_major_radius))**2
+            if ((sqrt(psi_norm) <= XL1NCETA) .and. (XL1NCETA > 0)) then
+              ! Smooth transition function (0 to 1)
+              aux_weight = 0.5 * (1 - cos(PI * sqrt(psi_norm) / XL1NCETA))
+              neo_fact_eta_T = (1 - aux_weight) * 1.0 + aux_weight * neo_fact_eta_T
+            endif
+            eta_T = eta_T * neo_fact_eta_T
+          endif
 
           dpsi_dt   = BigR*(ps0_s*u0_t - ps0_t*u0_s)/xjac + eta_T*zj0 - F0*u0_p 
           ExB_norm  = -dpsi_dt * (ps0_R*nmlR + ps0_Z*nmlZ) / (BigR**2.d0) 

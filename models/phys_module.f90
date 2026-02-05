@@ -87,6 +87,7 @@ module phys_module
   integer :: adaptive_time_inc_iter !< If number of solver iterations in previous timestep is below this value, timestep is increased
   real*8  :: adaptive_time_inc_fac !< Adaptive timestep increase multiplication factor. I.e. t_step = t_step*adaptive_time_inc_fac
   real*8  :: adaptive_time_min    !< Minimum adaptive timestep before simulation exits
+  real*8  :: adaptive_time_max    !< Maximum adaptive timestep to prevent extremely large timesteps
   logical :: equil                !< compute equilibrium
   logical :: no_mach1_bc          !< Never apply Mach-1 BCs
   logical :: Mach1_openBC         !< Full-MHD: Apply Mach-1 BCs inside mod_boundary_matrix_open.f90 (or mod_boundary_conditions.f90)

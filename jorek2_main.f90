@@ -696,14 +696,19 @@ mpi_required = 0
         if ((solver%iter_gmres .ge. adaptive_time_dec_iter) .and. & 
             (tstep*adaptive_time_dec_fac .ge. adaptive_time_min)) then
           tstep = tstep*adaptive_time_dec_fac
-        else if ((solver%iter_gmres .lt. adaptive_time_inc_iter)) then
-          tstep = tstep*adaptive_time_inc_fac
-        endif
 
-
-        if ( my_id == 0 ) then
-            write(*,*) 'ADAPTING TIMESTEP : ',tstep
+          if ( my_id == 0 ) then
+            write(*,*) 'ADAPTING TIMESTEP (decrease) : ',tstep
             write(*,*)
+          endif
+        else if ((solver%iter_gmres .lt. adaptive_time_inc_iter) .and. &
+                 (tstep*adaptive_time_inc_fac .lt. adaptive_time_max)) then
+          tstep = tstep*adaptive_time_inc_fac
+
+          if ( my_id == 0 ) then
+            write(*,*) 'ADAPTING TIMESTEP (increase) : ',tstep
+            write(*,*)
+          endif
         endif
 
       endif

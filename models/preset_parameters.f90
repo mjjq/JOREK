@@ -676,6 +676,7 @@ subroutine preset_parameters
   initial_amplitude = 1.d-12
   init_amp_psin = 0.5
   init_amp_width = 1000.0 ! Disable gaussian concentration about init_amp_psin by default
+  init_m_pol = 0          ! Poloidally uniform initial perturbation
   
 !==== RMP parameters =====
   RMP_on             = .false.              ! .true. to activate RMPs (changes boundary conditions)

@@ -775,6 +775,7 @@ module phys_module
   real*8 :: initial_amplitude !< Initial amplitude of n>0 perturbations.
   real*8 :: init_amp_psin     !< Location of initial perturbation gaussian (in terms of Psi N)
   real*8 :: init_amp_width    !< Width of initial perturbation gaussian
+  integer :: init_m_pol       !< Poloidal mode number of initial perturbation (used to seed specific modes)
 
   !> @name RMP profiles
   logical :: output_bnd_elements !< If .true., writes bnd nodes and bnd elements in files 'boundary_nodes.dat' and 'boundary_elements.dat'

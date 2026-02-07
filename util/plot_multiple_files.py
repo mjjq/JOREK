@@ -173,12 +173,12 @@ def plot_ascii_files(file_paths, xscaleType, yscaleType, title, xlabel, ylabel, 
         if not colorful:
             colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
 
-        color_plot = colors[i % len(colors)]
+        color_plot = colors[(i + 0) % len(colors)]
 
         if colorful:
             linestyle_plot = linestyle_list[0]
         else:
-            linestyle_plot = linestyle_list[i % len(linestyle_list)]  # Cycle through linestyle_list
+            linestyle_plot = linestyle_list[(i + 0) % len(linestyle_list)]  # Cycle through linestyle_list
 
         for rankj, j in enumerate(columns_plot_for_Y_mdf):
             if len(file_paths) == 1:

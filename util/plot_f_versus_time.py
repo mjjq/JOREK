@@ -17,10 +17,82 @@ import plot_multiple_files as pltmpf
 import plot_q_versus_time as pltqvst
 from tqdm import tqdm
 import matplotlib.ticker as ticker
+from scipy import integrate
 
 def find_nearest(array, target):
     idx = (np.abs(array - target)).argmin()
     return idx
+
+
+def plot_radial_integration(times_2d, radial_2d, data_2d_plt, t_start, t_end):
+    # Determine which integration function is available
+    if hasattr(integrate, 'trapezoid'):
+        integrator = integrate.trapezoid
+    else:
+        integrator = integrate.trapz  # Fallback for older versions
+
+    # Extract 1D vectors
+    times_1d = times_2d[:, 0]
+    radial_1d = radial_2d[0, :]
+    
+    # Create mask and slice data
+    time_mask = (times_1d >= t_start) & (times_1d <= t_end)
+    selected_times = times_1d[time_mask]
+    selected_data = data_2d_plt[time_mask, :]
+    
+    # Perform integration using the detected integrator
+    integrated_radial_profile = integrator(selected_data, x=selected_times, axis=0)
+    
+    # Plotting
+    plt.figure(figsize=(8, 5))
+    plt.plot(radial_1d, integrated_radial_profile, linewidth=2, color='tab:red')
+    plt.title(f'Integrated Profile from $t={t_start}$ to $t={t_end}$')
+    plt.xlabel('Radius')
+    plt.ylabel('Integrated Signal')
+    plt.grid(True)
+    plt.show()
+
+    return radial_1d, integrated_radial_profile
+
+def analyze_radial_profile(times_2d, radial_2d, data_2d_plt, t_start, t_end):
+    # Compatibility check for SciPy version
+    integrator = integrate.trapezoid if hasattr(integrate, 'trapezoid') else integrate.trapz
+
+    # 1. Extract 1D vectors
+    times_1d = times_2d[:, 0]
+    radial_1d = radial_2d[0, :]
+    
+    # 2. Mask the time window
+    time_mask = (times_1d >= t_start) & (times_1d <= t_end)
+    selected_times = times_1d[time_mask]
+    selected_data = data_2d_plt[time_mask, :]
+    
+    if len(selected_times) < 2:
+        raise ValueError("The selected time range is too small or contains no data points.")
+
+    # 3. Calculate the Integral
+    integrated_profile = integrator(selected_data, x=selected_times, axis=0)
+    
+    # 4. Calculate the Time-Average
+    # We divide by the actual duration of the sliced data
+    duration = selected_times[-1] - selected_times[0]
+    averaged_profile = integrated_profile / duration
+    
+    # 5. Plotting the Average Profile
+    plt.figure(figsize=(8, 5))
+    plt.plot(radial_1d, averaged_profile, linewidth=2, color='darkgreen', label='Time-Average')
+    
+    plt.title(f'Time-Averaged Radial Profile\n(Interval: {selected_times[0]:.2f} to {selected_times[-1]:.2f})')
+    plt.xlabel(r'Radial Coordinate ($r$)')
+    plt.ylabel(r'Averaged Value $\langle Data \rangle_t$')
+    plt.grid(True, linestyle=':', alpha=0.6)
+    plt.legend()
+    plt.show()
+
+    return radial_1d, integrated_profile, averaged_profile
+
+# Example call:
+# r, integral, average = analyze_radial_profile(times_2d, radial_2d, data_2d_plt, 0.5, 1.5)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -58,6 +130,10 @@ if __name__ == "__main__":
                         help="Specify the time point to plot and save 1D profile vs radial coordinate.")
     parser.add_argument("-rslc", "--radial_slice", type=float, default=-1.e9,
                         help="Specify the raidal coordinate point to plot and save 1D profile vs time.")
+    parser.add_argument("-tstart", "--tstart_avg_intg", type=float, default=-1.e9,
+                        help="Specify the start time for averaging/integrating data over time.")
+    parser.add_argument("-tend", "--tend_avg_intg", type=float, default=-1.e9,
+                        help="Specify the end time for averaging/integrating data over time.")
 
     args = parser.parse_args()
     
@@ -221,6 +297,18 @@ if __name__ == "__main__":
         plt.tight_layout()    
 
     plt.show()
+
+
+    if args.tstart_avg_intg >= 0 and args.tend_avg_intg > 0:
+        t_start = args.tstart_avg_intg
+        t_end   = args.tend_avg_intg
+        # r_coord, integrated_profile = plot_radial_integration(times_2d, radial_2d, data_2d, t_start, t_end)
+        r_coord, integrated_profile, averaged_profile = analyze_radial_profile(times_2d, radial_2d, data_2d, t_start, t_end)
+        file_save = 'postproc/avg_' + variable_name + '_profile_during_t_eq_' + '{:.2f}'.format(t_start) + '_' + '{:.2f}'.format(t_end) + '.dat'
+        data_save=np.column_stack((r_coord, averaged_profile))
+        np.savetxt(file_save, data_save, delimiter=' ', comments='', header = 'rhop ' + variable_name +'-profile')
+        print('avg_' + variable_name + "-profile is saved to " + file_save)
+
 
     if False: # plot Jtor over time, $ plot_f_versus_time.py -xm $time2si -fn exprs_averaged -yc 8 -xl "time [ms]" -rp 0.5 -clim 0 3.3 
         rmin = 0.07

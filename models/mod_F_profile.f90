@@ -557,6 +557,15 @@ subroutine integrate_F_profile()
   end do
   close(unit=10)
 
+  ! --- Write out the F-profile vs Psi_n for debugging purpose
+  open(unit=10, file='F_profile_invPsi.dat', status='replace', action='write')
+  write(10, '(A)') 'Fprofile_internal_psi   Fprofile_internal'
+  do i_prof = 1, n_Fprofile_internal
+      ! When calling F_profile, if psi_axis > psi_bnd, the F_profile is reversed as below
+      write(10, '(2ES15.6)') Fprofile_internal_psi(i_prof), 2 * F0 - Fprofile_internal(i_prof)
+  end do
+  close(unit=10)
+
   deallocate(integral_large)
   deallocate(psi_large)
   

@@ -106,8 +106,8 @@ character(len=64) :: descr
 logical :: long2
 
 long2 = .false.
-
-if ( (i_var <= n_var) .or. (i_var > (n_var + 9)) ) then
+#define n_var_additional 14
+if ( (i_var <= n_var) .or. (i_var > (n_var + n_var_additional)) ) then
   name  = 'NONE'
   descr = 'Illegal variable index!'
   return
@@ -138,6 +138,21 @@ else if ( i_var == n_var + 8 ) then
 else if ( i_var == n_var + 9 ) then
   name  = "B_poloidal"
   descr = "Poloidal component of magnetic field"
+else if ( i_var == n_var + 10 ) then
+  name  = "JxB_radial"
+  descr = "Radial component of JxB"
+else if ( i_var == n_var + 11 ) then
+  name  = "gradP_radial"
+  descr = "Radial component of pressure gradient"
+else if ( i_var == n_var + 12 ) then
+  name  = "RUxB_phi"
+  descr = "Phi component of R * U x B"
+else if ( i_var == n_var + 13 ) then
+  name  = "rho_divU"
+  descr = "rho * Div U"
+else if ( i_var == n_var + 14 ) then
+  name  = "U_gradRho"
+  descr = "U dot grad(rho)"
 else
   write(name, "(I4)") i_var
   descr = "Please check implementation"

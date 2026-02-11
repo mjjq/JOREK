@@ -103,7 +103,8 @@ program JOREK2_FOUR
   call execute_command_line('mkdir '//trim(foldername))
 
 #ifdef fullmhd
-#define n_var_max (n_var + 9)
+#define n_var_additional 14
+#define n_var_max (n_var + n_var_additional)
 #else
 #define n_var_max (n_var)
 #endif

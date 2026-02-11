@@ -40,6 +40,7 @@ module phys_module
   real*8  :: visco_par_par        !< Parallel parallel viscosity (normalized)
   real*8  :: visco_par_par_heating!< Parallel parallel viscosity used in the parallel viscous heating term (normalized)
   real*8  :: F0                   !< Determines fixed toroidal magnetic field: \f$ B_\phi = F_0/R \f$
+                                  !< Haowei note: should it be calculated from the vacuum field? because in integrate_F_profile(), F_bnd = F0
   real*8  :: central_density      !< particle density at the magnetic axis (in units of \f$10^{20} m^{-3}\f$)
   real*8  :: central_mass         !< average ion mass in atomic mass units (constant in time and space)
   real*8  :: sqrt_mu0_rho0        !< Normalization factor \f$\sqrt(\mu_0 \rho_0)\f$ calculated from input

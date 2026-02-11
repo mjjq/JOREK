@@ -106,6 +106,7 @@ if __name__ == "__main__":
             i = np.where(step_all_1d == it)[0]
             if len(i) > 1:
                 print("Find multiple for step = ", it, " in " + timefile)
+                times_1d_array.append(times_all_1d[i[0]])
             elif len(i) == 1:
                 times_1d_array.append(times_all_1d[i[0]])
             else:

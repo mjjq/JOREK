@@ -332,6 +332,7 @@ subroutine integrate_F_profile()
   real*8  :: ff2,ff3,ff4,ff5,ff6
   real*8, allocatable  :: integral_large(:), psi_large(:)
   real*8  :: sign_F
+  real*8  :: step_inc_factor, step_dec_factor
 
   if (F0 .eq. 0.d0) then
     write(*,*) "ERROR: F0 cannot equal zero!!!"
@@ -450,6 +451,8 @@ subroutine integrate_F_profile()
     psi      = 0.d0
     i_step   = 0
     stay_safe= 0
+    step_inc_factor = 2.0
+    step_dec_factor = 2.0
     do while (.true.)
   
       ! --- Make sure we are not in an infinite loop...
@@ -457,6 +460,18 @@ subroutine integrate_F_profile()
       if (stay_safe .gt. 10*n_integral_max) then
         write(*,*)'Warning! F-profile integration stuck in infinite loop!'
         stop
+      else if(stay_safe .gt. n_integral_max/1e3) then
+        write(*,*)'Warning! F-profile integration is taking too long, we change step_dec_factor from ', step_dec_factor, ' to ', 1.1
+        step_dec_factor = 1.2
+        stay_safe = 0
+      else if(stay_safe .gt. n_integral_max/1e2) then
+        write(*,*)'Warning! F-profile integration is taking too long, we change step_dec_factor from ', step_dec_factor, ' to ', 1.5
+        step_dec_factor = 1.5
+        stay_safe = 0
+      else if(stay_safe .gt. n_integral_max/1e1) then
+        write(*,*)'Warning! F-profile integration is taking too long, we change step_dec_factor from ', step_dec_factor, ' to ', 1.9
+        step_dec_factor = 1.9
+        stay_safe = 0
       endif
     
       ! --- New step (we go from 0.0 to ~1.0)
@@ -480,16 +495,17 @@ subroutine integrate_F_profile()
       if (psi .lt. psi_edge) then
         diff = abs(FFprime_mid - (FFprime_now+FFprime_prev)/2.0)
         if (diff / reference .gt. quad_tol_max) then
-          if (step / 2.0 .ge. step_min) then ! this is our threshold, otherwise continue...
-            step = step / 2.0
+          if (step / step_dec_factor .ge. step_min) then ! this is our threshold, otherwise continue...
+            step = step / step_dec_factor
+            write(*,*) 'decrease step by ', step_dec_factor, ', step = ', step, ' at psi = ', psi
             psi = psi_prev
             cycle
           endif
         endif
         if (diff / reference .lt. quad_tol_min) then
-          if (step * 2.0 .le. step_max) then ! this is our threshold, otherwise continue...
-            step = step * 2.0
-            write(*,*) 'increase step,step'
+          if (step * step_inc_factor .le. step_max) then ! this is our threshold, otherwise continue...
+            step = step * step_inc_factor
+            write(*,*) 'increase step by ', step_inc_factor, ', step = ', step, ' at psi = ', psi
             psi = psi_prev
             cycle
           endif

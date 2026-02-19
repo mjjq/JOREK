@@ -63,11 +63,66 @@ def integrate_pressure_gradient(r, dpdr):
     
     return np.trapz(integrand, r)
 
+def integrate_2r(r):
+    """
+    Compute integral: ∫ 2r dr
+
+    Parameters
+    ----------
+    r : array_like
+        1D array of radial positions
+
+    Returns
+    -------
+    float
+        Value of the integral (0 if input array is empty)
+    """
+    r = np.asarray(r)
+
+    if len(r) == 0:
+        return 0.0
+
+    integrand = 2.0 * r
+    return np.trapz(integrand, r)
+
+def integrate_pressure_times_2r(r, p):
+    """
+    Compute integral: ∫ p * 2r dr
+
+    Parameters
+    ----------
+    r : array_like
+        1D array of radial positions
+    p : array_like
+        1D array of pressure values (same length as r)
+
+    Returns
+    -------
+    float
+        Value of the integral (0 if input arrays are empty)
+
+    Raises
+    ------
+    ValueError
+        If r and p have different lengths
+    """
+    r = np.asarray(r)
+    p = np.asarray(p)
+
+    if len(r) == 0 or len(p) == 0:
+        return 0.0
+
+    if len(r) != len(p):
+        raise ValueError("r and p must have the same length.")
+
+    integrand = p * 2.0 * r
+    return np.trapz(integrand, r)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Plot radial distribution of beta_p (y-axis) versus time (x-axis) from postproc files.")
-    parser.add_argument("-fp", "--file_path", default="postproc_with_Btheta/",
+    parser.add_argument("-fp", "--file_path", default="postproc/",
                         help="Directory contains ???????_sxxxxx.dat.")
     parser.add_argument("-fn", "--file_name", default="exprs_averaged_s",
                         help="Prefix of the files to be plotted.")
@@ -118,7 +173,9 @@ if __name__ == "__main__":
     # Initialize 1D and 2D arrays
     numbers_1d_array = []
     betap_dpdr_2d_array = []
+    dpdr_2d_array = []
     radial_1d_array = []
+    error_integ_2d_array = []
 
     variable_name = 'beta_p'
     idx_pres = args.column_plot_for_pressure
@@ -129,6 +186,11 @@ if __name__ == "__main__":
         file_path = os.path.join(directory, file_name)
         numbers_1d_array.append(pltqvst.extract_number(file_path))
         column_names, data = pltmpf.read_ascii_file(file_path, args.skiprows)
+        # add an empty row at the beginning of data, which is required for the integration from 0 to r, 
+        # otherwise, the ∫ 2r dr from 0 to r1 will be shifted by a constant from the true value of r1^2
+        new_row = np.zeros((1, data.shape[1]))
+        new_row[0, 1:] = data[0, 1:]
+        data = np.vstack((new_row, data))
 
         if i == 0:
             radial_1d_array = data[:, 0]
@@ -136,18 +198,42 @@ if __name__ == "__main__":
             if coord_name == 'Psi_N':
                 radial_1d_array = radial_1d_array ** 0.5
             elif coord_name == 'rho_P':
-                radial_1d_array = radial_1d_array ** 1.0
+                radial_1d_array = radial_1d_array
             else:
                 Warning(f"Error in the coord_name: {coord_name}")
 
         dpdr = np.gradient(data[:, idx_pres], radial_1d_array)
         betap_dpdr_1d = []
+        error_integ_1d = []
 
         for i_flux, Btheta in enumerate(data[:, idx_Btheta]):
-            betap_dpdr = 2 * mu0 / Btheta ** 2 / radial_1d_array[i_flux] ** 2 * integrate_pressure_gradient(radial_1d_array[:i_flux+1],dpdr[:i_flux+1])
-            betap_dpdr_1d.append(betap_dpdr)
+            if Btheta != data[i_flux, idx_Btheta]:
+                print(f"file_id = {i}, Warning: Btheta = {Btheta} is different from {data[i_flux, idx_Btheta]} at i_flux = {i_flux} in file {file_name}")
+            if i_flux == 0 and radial_1d_array[i_flux] == 0:
+                if i == 0:
+                    print(f"file_id = {i}, Warning: the first radial point is zero, we skip it! ")
+                betap_dpdr_1d.append(0.0)
+                error_integ_1d.append(0.0)
+            else:
+                # because the last index in numpy array is shifited by 1, for example [:10, idx] corresponds to index 9 in the original data
+                i_flux_to_integ = i_flux + 1
+                # the below three methods are equilivanet
+                betap_dpdr1 = 2 * mu0 / Btheta ** 2 * integrate_pressure_gradient(radial_1d_array[:i_flux_to_integ], dpdr[:i_flux_to_integ])
+                betap_dpdr2 = 2 * mu0 / Btheta ** 2 * (integrate_pressure_times_2r(radial_1d_array[:i_flux_to_integ], data[:i_flux_to_integ, idx_pres]) / radial_1d_array[i_flux] ** 2 - data[i_flux, idx_pres])
+                betap_dpdr3 = 2 * mu0 / Btheta ** 2 * (integrate_pressure_times_2r(radial_1d_array[:i_flux_to_integ], data[:i_flux_to_integ, idx_pres]) / integrate_2r(radial_1d_array[:i_flux_to_integ]) - data[i_flux, idx_pres])
+                # the normal formula of beta_p = 2 \mu_0 <p> / Btheta^2, where <p> is the average pressure
+                betap_normal = 2 * mu0 / Btheta ** 2 * (integrate_pressure_times_2r(radial_1d_array[:i_flux_to_integ], data[:i_flux_to_integ, idx_pres]) / integrate_2r(radial_1d_array[:i_flux_to_integ]))
+                # error_integ = np.abs(integrate_2r(radial_1d_array[:i_flux_to_integ]) - radial_1d_array[i_flux] ** 2) / radial_1d_array[i_flux] ** 2
+                error_integ = np.max([np.abs(betap_dpdr1 - betap_dpdr2), np.abs(betap_dpdr1 - betap_dpdr3), np.abs(betap_dpdr2 - betap_dpdr3)]) / np.abs(betap_dpdr1)
+                betap_dpdr_1d.append(betap_dpdr3)
+                error_integ_1d.append(error_integ)
 
         betap_dpdr_2d_array.append(betap_dpdr_1d)
+        dpdr_2d_array.append(dpdr)
+        error_integ_2d_array.append(error_integ_1d)
+
+    dpdr_2d_array = np.array(dpdr_2d_array)
+    error_integ_2d_array = np.array(error_integ_2d_array)
 
     timefile = 'times.dat'
     if os.path.exists(timefile):
@@ -253,16 +339,27 @@ if __name__ == "__main__":
         np.savetxt(file_save, data_save, delimiter=' ', comments='', header = 'rhop ' + variable_name +'-profile')
         print(variable_name + "-profile is saved to " + file_save)
 
-        plt.figure(figsize=(7, 5))
-        plt.plot(radial_1d, data_slice_plt, linewidth = 2)
-        plt.xlabel(coord_name if args.ylabel == "" else args.ylabel, fontsize=font_size)
-        plt.ylabel(variable_name + ' profile', fontsize=font_size)
-        plt.title(variable_name + ' profile @ time = ' + '{:.2f}'.format(times_1d[id_target]), fontsize=font_size)
-        plt.xticks(fontsize=font_size)
-        plt.yticks(fontsize=font_size)
-        plt.xlim(min(radial_1d), max(radial_1d))
-        plt.grid()
-        plt.tight_layout()
+        fig, ax_left = plt.subplots(figsize=(7, 5))
+        error_bar_beta_p = np.abs(error_integ_2d_array[id_target,:] * data_slice_plt)
+        line_left = ax_left.errorbar(radial_1d, data_slice_plt, yerr=error_bar_beta_p, linewidth = 2, color='tab:blue', label = 'beta_p', capsize=2)
+        line_error, = ax_left.plot(radial_1d, error_integ_2d_array[id_target,:], linewidth = 2, linestyle='dashed', color='tab:blue', label = 'relative error')
+        ax_left.set_xlabel(coord_name if args.ylabel == "" else args.ylabel, fontsize=font_size)
+        ax_left.set_ylabel(variable_name + ' profile', fontsize=font_size, color='tab:blue')
+        ax_left.tick_params(axis='x', labelsize=font_size)
+        ax_left.tick_params(axis='y', labelsize=font_size, labelcolor='tab:blue')
+        ax_left.set_xlim(min(radial_1d), max(radial_1d))
+        ax_left.grid()
+
+        ax_right = ax_left.twinx()
+        line_right, = ax_right.plot(radial_1d, dpdr_2d_array[id_target,:], linewidth = 2, color='tab:red', label = 'dp/dr')
+        ax_right.set_ylabel('dp/dr', fontsize=font_size, color='tab:red')
+        ax_right.tick_params(axis='y', labelsize=font_size, labelcolor='tab:red')
+
+        ax_left.set_title(variable_name + ' profile @ time = ' + '{:.2f}'.format(times_1d[id_target]), fontsize=font_size)
+        lines = [line_left, line_error, line_right]
+        labels = [line.get_label() for line in lines]
+        ax_left.legend(lines, labels)
+        fig.tight_layout()
     
     if args.radial_slice != -1.e9:
         id_target = np.abs(radial_1d - args.radial_slice).argmin()
@@ -273,7 +370,7 @@ if __name__ == "__main__":
         print(variable_name + " vs time is saved to " + file_save)
         
         plt.figure(figsize=(10, 5))
-        plt.plot(times_1d, data_slice_plt, linewidth = 2)
+        plt.plot(times_1d, data_slice_plt, linewidth = 2, label = 'beta_P')
         plt.xlabel(r'normalized time' if args.xlabel == "" else args.xlabel, fontsize=font_size)
         plt.ylabel(variable_name + ' value', fontsize=font_size)
         plt.title(variable_name + r' vs time @ ' + coord_name + ' = ' + '{:.2f}'.format(radial_1d[id_target]), fontsize=font_size)
@@ -281,6 +378,7 @@ if __name__ == "__main__":
         plt.yticks(fontsize=font_size)
         plt.xlim(min(times_1d), max(times_1d))
         plt.grid()
+        plt.legend()
         plt.tight_layout()    
 
     plt.show()

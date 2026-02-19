@@ -67,12 +67,12 @@ module mod_newton_solver
       tol_Newton = normRHScurrent/normRHSn
       tol_Gmres = solver%newton%gamma_Newton*(normRHScurrent/normRHSprevious)**solver%newton%alpha_Newton
 
-      if (verbose) write(*,*) "Newton:", inewton, tol_Newton, tol_Gmres
+      if (verbose) write(*,*) "Newton: inewton =", inewton, "tol_Newton =", tol_Newton, "tol_Gmres =", tol_Gmres
 
       if (tol_Newton.le.(solve_tol)) then
         converged = .true.
         if (verbose) then
-          write(*,*) "Newton converged:", inewton - 1, tol_Newton
+          write(*,*) "Newton converged: inewton =", inewton - 1, "tol_Newton =", tol_Newton
         endif
 
         call node_list_restore(mhd_sim%node_list, solver%newton%store_value, solver%newton%store_delta)
@@ -95,7 +95,7 @@ module mod_newton_solver
 
         if (inewton.eq.solver%newton%maxNewton) then
           if (verbose) then
-            write(*,*) "Newton failed to converge:", inewton - 1, tol_Newton
+            write(*,*) "Newton failed to converge: inewton =", inewton - 1, "tol_Newton =", tol_Newton
           endif
           solver%step_success = .false.
           return
@@ -104,6 +104,11 @@ module mod_newton_solver
       endif
 
       solver%iter_tol = tol_Gmres
+      if (verbose) then
+        write(*,*) "Newton: gamma_Newton =", solver%newton%gamma_Newton, "and alpha_Newton =", solver%newton%alpha_Newton
+        write(*,*) "Newton: normRHSn =", normRHSn, "normRHScurrent =", normRHScurrent, "normRHSprevious =", normRHSprevious
+        write(*,*) "Newton: call solve_sparse_system, tol_Gmres =", tol_Gmres, "and solve_tol =", solve_tol
+      endif
       call solve_sparse_system(a_matk, rhsk, deltas, solver, mhd_sim)
 
       if (.not.solver%step_success) return

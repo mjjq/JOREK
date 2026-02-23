@@ -169,18 +169,28 @@ module diffusivities
 
   end function get_neo_etaT_ratio1
 
+#define USE_C2_ANAYTIC_NEO_ETA_T_RATIO
+
   real*8 function get_neo_etaT_ratio_ana1(psin)
 #if _OPENMP >= 201511
     !$omp declare simd
 #endif
     implicit none
     real*8, intent(in) :: psin
-    real*8             :: aux_weight
+    real*8             :: aux_t, aux_weight
 
     get_neo_etaT_ratio_ana1 = 1.d0 / (1-dsqrt(dsqrt(psin) * neo_minor_radius / neo_major_radius))**2
     if ((sqrt(psin) <= XL1NCETA) .and. (XL1NCETA > 0)) then
+#ifdef USE_C2_ANAYTIC_NEO_ETA_T_RATIO
+      ! Normalized position in transition region [0, 1]
+      aux_t = sqrt(psin) / XL1NCETA
+      ! Quintic smoothstep: 6t^5 - 15t^4 + 10t^3
+      ! This ensures f(0)=0, f(1)=1, f'(0)=0, f'(1)=0, f''(0)=0, f''(1)=0
+      aux_weight = aux_t**3 * (6 * aux_t**2 - 15 * aux_t + 10)
+#else
       ! Smooth transition function (0 to 1)
       aux_weight = 0.5 * (1 - cos(PI * sqrt(psin) / XL1NCETA))
+#endif
       get_neo_etaT_ratio_ana1 = (1 - aux_weight) * 1.0 + aux_weight * get_neo_etaT_ratio_ana1
     endif
 

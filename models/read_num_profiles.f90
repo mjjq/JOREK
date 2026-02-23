@@ -10,7 +10,7 @@ subroutine read_num_profiles(my_id)
   implicit none
   
   integer, intent(in) :: my_id
-  integer             :: i
+  integer             :: i, io_unit
   
   num_rho = ( rho_file /= 'none' )
   if ( num_rho .and. ( my_id == 0 ) ) then
@@ -165,8 +165,16 @@ subroutine read_num_profiles(my_id)
       call linspace(0.d0, 1.1d0, num_neo_etaT_ratio_len, num_neo_etaT_ratio_x)
 
       do i = 1, num_neo_etaT_ratio_len
+        num_neo_etaT_ratio_x(i) = (num_neo_etaT_ratio_x(i)) ** 2
         num_neo_etaT_ratio_y0(i) = get_neo_etaT_ratio_ana(num_neo_etaT_ratio_x(i))
       end do
+      open(newunit=io_unit, file='jorek_eta_neo_ratio_ana', status='replace', action='write')
+      do i = 1, num_neo_etaT_ratio_len
+        write(io_unit,'(2es24.16)') num_neo_etaT_ratio_x(i), num_neo_etaT_ratio_y0(i)
+      end do
+      close(io_unit)
+      write(*,*) 'No neo_etaT_ratio profile provided, using analytical profile instead.'
+      write(*,*) 'The profile is saved to file "jorek_eta_neo_ratio_ana" for reference.'
     end if
     call check_num_prof(num_neo_etaT_ratio, num_neo_etaT_ratio_x, num_neo_etaT_ratio_y0, num_neo_etaT_ratio_len, 'neo_ratio',          &
                           check_positive=.true.)

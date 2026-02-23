@@ -86,3 +86,6 @@ q_fmhd
 .VSCodeCounter/2024-09-05_15-12-03/results.txt
 bin*/mod_elt_matrix_fft.f90
 .vscode/settings.json
+Makefile_gnu.inc
+Makefile_intel.inc
+Makefile_wiki.inc

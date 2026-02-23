@@ -176,7 +176,7 @@ if __name__ == "__main__":
     if args.time_slice != -1.e9:
         id_target = np.abs(times_1d - args.time_slice).argmin()
         data_slice_plt = abs(data_2d)[id_target,:]
-        file_save = 'postproc/q_profile_at_t_eq_' + '{:.2f}'.format(times_1d[id_target]) + '.dat'
+        file_save = directory + 'q_profile_at_t_eq_' + '{:.2f}'.format(times_1d[id_target]) + '.dat'
         data_save=np.column_stack((psin_1d, data_slice_plt))
         np.savetxt(file_save, data_save, delimiter=' ', comments='', header = 'rhop q-profile')
         print("q-profile is saved to " + file_save)
@@ -195,7 +195,7 @@ if __name__ == "__main__":
     if args.radial_slice != -1.e9:
         id_target = np.abs(np.sqrt(psin_1d) - args.radial_slice).argmin()
         data_slice_plt = abs(data_2d)[:,id_target]
-        file_save = 'postproc/q_vs_time_at_rhop_eq_' + '{:.2f}'.format(np.sqrt(psin_1d[id_target])) + '.dat'
+        file_save = directory + 'q_vs_time_at_rhop_eq_' + '{:.2f}'.format(np.sqrt(psin_1d[id_target])) + '.dat'
         data_save=np.column_stack((times_1d, data_slice_plt))
         np.savetxt(file_save, data_save, delimiter=' ', comments='', header = 'time q-value')
         print("q vs time is saved to " + file_save)

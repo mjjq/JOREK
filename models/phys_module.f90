@@ -694,8 +694,6 @@ module phys_module
   real*8, allocatable :: num_d_perp_y(:)    !< D_perp values of d_perp profile
   real*8, allocatable :: num_d_perp_x_imp(:)!< Psi_N values of d_perp  profile for impurity
   real*8, allocatable :: num_d_perp_y_imp(:)!< D_perp values of d_perp profile for impurity
-  real*8, allocatable :: num_neo_etaT_ratio_x(:)    !< Psi_N values of neo_etaT_ratio  profile
-  real*8, allocatable :: num_neo_etaT_ratio_y(:)    !< neo_etaT_ratio values of d_perp profile
   real*8, allocatable :: num_zk_perp_x(:)   !< Psi_N values of zk_perp profile
   real*8, allocatable :: num_zk_perp_y(:)   !< ZK_perp values of zk_perp profile
   real*8, allocatable :: num_zk_e_perp_x(:) !< Psi_N values of zk_e_perp profile
@@ -730,6 +728,13 @@ module phys_module
   integer             :: num_heatsource_e_len    !< Number of datapoints in heatsource profile
   real*8, allocatable :: num_heatsource_e_x(:)   !< Psi_N values of heatsource profile
   real*8, allocatable :: num_heatsource_e_y(:)   !< heatsource values of heatsource profile
+
+  !> @name Numerical profile for the ratio of neo-classical to Spitzer resistivity (eta_neo/eta_spz)
+  real*8, allocatable :: num_neo_etaT_ratio_x(:)    !< Psi_N values of neo_etaT_ratio  profile
+  real*8, allocatable :: num_neo_etaT_ratio_y0(:)   !< neo_etaT_ratio values of d_perp profile
+  real*8, allocatable :: num_neo_etaT_ratio_y1(:)   !< First derivatives of neo_etaT_ratio profile (\f$ d(eta_neo/eta_spz)/d\Psi_N \f$)
+  real*8, allocatable :: num_neo_etaT_ratio_y2(:)   !< Second derivatives of neo_etaT_ratio profile (\f$ d^2(eta_neo/eta_spz)/d\Psi_N^2 \f$)
+  real*8, allocatable :: num_neo_etaT_ratio_y3(:)   !< Third derivatives of neo_etaT_ratio profile (\f$ d^3(eta_neo/eta_spz)/
   
   !> @name Analytical input profile for the density
   real*8  :: rho_0             !< Central normalized density (usually 1)

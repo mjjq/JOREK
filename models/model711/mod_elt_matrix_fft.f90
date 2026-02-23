@@ -14,7 +14,7 @@ use data_structure
 use gauss
 use basis_at_gaussian
 use phys_module
-use diffusivities, only: get_dpar, get_dperp, get_zk_iperp, get_zk_eperp, get_neo_etaT_ratio
+use diffusivities, only: get_dpar, get_dperp, get_zk_iperp, get_zk_eperp, get_neo_etaT_ratio, get_ddpsi_neo_etaT_ratio
 use equil_info, only : get_psi_n, ES
 use mod_F_profile
 use mod_bootstrap_functions
@@ -268,7 +268,8 @@ real*8     :: PneoZ_UR,     PneoZ_UZ
 
 real*8     :: ZKi_prof, ZKe_prof, D_par_prof, D_prof, psi_norm
 
-real*8     :: eta_T, visco_T, deta_dT, d2eta_d2T, dvisco_dT, visco_num_T, neo_fact_eta_T
+real*8     :: eta_T, visco_T, deta_dT, d2eta_d2T, dvisco_dT, visco_num_T, neo_fact_eta_T, ddpsi_neo_fact_eta_T
+real*8     :: ddR_neo_fact_eta_T, ddZ_neo_fact_eta_T
 real*8     :: visco_R, visco_Z, visco_p, d2visco_d2T
 real*8     :: visco_T_T, visco_R_T, visco_Z_T, visco_p_T__p, visco_p_T__n ! basis functions
 real*8     :: eta_num_T, eta_R, eta_Z, eta_p, Zki_par_T, dZKi_par_dT, Zke_par_T, dZKe_par_dT
@@ -1485,9 +1486,13 @@ do j=1,n_degrees
 #endif
           if (neo_etaT) then
             neo_fact_eta_T = get_neo_etaT_ratio(psi_norm)
+            ddpsi_neo_fact_eta_T = get_ddpsi_neo_etaT_ratio(psi_norm, psi_axis, psi_bnd)
           else
             neo_fact_eta_T = 1.d0
+            ddpsi_neo_fact_eta_T = 0.d0
           endif
+          ddR_neo_fact_eta_T = ddpsi_neo_fact_eta_T * psi_axisym_R(ms,mt)
+          ddZ_neo_fact_eta_T = ddpsi_neo_fact_eta_T * psi_axisym_Z(ms,mt)
 
 #ifdef TEMPERATURE_DEPENDENT_UPDATE
           ! --- Resistivity
@@ -1514,8 +1519,8 @@ do j=1,n_degrees
           deta_dT   = deta_dT   * neo_fact_eta_T
           d2eta_d2T = d2eta_d2T * neo_fact_eta_T
 
-          eta_R = deta_dT * Te0_R
-          eta_Z = deta_dT * Te0_Z
+          eta_R = deta_dT * Te0_R + eta_T / neo_fact_eta_T * ddR_neo_fact_eta_T
+          eta_Z = deta_dT * Te0_Z + eta_T / neo_fact_eta_T * ddZ_neo_fact_eta_T
           eta_p = deta_dT * Te0_p
 
           ! --- Eta for ohmic heating ! NOT YET IMPLEMENTED !!! NEED THE CURRENT !!!
@@ -1605,8 +1610,8 @@ do j=1,n_degrees
           deta_dT   = deta_dT   * neo_fact_eta_T
           d2eta_d2T = d2eta_d2T * neo_fact_eta_T
 
-          eta_R = deta_dT * dTe_GS_dR_initial(ms,mt)
-          eta_Z = deta_dT * dTe_GS_dZ_initial(ms,mt)
+          eta_R = deta_dT * dTe_GS_dR_initial(ms,mt) + eta_T / neo_fact_eta_T * ddR_neo_fact_eta_T
+          eta_Z = deta_dT * dTe_GS_dZ_initial(ms,mt) + eta_T / neo_fact_eta_T * ddZ_neo_fact_eta_T
           eta_p = deta_dT * 0.d0
 
           ! --- Eta for ohmic heating ! NOT YET IMPLEMENTED !!! NEED THE CURRENT !!!
@@ -2988,11 +2993,13 @@ do j=1,n_degrees
                   gradTe_gradVstar_Te__p  = Te_R * v_R  + Te_Z * v_Z
                   gradTe_gradVstar_Te__kn = (Te_p__n / R) * (v_p__k  / R)
 #ifdef TEMPERATURE_DEPENDENT_UPDATE
-                  eta_T_T    = neo_fact_eta_T * deta_dT * Te
-                  eta_R_T    = neo_fact_eta_T * d2eta_d2T * Te * Te0_R + deta_dT * Te_R
-                  eta_Z_T    = neo_fact_eta_T * d2eta_d2T * Te * Te0_Z + deta_dT * Te_Z
-                  eta_p_T__p = neo_fact_eta_T * d2eta_d2T * Te * Te0_p
-                  eta_p_T__n = neo_fact_eta_T * deta_dT * Te_p__n
+                  eta_T_T    = deta_dT * Te
+                  eta_R_T    = d2eta_d2T * Te * Te0_R + deta_dT * Te_R &
+                               + eta_T_T / neo_fact_eta_T * ddR_neo_fact_eta_T
+                  eta_Z_T    = d2eta_d2T * Te * Te0_Z + deta_dT * Te_Z &
+                               + eta_T_T / neo_fact_eta_T * ddZ_neo_fact_eta_T
+                  eta_p_T__p = d2eta_d2T * Te * Te0_p
+                  eta_p_T__n = deta_dT * Te_p__n
 
                   visco_T_T  = dvisco_dT * Te
                   visco_R_T  = d2visco_d2T * Te * Te0_R + dvisco_dT * Te_R

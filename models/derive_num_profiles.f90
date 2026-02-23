@@ -56,6 +56,12 @@ subroutine derive_num_profiles(my_id)
       call derivProf(num_rot_x, num_rot_y1, num_rot_len, num_rot_y2)
       call derivProf(num_rot_x, num_rot_y2, num_rot_len, num_rot_y3)
     end if    
+
+    if ( num_neo_etaT_ratio ) then
+      call derivProf(num_neo_etaT_ratio_x, num_neo_etaT_ratio_y0, num_neo_etaT_ratio_len, num_neo_etaT_ratio_y1)
+      call derivProf(num_neo_etaT_ratio_x, num_neo_etaT_ratio_y1, num_neo_etaT_ratio_len, num_neo_etaT_ratio_y2)
+      call derivProf(num_neo_etaT_ratio_x, num_neo_etaT_ratio_y2, num_neo_etaT_ratio_len, num_neo_etaT_ratio_y3)
+    end if
     
   end if
   

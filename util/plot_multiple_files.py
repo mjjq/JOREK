@@ -120,7 +120,8 @@ def plot_ascii_files(file_paths, xscaleType, yscaleType, title, xlabel, ylabel, 
     # Set the default linewidth for all lines
     mpl.rcParams['lines.linewidth'] = line_width
 
-    # plt.figure(figsize=(10, 6))  # Set the figure size
+    plt.figure(figsize=(6.4, 4.8))  # Set the figure size
+    # plt.figure(figsize=(7.4, 4.8))  # Set the figure size
 
     if colorful:
         n_curves = len(file_paths)
@@ -246,6 +247,8 @@ def plot_ascii_files(file_paths, xscaleType, yscaleType, title, xlabel, ylabel, 
         ymin, ymax = ylim
         plt.ylim(ymin, ymax)
 
+    # Fixed margins keep the axes box size stable across tick label changes.
+    # plt.subplots_adjust(left=0.14, right=0.95, bottom=0.15, top=0.92)
     plt.tight_layout()
     plt.show()
 

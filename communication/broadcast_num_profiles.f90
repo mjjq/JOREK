@@ -199,10 +199,16 @@ if ( num_neo_etaT_ratio ) then
   call MPI_BCAST(num_neo_etaT_ratio_len,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
   if ( my_id /= 0 ) then
      call tr_allocate(num_neo_etaT_ratio_x,1,num_neo_etaT_ratio_len,"num_neo_etaT_ratio_x")
-     call tr_allocate(num_neo_etaT_ratio_y,1,num_neo_etaT_ratio_len,"num_neo_etaT_ratio_y")
+     call tr_allocate(num_neo_etaT_ratio_y0,1,num_neo_etaT_ratio_len,"num_neo_etaT_ratio_y0")
+     call tr_allocate(num_neo_etaT_ratio_y1,1,num_neo_etaT_ratio_len,"num_neo_etaT_ratio_y1")
+     call tr_allocate(num_neo_etaT_ratio_y2,1,num_neo_etaT_ratio_len,"num_neo_etaT_ratio_y2")
+     call tr_allocate(num_neo_etaT_ratio_y3,1,num_neo_etaT_ratio_len,"num_neo_etaT_ratio_y3")
   end if
   call MPI_BCAST(num_neo_etaT_ratio_x,num_neo_etaT_ratio_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(num_neo_etaT_ratio_y,num_neo_etaT_ratio_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+  call MPI_BCAST(num_neo_etaT_ratio_y0,num_neo_etaT_ratio_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+  call MPI_BCAST(num_neo_etaT_ratio_y1,num_neo_etaT_ratio_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+  call MPI_BCAST(num_neo_etaT_ratio_y2,num_neo_etaT_ratio_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+  call MPI_BCAST(num_neo_etaT_ratio_y3,num_neo_etaT_ratio_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
 end if
 
 if ( num_zk_perp ) then

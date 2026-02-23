@@ -2,8 +2,10 @@
 subroutine read_num_profiles(my_id)
   
   use phys_module
-  use profiles, only: readProf, readProfNeo, derivProf
+  use profiles, only: readProf, readProfNeo, derivProf, resizeProf
   use mod_F_profile
+  use mod_q_profile_fmhd_3D, only: linspace
+  use diffusivities, only: get_neo_etaT_ratio_ana
   
   implicit none
   
@@ -153,11 +155,23 @@ subroutine read_num_profiles(my_id)
                         'd_perp_imp', check_positive=.true.)
   end if
   
-  num_neo_etaT_ratio = ( neo_etaT_ratio_file /= 'none' )
-  if ( num_neo_etaT_ratio .and. ( my_id == 0 ) ) then
-    call readProf(num_neo_etaT_ratio_x, num_neo_etaT_ratio_y, num_neo_etaT_ratio_len, neo_etaT_ratio_file)
-    call check_num_prof(num_neo_etaT_ratio, num_neo_etaT_ratio_x, num_neo_etaT_ratio_y, num_neo_etaT_ratio_len, 'neo_ratio',          &
-                        check_positive=.true.)
+  num_neo_etaT_ratio = .true. ! always construct the neo_etaT_ratio profile, even if no file is provided, since it is needed for the temperature-dependent update of the neoclass resistivity
+#define CONSTANT_LEN 550
+  if ( my_id == 0 ) then
+    if ( neo_etaT_ratio_file /= 'none' ) then
+      call readProf(num_neo_etaT_ratio_x, num_neo_etaT_ratio_y0, num_neo_etaT_ratio_len, neo_etaT_ratio_file)
+    else
+      call resizeProf(num_neo_etaT_ratio_x, num_neo_etaT_ratio_y0, num_neo_etaT_ratio_len, CONSTANT_LEN, .false.)
+      call linspace(0.d0, 1.1d0, num_neo_etaT_ratio_len, num_neo_etaT_ratio_x)
+
+      do i = 1, num_neo_etaT_ratio_len
+        num_neo_etaT_ratio_y0(i) = get_neo_etaT_ratio_ana(num_neo_etaT_ratio_x(i))
+      end do
+    end if
+    call check_num_prof(num_neo_etaT_ratio, num_neo_etaT_ratio_x, num_neo_etaT_ratio_y0, num_neo_etaT_ratio_len, 'neo_ratio',          &
+                          check_positive=.true.)
+  else
+    if ( neo_etaT_ratio_file == 'none' ) num_neo_etaT_ratio_len = CONSTANT_LEN
   end if
 
 

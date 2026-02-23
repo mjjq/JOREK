@@ -708,6 +708,7 @@ subroutine trance_field_lines_fmhd_3D (node_list, element_list, phi_start, phi_p
 
     if (n <= 1) then
         print *, "Error: Number of points must be greater than 1."
+        write(*,*) "input n = ", n
         stop
     end if
 

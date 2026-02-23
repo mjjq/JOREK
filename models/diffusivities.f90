@@ -8,14 +8,15 @@ module diffusivities
                          num_zk_perp, num_zk_e_perp, num_zk_i_perp, ZK_perp, ZK_e_perp, ZK_i_perp, num_zk_perp_x, num_zk_perp_y, num_zk_perp_len,      &
                          num_zk_e_perp_x, num_zk_i_perp_x, num_zk_e_perp_y, num_zk_i_perp_y, num_zk_e_perp_len, num_zk_i_perp_len,     &
                          xpoint, xcase, rho_0, rho_coef, T_coef, Ti_coef, Te_coef, neo_minor_radius, neo_major_radius, XL1NCETA,       &
-                         num_neo_etaT_ratio, num_neo_etaT_ratio_x, num_neo_etaT_ratio_y, num_neo_etaT_ratio_len
+                         num_neo_etaT_ratio, num_neo_etaT_ratio_x, num_neo_etaT_ratio_y0, num_neo_etaT_ratio_y1, num_neo_etaT_ratio_y2, &
+                         num_neo_etaT_ratio_y3, num_neo_etaT_ratio_len
   use profiles,    only: interpolProf, derivProf
     
   implicit none
   
   
   private
-  public get_dpar, get_dperp, get_neo_etaT_ratio, get_zkperp, get_zk_iperp, get_zk_eperp, get_dzk_i_dpsi_perp, get_dzk_e_dpsi_perp, get_dzk_dpsi_perp
+  public get_dpar, get_dperp, get_neo_etaT_ratio, get_neo_etaT_ratio_ana, get_ddpsi_neo_etaT_ratio, get_zkperp, get_zk_iperp, get_zk_eperp, get_dzk_i_dpsi_perp, get_dzk_e_dpsi_perp, get_dzk_dpsi_perp
 
   interface get_dpar
     module procedure get_dpar1
@@ -31,6 +32,14 @@ module diffusivities
   interface get_neo_etaT_ratio
     module procedure get_neo_etaT_ratio1
   end interface get_neo_etaT_ratio
+
+  interface get_neo_etaT_ratio_ana
+    module procedure get_neo_etaT_ratio_ana1
+  end interface get_neo_etaT_ratio_ana
+
+  interface get_ddpsi_neo_etaT_ratio
+    module procedure get_ddpsi_neo_etaT_ratio1
+  end interface get_ddpsi_neo_etaT_ratio
   
   interface get_zkperp
     module procedure get_zkperp1
@@ -155,23 +164,42 @@ module diffusivities
     implicit none
     real*8, intent(in) :: psin
     real*8             :: aux_weight
-
-    if ( num_neo_etaT_ratio ) then
-        
-      get_neo_etaT_ratio1 = interpolProf(num_neo_etaT_ratio_x, num_neo_etaT_ratio_y, num_neo_etaT_ratio_len, psin)
-      
-    else
-
-      get_neo_etaT_ratio1 = 1.d0 / (1-dsqrt(dsqrt(psin) * neo_minor_radius / neo_major_radius))**2
-      if ((sqrt(psin) <= XL1NCETA) .and. (XL1NCETA > 0)) then
-        ! Smooth transition function (0 to 1)
-        aux_weight = 0.5 * (1 - cos(PI * sqrt(psin) / XL1NCETA))
-        get_neo_etaT_ratio1 = (1 - aux_weight) * 1.0 + aux_weight * get_neo_etaT_ratio1
-      endif
-
-    endif
+       
+    get_neo_etaT_ratio1 = interpolProf(num_neo_etaT_ratio_x, num_neo_etaT_ratio_y0, num_neo_etaT_ratio_len, psin)
 
   end function get_neo_etaT_ratio1
+
+  real*8 function get_neo_etaT_ratio_ana1(psin)
+#if _OPENMP >= 201511
+    !$omp declare simd
+#endif
+    implicit none
+    real*8, intent(in) :: psin
+    real*8             :: aux_weight
+
+    get_neo_etaT_ratio_ana1 = 1.d0 / (1-dsqrt(dsqrt(psin) * neo_minor_radius / neo_major_radius))**2
+    if ((sqrt(psin) <= XL1NCETA) .and. (XL1NCETA > 0)) then
+      ! Smooth transition function (0 to 1)
+      aux_weight = 0.5 * (1 - cos(PI * sqrt(psin) / XL1NCETA))
+      get_neo_etaT_ratio_ana1 = (1 - aux_weight) * 1.0 + aux_weight * get_neo_etaT_ratio_ana1
+    endif
+
+  end function get_neo_etaT_ratio_ana1
+
+  real*8 function get_ddpsi_neo_etaT_ratio1(psin, psi_bnd, psi_axis)
+#if _OPENMP >= 201511
+    !$omp declare simd
+#endif
+    implicit none
+    real*8, intent(in) :: psin
+    real*8, intent(in) :: psi_bnd, psi_axis
+    real*8             :: delta_psi
+
+    delta_psi = psi_bnd - psi_axis
+
+    get_ddpsi_neo_etaT_ratio1 = interpolProf(num_neo_etaT_ratio_x, num_neo_etaT_ratio_y1, num_neo_etaT_ratio_len, psin) / delta_psi
+
+  end function get_ddpsi_neo_etaT_ratio1
 
 
   

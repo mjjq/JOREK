@@ -27,7 +27,8 @@ def get_time(num, path = './'):
 
 # Define a function to read data from the file and create scatter plots for each group
 def read_and_plot_data(filename, xlabel_name, ylabel_name, lines_to_skip=1, font_size = 15, multiplier_for_time = 1.0, colorful = False, title = ''):
-    fig = plt.figure(figsize=(7, 6))
+    # fig = plt.figure(figsize=(7, 6))
+    fig = plt.figure(figsize=(6.4, 5.6))  # Set the figure size
     data = []
     current_group = []
     with open(filename, 'r') as file:
@@ -97,6 +98,7 @@ def read_and_plot_data(filename, xlabel_name, ylabel_name, lines_to_skip=1, font
     if title:
         plt.title(title)
     plt.tight_layout()
+    # plt.subplots_adjust(left=0.06, right=0.95, bottom=0.12, top=0.9)
     # plt.legend()
     # plt.show()
     return fig
@@ -107,7 +109,7 @@ if __name__ == "__main__":
         description="Plot Poincaré plot.")
     parser.add_argument("file_paths", nargs="+",
                         help="filename contains the data.")
-    parser.add_argument("-fz", "--fontsize", type=int, default=15,
+    parser.add_argument("-fz", "--fontsize", type=int, default=18,
                         help="Define the fontsize of figure.")
     parser.add_argument("-ti", "--title", default="", help="Manually define the title.")
     parser.add_argument("-tm", "--multiplier_for_time", type=float, default=1.0,

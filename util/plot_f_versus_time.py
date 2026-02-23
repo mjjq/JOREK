@@ -226,15 +226,17 @@ if __name__ == "__main__":
     plt.figure(figsize=(10, 5)) 
     n_level = 40
     if args.clim:
-        contour = plt.contourf(times_2d, radial_2d, data_2d_plt, n_level, levels = np.linspace(args.clim[0], args.clim[1], n_level), cmap='PiYG_r')#, extend = 'both')
+        contour = plt.contourf(times_2d, radial_2d, data_2d_plt, n_level, levels = np.linspace(args.clim[0], args.clim[1], n_level), cmap='PiYG_r', extend = 'both')
     else:
         contour = plt.contourf(times_2d, radial_2d, data_2d_plt, n_level, cmap='PiYG_r')
 
     cbar = plt.colorbar(contour)
-    # formatter = ticker.FormatStrFormatter('%.2e')
+    # formatter = ticker.FormatStrFormatter('%.3e')
+    # formatter = ticker.FormatStrFormatter('%.3f')
     # cbar.ax.yaxis.set_major_formatter(formatter)
     # cbar.set_label(r'$\varepsilon_\parallel$ [V/m]')
-    # cbar.locator = ticker.MaxNLocator(nbins=5)
+    # cbar.locator = ticker.MaxNLocator(nbins=7)
+    # cbar.update_ticks()
 
     plt.title(r'radial distribution of ' + variable_name + ' versus time' if args.title == "" else args.title, fontsize=font_size)
     plt.xlabel(r'normalized time' if args.xlabel == "" else args.xlabel, fontsize=font_size)        
@@ -246,6 +248,7 @@ if __name__ == "__main__":
         contour_line = plt.contour(times_2d, radial_2d, data_2d_plt, levels=args.contour_surfaces, colors='k', linestyles = 'dotted')
         plt.clabel(contour_line, inline=True, fontsize=8)
     plt.tight_layout()
+    # plt.subplots_adjust(left=0.1, right=0.99, bottom=0.14, top=0.93)
 
     x = np.reshape(times_2d, data_2d_num)
     y = np.reshape(radial_2d, data_2d_num)
@@ -262,7 +265,7 @@ if __name__ == "__main__":
     if args.time_slice != -1.e9:
         id_target = np.abs(times_1d - args.time_slice).argmin()
         data_slice_plt = data_2d[id_target,:]
-        file_save = 'postproc/' + variable_name + '_profile_at_t_eq_' + '{:.2f}'.format(times_1d[id_target]) + '.dat'
+        file_save = directory + variable_name + '_profile_at_t_eq_' + '{:.2f}'.format(times_1d[id_target]) + '.dat'
         data_save=np.column_stack((radial_1d, data_slice_plt))
         np.savetxt(file_save, data_save, delimiter=' ', comments='', header = 'rhop ' + variable_name +'-profile')
         print(variable_name + "-profile is saved to " + file_save)
@@ -281,7 +284,7 @@ if __name__ == "__main__":
     if args.radial_slice != -1.e9:
         id_target = np.abs(radial_1d - args.radial_slice).argmin()
         data_slice_plt = data_2d[:,id_target]
-        file_save = 'postproc/' + variable_name + '_vs_time_at_' + coord_name + '_eq_' + '{:.2f}'.format(radial_1d[id_target]) + '.dat'
+        file_save = directory + variable_name + '_vs_time_at_' + coord_name + '_eq_' + '{:.2f}'.format(radial_1d[id_target]) + '.dat'
         data_save=np.column_stack((times_1d, data_slice_plt))
         np.savetxt(file_save, data_save, delimiter=' ', comments='', header = 'time ' + variable_name + '-value')
         print(variable_name + " vs time is saved to " + file_save)
@@ -305,7 +308,7 @@ if __name__ == "__main__":
         t_end   = args.tend_avg_intg
         # r_coord, integrated_profile = plot_radial_integration(times_2d, radial_2d, data_2d, t_start, t_end)
         r_coord, integrated_profile, averaged_profile = analyze_radial_profile(times_2d, radial_2d, data_2d, t_start, t_end)
-        file_save = 'postproc/avg_' + variable_name + '_profile_during_t_eq_' + '{:.2f}'.format(t_start) + '_' + '{:.2f}'.format(t_end) + '.dat'
+        file_save = directory + 'avg_' + variable_name + '_profile_during_t_eq_' + '{:.2f}'.format(t_start) + '_' + '{:.2f}'.format(t_end) + '.dat'
         data_save=np.column_stack((r_coord, averaged_profile))
         np.savetxt(file_save, data_save, delimiter=' ', comments='', header = 'rhop ' + variable_name +'-profile')
         print('avg_' + variable_name + "-profile is saved to " + file_save)

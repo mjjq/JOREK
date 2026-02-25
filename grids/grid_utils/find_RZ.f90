@@ -107,7 +107,6 @@ subroutine find_RZ_all(node_list,element_list,R_find,Z_find,R_out,Z_out,ielm_out
     write(*,'(A, ES15.6)') " Approximated solution, please note! Error is: ", minErrxAll
 
     if(n_R * n_Z .eq. 0) then
-      write(*,*) "Warning: find magnetic axis in find_RZ_all, increase s_out from 0 to 1.e-3"
 #ifdef DEBUG_MAKE
       write(*,*) "Warning: ielm_out = ", ielm_out
       write(*,*) "Warning: n_tht    = ", n_tht
@@ -116,9 +115,15 @@ subroutine find_RZ_all(node_list,element_list,R_find,Z_find,R_out,Z_out,ielm_out
       write(*,*) "Warning: element_list%n_elements = ", element_list%n_elements
 #endif
       if(n_tht .ne. 0) then
-        if((ielm_out .le. n_tht).and.(s_out .le. 1.d-8)) s_out = 1.e-3
+        if((ielm_out .le. n_tht).and.(s_out .le. 1.d-8)) then
+          s_out = 1.e-3
+          write(*,*) "Warning: find magnetic axis in find_RZ_all, increase s_out from 0 to 1.e-3"
+        endif
       else
-        if((ielm_out .le. n_pol).and.(s_out .le. 1.d-8)) s_out = 1.e-3
+        if((ielm_out .le. n_pol).and.(s_out .le. 1.d-8)) then
+          s_out = 1.e-3
+          write(*,*) "Warning: find magnetic axis in find_RZ_all, increase s_out from 0 to 1.e-3"
+        endif
       endif
     endif
 

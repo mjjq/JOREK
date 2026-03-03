@@ -155,31 +155,33 @@ subroutine read_num_profiles(my_id)
                         'd_perp_imp', check_positive=.true.)
   end if
   
-  num_neo_etaT_ratio = .true. ! always construct the neo_etaT_ratio profile, even if no file is provided, since it is needed for the temperature-dependent update of the neoclass resistivity
+  if(neo_etaT) then
+    num_neo_etaT_ratio = .true. ! always construct the neo_etaT_ratio profile, even if no file is provided, since it is needed for the temperature-dependent update of the neoclass resistivity
 #define CONSTANT_LEN 550
-  if ( my_id == 0 ) then
-    if ( neo_etaT_ratio_file /= 'none' ) then
-      call readProf(num_neo_etaT_ratio_x, num_neo_etaT_ratio_y0, num_neo_etaT_ratio_len, neo_etaT_ratio_file)
-    else
-      call resizeProf(num_neo_etaT_ratio_x, num_neo_etaT_ratio_y0, num_neo_etaT_ratio_len, CONSTANT_LEN, .false.)
-      call linspace(0.d0, 1.1d0, num_neo_etaT_ratio_len, num_neo_etaT_ratio_x)
+    if ( my_id == 0 ) then
+      if ( neo_etaT_ratio_file /= 'none' ) then
+        call readProf(num_neo_etaT_ratio_x, num_neo_etaT_ratio_y0, num_neo_etaT_ratio_len, neo_etaT_ratio_file)
+      else
+        call resizeProf(num_neo_etaT_ratio_x, num_neo_etaT_ratio_y0, num_neo_etaT_ratio_len, CONSTANT_LEN, .false.)
+        call linspace(0.d0, 1.1d0, num_neo_etaT_ratio_len, num_neo_etaT_ratio_x)
 
-      do i = 1, num_neo_etaT_ratio_len
-        num_neo_etaT_ratio_x(i) = (num_neo_etaT_ratio_x(i)) ** 2
-        num_neo_etaT_ratio_y0(i) = get_neo_etaT_ratio_ana(num_neo_etaT_ratio_x(i))
-      end do
-      open(newunit=io_unit, file='jorek_eta_neo_ratio_ana', status='replace', action='write')
-      do i = 1, num_neo_etaT_ratio_len
-        write(io_unit,'(2es24.16)') num_neo_etaT_ratio_x(i), num_neo_etaT_ratio_y0(i)
-      end do
-      close(io_unit)
-      write(*,*) 'No neo_etaT_ratio profile provided, using analytical profile instead.'
-      write(*,*) 'The profile is saved to file "jorek_eta_neo_ratio_ana" for reference.'
+        do i = 1, num_neo_etaT_ratio_len
+          num_neo_etaT_ratio_x(i) = (num_neo_etaT_ratio_x(i)) ** 2
+          num_neo_etaT_ratio_y0(i) = get_neo_etaT_ratio_ana(num_neo_etaT_ratio_x(i))
+        end do
+        open(newunit=io_unit, file='jorek_eta_neo_ratio_ana', status='replace', action='write')
+        do i = 1, num_neo_etaT_ratio_len
+          write(io_unit,'(2es24.16)') num_neo_etaT_ratio_x(i), num_neo_etaT_ratio_y0(i)
+        end do
+        close(io_unit)
+        write(*,*) 'No neo_etaT_ratio profile provided, using analytical profile instead.'
+        write(*,*) 'The profile is saved to file "jorek_eta_neo_ratio_ana" for reference.'
+      end if
+      call check_num_prof(num_neo_etaT_ratio, num_neo_etaT_ratio_x, num_neo_etaT_ratio_y0, num_neo_etaT_ratio_len, 'neo_ratio',          &
+                            check_positive=.true.)
+    else
+      if ( neo_etaT_ratio_file == 'none' ) num_neo_etaT_ratio_len = CONSTANT_LEN
     end if
-    call check_num_prof(num_neo_etaT_ratio, num_neo_etaT_ratio_x, num_neo_etaT_ratio_y0, num_neo_etaT_ratio_len, 'neo_ratio',          &
-                          check_positive=.true.)
-  else
-    if ( neo_etaT_ratio_file == 'none' ) num_neo_etaT_ratio_len = CONSTANT_LEN
   end if
 
 

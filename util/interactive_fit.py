@@ -23,7 +23,9 @@ if len(sys.argv) < 3:
 
 filename = sys.argv[1]
 mode = sys.argv[2]
+x_power = 1.0  # default no transformation
 x_power = float(sys.argv[-1])
+print(f"Using x_power = {x_power} for x transformation.")
 
 # parse options
 poly_degree = None
@@ -54,7 +56,7 @@ y = data[:, 1]
 delta_y = max(y) - min(y)
 delta_x = max(x) - min(x)
 accurucy = 0.01 * delta_x
-influ_rad = 0.10 * delta_x
+influ_rad = 0.05 * delta_x
 
 # --- Step 2: Define fitting functions ---
 def sine_model(x, a, b, c):

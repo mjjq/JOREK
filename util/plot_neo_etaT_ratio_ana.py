@@ -217,18 +217,19 @@ def main() -> None:
       first_derivative_num = np.gradient(ratio_num, psin_num, edge_order=2)
       second_derivative_num = np.gradient(first_derivative_num, psin_num, edge_order=2)
 
-    axes[0].plot(psin, ratio, lw=2, label="Analytical")
+    id_start = 0
+    axes[0].plot(psin[id_start:], ratio[id_start:], lw=2, label="Analytical")
     if psin_num is not None:
-      axes[0].plot(psin_num, ratio_num, lw=2, linestyle="--", color = 'k', label="From file")
+      axes[0].plot(psin_num[id_start:], ratio_num[id_start:], lw=2, linestyle="--", color = 'k', label="From file")
     axes[0].set_ylabel("neo_etaT_ratio_ana")
     axes[0].set_title("Analytical neo eta(T) ratio")
     axes[0].grid(True, alpha=0.3)
     axes[0].legend()
 
-    axes[1].plot(psin, second_derivative, lw=2, label="numerical ddpsi of analytical ratio")
-    axes[1].plot(psin, second_derivative_analytic, lw=2, linestyle=":", label="analytical ddpsi of analytical ratio")
+    axes[1].plot(psin[id_start:], second_derivative[id_start:], lw=2, label="numerical ddpsi of analytical ratio")
+    axes[1].plot(psin[id_start:], second_derivative_analytic[id_start:], lw=2, linestyle=":", label="analytical ddpsi of analytical ratio")
     if psin_num is not None:
-      axes[1].plot(psin_num, second_derivative_num, lw=2, linestyle="--", color = 'k', label="From file")
+      axes[1].plot(psin_num[id_start:], second_derivative_num[id_start:], lw=2, linestyle="--", color = 'k', label="From file")
     axes[1].set_xlabel("Psi_N")
     axes[1].set_ylabel("d2/dPsi_N2")
     axes[1].set_title("Second derivative of neo eta(T) ratio")

@@ -1690,6 +1690,8 @@ do j=1,n_degrees
                            / (1.d3*(MASS_ELECTRON*Ti0_corr+Te0_corr*MASS_PROTON*central_mass)&
                            / (EL_CHG * MU_ZERO * central_density * 1.d20)) ** 1.5 ! Assuming bg_charge is 1!
 
+            nu_e_bg      = nu_e_bg * thermalization_scale
+
             if (nu_e_bg < 0.)  nu_e_bg  = 0.
 
             !Converting the energy transfer rate from s^-1 to JOREK unit

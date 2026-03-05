@@ -998,6 +998,7 @@ module phys_module
 
   !> @name Flag for thermalization term
   logical             :: thermalization ! If true turns on the ion-electron thermalization term
+  real*8              :: thermalization_scale ! Scaling factor for the thermalization term
 
   !> @name (Currently unused)
   real*8  :: zjz_0, zjz_1,  zj_coef(10)

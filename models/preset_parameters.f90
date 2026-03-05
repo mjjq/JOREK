@@ -863,6 +863,7 @@ subroutine preset_parameters
 !===================== Thermalization flag========
 
   thermalization = .true.
+  thermalization_scale = 1.d0
 
 !===================== Polar axis treatment flag========
 

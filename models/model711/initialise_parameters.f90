@@ -22,7 +22,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 write_ps, time_evol_theta,                          &
                 regrid_from_GS,                                     &
                 time_evol_zeta, force_horizontal_Xline,             &
-                Mach1_openBC, thermalization,                       &
+                Mach1_openBC, thermalization, thermalization_scale, &
                 eta_ARAZ_const, eta_ARAZ_on, eta_ARAZ_simple,       & 
                 tauIC_initial,                                      &
                 tauIC_ARAZ_on, tauIC_AP_on, tauIC_rho_on,tauIC_tanh,&

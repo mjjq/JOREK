@@ -803,6 +803,7 @@ write(*,'(1x,a)',advance='no') ' CASTOR3D_METHOD_AT_VI_REFERENCE_FRAME : '
     write(*,REAL_FMT) 'ZK_i_par_SpitzerHaerm (not input parameter; printed for reference in JOREK units)', ZK_i_par_SpitzerHaerm
     write(*,LOGI_FMT) 'ZKpar_T_dependent     ', ZKpar_T_dependent
     write(*,LOGI_FMT) 'thermalization         ', thermalization
+    write(*,REAL_FMT) 'thermalization_scale   ', thermalization_scale
 
   else ! (with_TiTe), i.e. single temperature ******************************************************
 

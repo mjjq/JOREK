@@ -362,6 +362,12 @@ mpi_required = 0
   !***********************************************************************
   
   if_not_restart: if ((.not. restart) .or. regrid_from_GS) then
+    if (treat_axis .and. n_flux > 1) then
+      input_treat_axis = treat_axis   ! store the value from the input file
+      treat_axis = .false.
+      force_central_node = .true.
+      fix_axis_nodes = .true.
+    end if
     call tr_resetfile()
     
     call initial_grid(node_list, element_list, bnd_node_list, bnd_elm_list, my_id, n_cpu)
@@ -405,7 +411,15 @@ mpi_required = 0
     ! --- Determine a flux surface aligned grid and re-calculate the equilibrium on it
     if (n_flux > 1) then
 
+      if (input_treat_axis) then
+        treat_axis = .true.
+        force_central_node = .false.
+        fix_axis_nodes = .false.
+      end if
+
+      if (my_id == 0) write(*,*) 'Generating flux surface aligned grid...'
       call flux_grid(node_list, element_list, bnd_node_list, bnd_elm_list, my_id, n_cpu)
+      if (my_id == 0) write(*,*) 'Done generating flux surface aligned grid.'
       
       if ( freeb_equil2) then
         freeboundary_equil = .true.

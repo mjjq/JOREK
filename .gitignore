@@ -89,3 +89,4 @@ bin*/mod_elt_matrix_fft.f90
 Makefile_gnu.inc
 Makefile_intel.inc
 Makefile_wiki.inc
+bin*

@@ -540,7 +540,6 @@ do i=1,nrnew
            node_list%node(index)%index(3) = 3
            node_list%node(index)%index(4) = 4
            n_index_start = 4
-           node_list%node(index)%X(1,3,:) = 0.d0
            node_list%node(index)%axis_node = .true.
            node_list%node(index)%axis_dof  = 3
 

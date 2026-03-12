@@ -50,6 +50,7 @@ real*8, external   :: spwert
 integer            :: ifail, inode, node, index, index0, n_node_start, n_element_start, iv, ivp, ivm
 integer            :: my_id, n_index_start, node_iv, node_ivp, node_ivm
 integer            :: i_sons, n_max
+logical            :: found_piece
 
 real*8             :: psi_axis_local, R_axis_local, Z_axis_local, s_axis_local, t_axis_local
 real*8             :: psi_xpoint_local(2), R_xpoint_local(2), Z_xpoint_local(2), s_xpoint_local(2), t_xpoint_local(2)
@@ -167,6 +168,7 @@ do i=1,surface_list%n_psi
     do j=1, npnew
 
       theta = 2.d0 * PI * float(j-1)/float(npnew)
+      found_piece = .false.
 
       if (theta .gt. tht_max) theta = theta - 2.d0*PI
       if (theta .lt. tht_min) theta = theta + 2.d0*PI
@@ -305,6 +307,9 @@ do i=1,surface_list%n_psi
               PSInew(6:n_max,npnew*(i) + j) = 0.d0
             endif
 
+            found_piece = .true.
+            exit
+
           else
 
             write(*,*) ' T TOO BIG : ',T,T2,T3
@@ -314,6 +319,12 @@ do i=1,surface_list%n_psi
         endif
 
       enddo
+
+      if (.not. found_piece) then
+        write(*,*) 'ERROR in grid_flux_surface: no matching surface piece for theta bin'
+        write(*,'(A,2I8,3ES16.8)') ' i,j,theta,tht_min,tht_max =', i, j, theta, tht_min, tht_max
+        stop
+      endif
 
     enddo
 
@@ -366,6 +377,7 @@ do j=1,npnew
   CN  = COS(theta)
   SN  = SIN(theta)
 
+#define SIMPLE_AXIS_FLUX_GRID
 #ifdef SIMPLE_AXIS_FLUX_GRID
 
 ! derived from:
@@ -429,6 +441,7 @@ do i=1,n_nodes_max
   node_list%node(i)%values   = 0.d0
   node_list%node(i)%index    = 0
   node_list%node(i)%boundary = 0
+  node_list%node(i)%constrained = .false.
 enddo
 node_list%n_nodes = 0
 
@@ -526,6 +539,7 @@ do i=1,nrnew
 
     node_list%node(index)%axis_node = .false.
     node_list%node(index)%axis_dof  = 0    
+    node_list%node(index)%constrained = .false.
 
     if (i .eq. 1) node_list%node(index)%axis_node = .true.
 

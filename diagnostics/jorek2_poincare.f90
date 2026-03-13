@@ -244,8 +244,8 @@ L_IL: do i_lines=1,n_lines
 
   call find_RZ(node_list,element_list,R_start(i_lines),Z_start(i_lines),R_out,Z_out,i_elm,s_out,t_out,ifail)
  
-  if (ifail .ne. 0) then
-    write(*,*) "Out of boundary, ifail: ", ifail, ', line: ', i_lines, ', skip.'
+  if (ifail .ne. 0 .or. i_elm .le. 0) then
+    write(*,*) "Out of boundary, ifail: ", ifail, ', i_elm: ', i_elm, ', line: ', i_lines, ', skip.'
     cycle
   endif 
 
@@ -271,14 +271,20 @@ L_IL: do i_lines=1,n_lines
       Znew   = Z_line  + 0.5d0 * delta_phi * R_line * BZ / Bp
       phinew = p_line  + 0.5d0 * delta_phi
       call find_RZ(node_list,element_list,Rnew,Znew,R_out,Z_out,i_elm,s_line,t_line,ifail)
-      if (ifail .ne. 0) write(*,*) "WARNING: can not find RZ, error: ", ifail, ', line: ', i_lines, ', step 1.'
+      if (ifail .ne. 0 .or. i_elm .le. 0) then
+        write(*,*) "WARNING: can not find RZ, error: ", ifail, ', i_elm: ', i_elm, ', line: ', i_lines, ', step 1.'
+        exit
+      endif
       
       call step(i_elm,s_line,t_line,phinew,delta_phi_step,delta_s,delta_t, BR, BZ, Bp)
       Rnew   = R_line  + delta_phi * R_out * BR / Bp
       Znew   = Z_line  + delta_phi * R_out * BZ / Bp
       p_line = p_line  + delta_phi
       call find_RZ(node_list,element_list,Rnew,Znew,R_line,Z_line,i_elm,s_line,t_line,ifail)
-      if (ifail .ne. 0) write(*,*) "WARNING: can not find RZ, error: ", ifail, ', line: ', i_lines, ', step 2.'      
+      if (ifail .ne. 0 .or. i_elm .le. 0) then
+        write(*,*) "WARNING: can not find RZ, error: ", ifail, ', i_elm: ', i_elm, ', line: ', i_lines, ', step 2.'      
+        exit
+      endif
 #else
       delta_phi_local = 0.d0
       
@@ -458,6 +464,11 @@ L_IL: do i_lines=1,n_lines
 #endif
             
     enddo ! end of a 2Pi turn
+
+    if (ifail .ne. 0 .or. i_elm .le. 0) then
+      write(*,*) "WARNING: can not find RZ, error: ", ifail, ', i_elm: ', i_elm, ', line: ', i_lines, ', turn: ', i_turn, ', skip the rest of this line.'
+      exit
+    endif
 
     call interp_RZ(node_list,element_list,i_elm,s_line,t_line,R_line,Z_line)
             

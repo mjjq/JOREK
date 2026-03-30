@@ -92,6 +92,8 @@ if ( ierr == 0 ) then ! stpts file exists, use it.
 
   read(21, '(a)') s ! read comment line (ignored)
   read(21,*) n_lines
+  read(21, '(a)') s ! read comment line (ignored)
+  read(21,*) n_phi
   if ( n_lines < 1 ) then
     write(*,*) 'ERROR in stpts file: n_lines must be >= 1.'
     stop

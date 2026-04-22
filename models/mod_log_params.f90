@@ -240,6 +240,7 @@ write(*,'(1x,a)',advance='no') ' USE_CATALYST : '
   write(*,REAL_FMT) 'visco_par_heating     ', visco_par_heating
   write(*,REAL_FMT) 'initial_amplitude     ', initial_amplitude 
   write(*,INTG_FMT) 'init_m_pol            ', init_m_pol 
+  write(*,INTG_FMT) 'init_n_tor            ', init_n_tor
   write(*,LOGI_FMT) 'restart               ', restart
   write(*,INTG_FMT) 'rst_format            ', rst_format
   write(*,INTG_FMT) 'rst_hdf5              ', rst_hdf5

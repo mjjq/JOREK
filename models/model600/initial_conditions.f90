@@ -260,7 +260,6 @@ endif
 amplitude = initial_amplitude
 mm = 2
 
-PRINT '(A, F8.3)', 'Initial perturbation amplitude: ', amplitude
 
 do in=2,n_tor
 
@@ -277,7 +276,22 @@ do in=2,n_tor
       Z   = node_list%node(i)%x(1,1,2)
 
       theta = atan2(Z-ES%Z_axis, R-ES%R_axis)
-      angular_envelope = cos(dble(init_m_pol) * theta)
+
+      ! Standard initial perturbation
+      amplitude = 1.d-12
+      angular_envelope = 1.0
+
+      ! If the current toroidal harmonic is init_n_tor, then apply
+      ! custom initial perturbation. Integer division here so this
+      ! if statement will be true for both sin and cos perturbations.
+      if (in/2 .eq. init_n_tor) then
+              angular_envelope = cos(dble(init_m_pol) * theta)
+              amplitude = initial_amplitude
+              if(my_id .eq. 0) then
+                PRINT '(A, F8.3)', 'Initial perturbation amplitude: ', amplitude
+                write(*,*) "For toroidal mode ", init_n_tor
+              endif
+      endif
 
       ! Initial perturbation consists of a quadratic and gaussian envelope
       ! Need the quadratic envelope to ensure perturbation is zero at r=0,a
@@ -287,9 +301,9 @@ do in=2,n_tor
       quad_envelope = psi_n * (1.d0 - psi_n)
       quad_envelope_deriv = 1.d0 - 2.d0 * psi_n
 
-      initial_pert_envelope = initial_amplitude * exp_envelope * quad_envelope * angular_envelope
+      initial_pert_envelope = amplitude * exp_envelope * quad_envelope * angular_envelope
       ! Apply chain rule to envelope derivative
-      initial_pert_env_derivative = initial_amplitude * ( &
+      initial_pert_env_derivative = amplitude * ( &
         exp_envelope * quad_envelope_deriv +              &
         exp_envelope_deriv * quad_envelope                &
       ) * angular_envelope

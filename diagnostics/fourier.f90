@@ -30,9 +30,9 @@ module fourier
 #ifdef fullmhd
     use mod_model_settings, only: var_A3, var_AR, var_AZ, var_uR, var_uZ, var_up, var_rho, var_T, var_Ti, var_Te, with_TiTe
     use mod_math_operators
-    use basis_at_gaussian
     use mod_interp
 #endif
+    use basis_at_gaussian
     type(t_theta_mapping), intent(in)    :: mapping
     complex, allocatable,  intent(inout) :: vfour(:,:,:,:) !< Transformed quantities (m,n,irad,ivar)
     integer,               intent(in)    :: nTht !< Number of poloidal equidistant points

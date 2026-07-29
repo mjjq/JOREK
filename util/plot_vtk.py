@@ -146,7 +146,7 @@ def plot2D_scatter(x, y, z, title, file_path, time, font_size, si_unit = False, 
         plt.scatter(x, y, c=z, cmap='jet', marker='o', s=50)
 
     if np.size(nan_indices) > 0:
-        plt.plot(x[nan_indices], y[nan_indices], '.', MarkerSize = 1.0, color='black')
+        plt.plot(x[nan_indices], y[nan_indices], '.', markersize = 1.0, color='black')
 
     # Add a colorbar for reference
     plt.colorbar()
@@ -299,8 +299,8 @@ def read_reference(args, reader, variable):
         # Get the VTK dataset
         dataset_reference = reader.GetOutput()
 
-        scalar_names = [reader.GetScalarsNameInFile(
-            i) for i in range(0, reader.GetNumberOfScalarsInFile())]
+        pd_ref = dataset_reference.GetPointData()
+        scalar_names = [pd_ref.GetArrayName(i) for i in range(pd_ref.GetNumberOfArrays())]
         var = variable
 
         if var not in scalar_names:
@@ -319,7 +319,7 @@ def read_and_plot_q(q_surface, vtk_file):
     file_q = 'postproc/q_surface_' + "{:.4f}".format(q_surface) + '_s' + re.findall(r'\d+', vtk_file)[-1] + '.txt'
     if os.path.exists(file_q):
         data_q_surface = np.loadtxt(file_q)
-        plt.plot(data_q_surface[:, 0], data_q_surface[:, 1], '.', MarkerSize = 1.0, color='black')
+        plt.plot(data_q_surface[:, 0], data_q_surface[:, 1], '.', markersize = 1.0, color='black')
         plt.text(data_q_surface[0, 0], data_q_surface[0, 1], "{:.1f}".format(abs(q_surface)), fontsize=20, ha='center', va='center', color='black')
     else:
         print(f"The file {file_q} does not exist. Skipping.")
@@ -338,8 +338,8 @@ def read_and_plot_data(args, reader, variable, data_reference=0):
         # Get the VTK dataset
         dataset = reader.GetOutput()
 
-        scalar_names = [reader.GetScalarsNameInFile(
-            i) for i in range(0, reader.GetNumberOfScalarsInFile())]
+        pd = dataset.GetPointData()
+        scalar_names = [pd.GetArrayName(i) for i in range(pd.GetNumberOfArrays())]
         print('Variable names:\n', scalar_names)
 
         # time = reader.GetOutput().GetInformation().Get(vtk.vtkDataObject.DATA_TIME_STEP())
@@ -403,7 +403,7 @@ def read_and_plot_data(args, reader, variable, data_reference=0):
                 numpy_coordinates[:, 0], numpy_coordinates[:, 1], UR[:], UZ[:], "2D Flow field", file_path, time, args.fontsize, si_unit)
             
             if np.size(nan_indices) > 0:
-                plt.plot(numpy_coordinates[nan_indices, 0], numpy_coordinates[nan_indices, 1], '.', MarkerSize = 1.0, color='black')
+                plt.plot(numpy_coordinates[nan_indices, 0], numpy_coordinates[nan_indices, 1], '.', markersize = 1.0, color='black')
         else:
             plot2D_interpolated(
                 numpy_coordinates[:, 0], numpy_coordinates[:, 1], data - data_reference, var, file_path, time, args.fontsize, si_unit, args.clim)
@@ -426,8 +426,8 @@ def read_data(file_path, reader, variable_list, itor):
     reader.Update()
     dataset = reader.GetOutput()
 
-    scalar_names = [reader.GetScalarsNameInFile(
-        i) for i in range(0, reader.GetNumberOfScalarsInFile())]
+    pd = dataset.GetPointData()
+    scalar_names = [pd.GetArrayName(i) for i in range(pd.GetNumberOfArrays())]
     if itor == 0:
         print('Variable names:\n', scalar_names)
     print('Loading: ', file_path)
@@ -511,8 +511,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # print(args.file_paths)
-    # Create a VTK reader
-    reader = vtk.vtkDataSetReader()
+    # Create a VTK reader for unstructured grid files
+    reader = vtk.vtkUnstructuredGridReader()
 
     for variable in args.variable_list:
 

@@ -19,6 +19,7 @@ use equil_info, only : get_psi_n, ES
 use mod_F_profile
 use mod_bootstrap_functions
 use mod_sources
+use mod_plasma_functions, only: resistivity
 
 implicit none
 
@@ -975,41 +976,8 @@ do i=1,n_vertex_max
           ZK_prof = get_zkperp(psi_norm)
 
           ! --- Resistivity
-          if ( eta_T_dependent .and. T0_corr <= T_max_eta) then
-            eta_T     =   eta   * (T0_corr/T_0)**(-1.5d0)
-            deta_dT   = - eta   * 1.5d0  * T0_corr**(-2.5d0) * T_0**(1.5d0)
-            d2eta_d2T =   eta   * 3.75d0 * T0_corr**(-3.5d0) * T_0**(1.5d0)
-          else if ( eta_T_dependent .and. T0_corr > T_max_eta) then
-            eta_T     = eta * (T_max_eta/T_0)**(-1.5d0)
-            deta_dT   = 0.d0
-            d2eta_d2T = 0.d0
-          else
-            eta_T     = eta
-            deta_dT   = 0.d0
-            d2eta_d2T = 0.d0
-          end if
-          if ( eta_T_dependent .and.  xpoint2 .and. (T0 .lt. T_min) ) then
-              eta_T     = eta    * (T_min/T_0)**(-1.5d0)
-              deta_dT   = 0.d0
-              d2eta_d2T = 0.d0
-          end if
-          if (eta_T_dependent) then
-                ! Smooth version of max(T0_corr, T_min)
-                smooth_dist = 0.1d0*T_min
-                exp_arg = exp((T0_corr-T_min)/smooth_dist)
-
-                T_clamp = T_min + smooth_dist*log(1.d0 + exp_arg)
-                d_T_clamp_dT = exp_arg/(1.d0 + exp_arg)
-                d2_T_clamp_dT2 = exp_arg / &
-                        (smooth_dist*(1.d0 + exp_arg)**2)
-                
-                deta_dT_clamp = - eta   * 1.5d0  * T_clamp**(-2.5d0) * T_0**(1.5d0)
-                d2eta_d2T_clamp =  eta   * 3.75d0 * T_clamp**(-3.5d0) * T_0**(1.5d0)
-
-                eta_T =  eta   * (T_clamp/T_0)**(-1.5d0)
-                deta_dT = deta_dT_clamp * d_T_clamp_dT
-                d2eta_d2T = d_T_clamp_dT**(2.d0) * d2eta_d2T_clamp + deta_dT_clamp * d2_T_clamp_dT2 
-          end if
+          call resistivity(eta, T0, T0_corr, T_max_eta, T_0, 1.d0, eta_T, deta_dT=deta_dT, d2eta_d2T=d2eta_d2T)  
+          
           eta_R = deta_dT * T0_R
           eta_Z = deta_dT * T0_Z
           eta_p = deta_dT * T0_p

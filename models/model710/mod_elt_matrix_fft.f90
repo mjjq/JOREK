@@ -234,6 +234,7 @@ real*8     :: PneoZ_UR,     PneoZ_UZ
 
 real*8     :: ZK_prof, D_prof, psi_norm
 
+real*8     :: smooth_dist, exp_arg, T_clamp, d_T_clamp_dT, d2_T_clamp_dT2, deta_dT_clamp, d2eta_d2T_clamp
 real*8     :: eta_T, visco_T, deta_dT, d2eta_d2T, dvisco_dT, visco_num_T, visco_divV, dvisco_divV_dT
 real*8     :: eta_num_T, eta_R, eta_Z, eta_p, Zkpar_T, dZKpar_dt
 real*8     :: eta_T_T, eta_R_T, eta_Z_T, eta_p_T__p, eta_p_T__n
@@ -991,6 +992,23 @@ do i=1,n_vertex_max
               eta_T     = eta    * (T_min/T_0)**(-1.5d0)
               deta_dT   = 0.d0
               d2eta_d2T = 0.d0
+          end if
+          if (eta_T_dependent) then
+                ! Smooth version of max(T0_corr, T_min)
+                smooth_dist = 0.1d0*T_min
+                exp_arg = exp((T0_corr-T_min)/smooth_dist)
+
+                T_clamp = T_min + smooth_dist*log(1.d0 + exp_arg)
+                d_T_clamp_dT = exp_arg/(1.d0 + exp_arg)
+                d2_T_clamp_dT2 = exp_arg / &
+                        (smooth_dist*(1.d0 + exp_arg)**2)
+                
+                deta_dT_clamp = - eta   * 1.5d0  * T_clamp**(-2.5d0) * T_0**(1.5d0)
+                d2eta_d2T_clamp =  eta   * 3.75d0 * T_clamp**(-3.5d0) * T_0**(1.5d0)
+
+                eta_T =  eta   * (T_clamp/T_0)**(-1.5d0)
+                deta_dT = deta_dT_clamp * d_T_clamp_dT
+                d2eta_d2T = d_T_clamp_dT**(2.d0) * d2eta_d2T_clamp + deta_dT_clamp * d2_T_clamp_dT2 
           end if
           eta_R = deta_dT * T0_R
           eta_Z = deta_dT * T0_Z

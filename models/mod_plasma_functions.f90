@@ -264,15 +264,24 @@ end subroutine smooth_max
     real*8, optional, intent(out)  :: dvisco_dT        ! 1st derivative w.r.t. temperature   
     real*8, optional, intent(out)  :: d2visco_d2T      ! 2nd derivative w.r.t. temperature           
 
+    real*8 :: smooth_dist, exp_arg, T_clamp, d_T_clamp_dT, d2_T_clamp_dT2, dvisco_dT_clamp, d2visco_d2T_clamp
+    
     if ( visco_T_dependent ) then
-      visco_T     =   visco * (T_corr/T0)**(-1.5d0)
-      if (present(dvisco_dT))   dvisco_dT   = - visco * (1.5d0)  * T_corr**(-2.5d0) * T0**(1.5d0)
-      if (present(d2visco_d2T)) d2visco_d2T =   visco * (3.75d0) * T_corr**(-3.5d0) * T0**(1.5d0)
-      if (T_raw .lt. T_min) then
-        visco_T     = visco  * (T_min/T0)**(-1.5d0)
-        if (present(dvisco_dT  )) dvisco_dT   = 0.d0
-        if (present(d2visco_d2T)) d2visco_d2T = 0.d0
-      else if (T_raw .gt. T_max_visco) then
+      if (T_min .lt. 1.d-10) then
+        visco_T     =   visco * (T_corr/T0)**(-1.5d0)
+        if (present(dvisco_dT))   dvisco_dT   = - visco * (1.5d0)  * T_corr**(-2.5d0) * T0**(1.5d0)
+        if (present(d2visco_d2T)) d2visco_d2T =   visco * (3.75d0) * T_corr**(-3.5d0) * T0**(1.5d0)
+      else
+        call smooth_max(T_corr, T_min, T_clamp, d_T_clamp_dT, d2_T_clamp_dT2)
+
+        dvisco_dT_clamp = - visco   * 1.5d0  * T_clamp**(-2.5d0) * T0**(1.5d0)
+        d2visco_d2T_clamp =  visco   * 3.75d0 * T_clamp**(-3.5d0) * T0**(1.5d0)                                                                                                
+                                                                                                                                                                                            
+        visco_T =  visco   * (T_clamp/T0)**(-1.5d0)                                                                  
+        if (present(dvisco_dT)) dvisco_dT = dvisco_dT_clamp * d_T_clamp_dT                                                                    
+        if (present(d2visco_d2T)) d2visco_d2T = d_T_clamp_dT**(2.d0) * d2visco_d2T_clamp + dvisco_dT_clamp * d2_T_clamp_dT2
+      end if
+      if (T_raw .gt. T_max_visco) then
         visco_T     =   visco * (T_max_visco/T0)**(-1.5d0)
         if (present(dvisco_dT  )) dvisco_dT   = 0.d0
         if (present(d2visco_d2T)) d2visco_d2T = 0.d0

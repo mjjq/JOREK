@@ -19,7 +19,7 @@ use equil_info, only : get_psi_n, ES
 use mod_F_profile
 use mod_bootstrap_functions
 use mod_sources
-use mod_plasma_functions, only: resistivity
+use mod_plasma_functions, only: resistivity, viscosity
 
 implicit none
 
@@ -999,17 +999,7 @@ do i=1,n_vertex_max
           end if
 
           ! --- Viscosity
-          if ( visco_T_dependent ) then
-            visco_T   = visco * (T0_corr/T_0)**(-1.5d0)
-            dvisco_dT = - visco * (1.5d0)  * T0_corr**(-2.5d0) * T_0**(1.5d0)
-            if ( xpoint2 .and. (T0 .lt. T_min) ) then
-              visco_T     = visco  * (T_min/T_0)**(-1.5d0)
-              dvisco_dT   = 0.d0
-            endif
-          else
-            visco_T   = visco
-            dvisco_dT = 0.d0
-          end if
+          call viscosity(visco, T0, T0_corr, T_0, visco_T, dvisco_dT)
 
           ! --- Kpar
           if ( ZKpar_T_dependent ) then

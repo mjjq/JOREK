@@ -14,8 +14,30 @@ module mod_plasma_functions
   contains
   
  
+!> Return a smoothed form of max(T_corr, T_min)
+pure subroutine smooth_max(T_corr, T_min, T_clamp, d_T_clamp_dT, d2_T_clamp_dT2)
+        implicit none
+
+        real*8, intent(in)              :: T_corr         ! Corrected temperature > 0
+        real*8, intent(in)              :: T_min          ! Minimum temperature to clamp to
+        real*8, intent(out)             :: T_clamp        ! Modified temperature value
+        real*8, intent(out)             :: d_T_clamp_dT   ! Derivative in clamped temperature w.r.t T_corr
+        real*8, intent(out)             :: d2_T_clamp_dT2 ! 2nd derivative in clamped temperature w.r.t T_corr
+
+        real*8                          :: smooth_dist, exp_arg
+
+        ! Width of smoothing, hardcoded to 0.1T_min to avoid sharp transition
+        ! and ensure T_clamp ~ T_min for T_corr << T_min
+        smooth_dist = 0.1d0*T_min
+        exp_arg = exp((T_corr-T_min)/smooth_dist)
+
+        T_clamp = T_min + smooth_dist*log(1.d0 + exp_arg)
+        d_T_clamp_dT = exp_arg/(1.d0 + exp_arg)
+        d2_T_clamp_dT2 = exp_arg / &
+                (smooth_dist*(1.d0 + exp_arg)**2)
 
 
+end subroutine smooth_max
 
  
   !> Determine resistivity (input/output in JOREK units)
@@ -44,6 +66,8 @@ module mod_plasma_functions
 
     !--- Local parameters
     real*8 :: eta_coef, deta_coef_dZeff
+    real*8 :: smooth_dist, exp_arg, T_clamp, d_T_clamp_dT, d2_T_clamp_dT2, deta_dT_clamp, d2eta_d2T_clamp
+
 
     if (present(deta_dT))       deta_dT     = 0.d0
     if (present(d2eta_d2T))     d2eta_d2T   = 0.d0
@@ -60,11 +84,17 @@ module mod_plasma_functions
       eta_T     = eta_0
     end if
 
-    if ( eta_T_dependent .and. (T_raw .lt. T_min) ) then
-      eta_T       = eta_0     * (T_min/T0)**(-1.5d0)
-      if (present(deta_dT))     deta_dT    = 0.d0
-      if (present(d2eta_d2T))   d2eta_d2T  = 0.d0
-    endif
+
+    if ( eta_T_dependent .and. (T_min .gt. 1.d-10) ) then
+        call smooth_max(T_corr, T_min, T_clamp, d_T_clamp_dT, d2_T_clamp_dT2)
+
+        deta_dT_clamp = - eta_0   * 1.5d0  * T_clamp**(-2.5d0) * T0**(1.5d0)
+        d2eta_d2T_clamp =  eta_0   * 3.75d0 * T_clamp**(-3.5d0) * T0**(1.5d0)                                                                                                
+                                                                                                                                                                                            
+        eta_T =  eta_0   * (T_clamp/T0)**(-1.5d0)                                                                  
+        if (present(deta_dT)) deta_dT = deta_dT_clamp * d_T_clamp_dT                                                                    
+        if (present(d2eta_d2T)) d2eta_d2T = d_T_clamp_dT**(2.d0) * d2eta_d2T_clamp + deta_dT_clamp * d2_T_clamp_dT2
+    end if
 
     if (with_impurities) then 
 

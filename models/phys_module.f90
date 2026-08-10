@@ -110,7 +110,6 @@ module phys_module
   real*8  :: adaptive_time_inc_fac !< Adaptive timestep increase multiplication factor. I.e. t_step = t_step*adaptive_time_inc_fac
   real*8  :: adaptive_time_min    !< Minimum adaptive timestep before simulation exits
   real*8  :: adaptive_time_max    !< Maximum adaptive timestep to prevent extremely large timesteps
-  logical :: adaptive_time        !< (Only implemented in full MHD models)
   real*8  :: cfl                  !< tstep = cfl * min(h_elm) / max(v)
   logical :: equil                !< compute equilibrium
   logical :: no_mach1_bc          !< Never apply Mach-1 BCs

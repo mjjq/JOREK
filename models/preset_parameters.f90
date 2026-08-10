@@ -696,7 +696,7 @@ subroutine preset_parameters
   adaptive_time_inc_fac = 1.2d0             ! If so, increase timestep by factor of 1.2
   adaptive_time_min  = 1.d0                 ! Stop reducing timestep if tstep*adaptive_time_dec_fac less than this
   adaptive_time_max  = 1000.d0              ! Stop increasing timestep if tstep*adaptive_time_inc_fac greater than this          
-  cfl                = 1.d0
+  cfl                = 0.d0
   
   equil              = .true.               ! compute equilibrium
   

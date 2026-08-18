@@ -369,6 +369,7 @@ subroutine preset_parameters
   heatsource_fix_profile_allow_negative     = .false.
   heatsource_fix_profile_tsteps             = 2.0
   heatsource_fix_profile_psi_max            = 0.9
+  heatsource_fix_profile_const_ZKperp       = .false.
   heatsource_i_fix_profile                  = .false.
   heatsource_i_fix_profile_allow_negative   = .false.
   heatsource_i_fix_profile_tsteps           = 2.0

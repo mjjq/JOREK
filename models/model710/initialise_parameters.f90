@@ -70,10 +70,12 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 particlesource_fix_profile_allow_negative,          &
                 particlesource_fix_profile_tsteps        ,          &
                 particlesource_fix_profile_psi_max       ,          &
+                particlesource_fix_profile_const_Dperp   ,          &
                 heatsource_fix_profile                   ,          &
                 heatsource_fix_profile_allow_negative    ,          &
                 heatsource_fix_profile_tsteps            ,          &
                 heatsource_fix_profile_psi_max           ,          &
+                heatsource_fix_profile_const_ZKperp      ,          &
                 pellet_amplitude, pellet_R, pellet_Z, pellet_phi,   &
                 pellet_radius, pellet_sig, pellet_length,           &
                 pellet_psi, pellet_delta_psi,                       &

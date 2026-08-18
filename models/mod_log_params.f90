@@ -893,6 +893,7 @@ write(*,'(1x,a)',advance='no') ' CASTOR3D_METHOD_AT_VI_REFERENCE_FRAME : '
   write(*,LOGI_FMT) 'heatsource_fix_profile_allow_negative    ',heatsource_fix_profile_allow_negative
   write(*,REAL_FMT) 'heatsource_fix_profile_tsteps            ',heatsource_fix_profile_tsteps
   write(*,REAL_FMT) 'heatsource_fix_profile_psi_max           ',heatsource_fix_profile_psi_max
+  write(*,LOGI_FMT) 'heatsource_fix_profile_const_ZKperp      ',heatsource_fix_profile_const_ZKperp
   write(*,LOGI_FMT) 'heatsource_i_fix_profile                 ',heatsource_i_fix_profile
   write(*,LOGI_FMT) 'heatsource_i_fix_profile_allow_negative  ',heatsource_i_fix_profile_allow_negative
   write(*,REAL_FMT) 'heatsource_i_fix_profile_tsteps          ',heatsource_i_fix_profile_tsteps

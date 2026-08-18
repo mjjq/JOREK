@@ -2069,6 +2069,10 @@ module mod_expression
           endif
 #else
           call sources(eq%xpoint, eq%xcase, Z, eq%Z_xpoint, psi_norm,0.d0,1.d0,particle_source,heat_source)
+          if (heatsource_fix_profile_const_ZKperp) then
+            call temperature(eq%xpoint, eq%xcase, Z, eq%Z_xpoint, psi_norm,0.d0,1.d0, Te_GS  ,dd1,dd2,dd3,dd4,dd5,dd6,dd7,dd8)
+            heat_source = - ZK_e_perp(1) * ( grad_psi_2 * dd3 + lap_psi * dd1 )
+          endif
 #endif
           ! --- Adaptive source to make sure density/temperature stays exactly at input profiles
           if (particlesource_fix_profile) then

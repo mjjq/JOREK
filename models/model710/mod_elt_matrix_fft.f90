@@ -67,7 +67,9 @@ real*8     :: Coef_DivV
 real*8     :: rho_axisym(n_gauss,n_gauss), T_axisym(n_gauss,n_gauss)
 real*8     :: rho_GS,T_GS, dd1,dd2,dd3,dd4,dd5,dd6,dd7,dd8
 real*8     :: psi_axisym(n_gauss,n_gauss), psi_axisym_s(n_gauss,n_gauss), psi_axisym_t(n_gauss,n_gauss)
+real*8     :: psi_axisym_ss(n_gauss,n_gauss), psi_axisym_tt(n_gauss,n_gauss), psi_axisym_st(n_gauss,n_gauss)
 real*8     ::                              psi_axisym_R(n_gauss,n_gauss), psi_axisym_Z(n_gauss,n_gauss)
+real*8     ::                              psi_axisym_RR(n_gauss,n_gauss), psi_axisym_ZZ(n_gauss,n_gauss)
 real*8     :: Fprof_time_dep,dF_dpsi(n_gauss,n_gauss)      ,dF_dz      ,dF_dpsi2      ,dF_dz2      ,dF_dpsi_dz
 real*8     :: zFFprime      ,dFFprime_dpsi,dFFprime_dz,dFFprime_dpsi2,dFFprime_dz2,dFFprime_dpsi_dz
 real*8     :: rho_initial(n_gauss,n_gauss),dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz
@@ -506,6 +508,7 @@ eq_aux_g = 0.d0; eq_aux_s = 0.d0; eq_aux_t = 0.d0; eq_aux_p = 0.d0;
 eq_pp    = 0.d0; eq_sp    = 0.d0; eq_tp=0.d0
 
 psi_axisym = 0.d0 ; psi_axisym_s = 0.d0 ; psi_axisym_t = 0.d0
+psi_axisym_ss = 0.d0; psi_axisym_tt = 0.d0; psi_axisym_st = 0.d0
 delta_g = 0.d0; delta_s = 0.d0; delta_t = 0.d0
 Fprofile= 0.d0
 
@@ -538,6 +541,9 @@ do i=1,n_vertex_max
         psi_axisym(ms,mt) = psi_axisym(ms,mt) + nodes(i)%values(1,j,var_A3) * element%size(i,j) * H(i,j,ms,mt)  * HZ(1,1)
         psi_axisym_s(ms,mt) = psi_axisym_s(ms,mt) + nodes(i)%values(1,j,var_A3) * element%size(i,j) * H_s(i,j,ms,mt)
         psi_axisym_t(ms,mt) = psi_axisym_t(ms,mt) + nodes(i)%values(1,j,var_A3) * element%size(i,j) * H_t(i,j,ms,mt)
+        psi_axisym_ss(ms,mt) = psi_axisym_ss(ms,mt) + nodes(i)%values(1,j,var_A3) * element%size(i,j) * H_ss(i,j,ms,mt)
+        psi_axisym_tt(ms,mt) = psi_axisym_tt(ms,mt) + nodes(i)%values(1,j,var_A3) * element%size(i,j) * H_tt(i,j,ms,mt)
+        psi_axisym_st(ms,mt) = psi_axisym_st(ms,mt) + nodes(i)%values(1,j,var_A3) * element%size(i,j) * H_st(i,j,ms,mt)
       end do
     end do
 
@@ -612,6 +618,14 @@ do ms=1, n_gauss
     ! --- This will be used in the main loop!
     psi_axisym_R(ms,mt) = (   y_t(ms,mt) * psi_axisym_s(ms,mt)  - y_s(ms,mt) * psi_axisym_t(ms,mt) ) / xjac
     psi_axisym_Z(ms,mt) = ( - x_t(ms,mt) * psi_axisym_s(ms,mt)  + x_s(ms,mt) * psi_axisym_t(ms,mt) ) / xjac
+    psi_axisym_RR(ms,mt)   = (psi_axisym_ss(ms,mt) * y_t(ms,mt)**2 - 2.d0*psi_axisym_st(ms,mt) * y_s(ms,mt)*y_t(ms,mt) + psi_axisym_tt(ms,mt) * y_s(ms,mt)**2    &
+                + psi_axisym_s(ms,mt) * (y_st(ms,mt)*y_t(ms,mt) - y_tt(ms,mt)*y_s(ms,mt) )                             &
+                + psi_axisym_t(ms,mt) * (y_st(ms,mt)*y_s(ms,mt) - y_ss(ms,mt)*y_t(ms,mt) ) )       / xjac**2           &
+                - xjac_R * (psi_axisym_s(ms,mt) * y_t(ms,mt) - psi_axisym_t(ms,mt) * y_s(ms,mt))     / xjac**2
+    psi_axisym_ZZ(ms,mt)   = (psi_axisym_ss(ms,mt) * x_t(ms,mt)**2 - 2.d0*psi_axisym_st(ms,mt) * x_s(ms,mt)*x_t(ms,mt) + psi_axisym_tt(ms,mt) * x_s(ms,mt)**2    &
+                + psi_axisym_s(ms,mt) * (x_st(ms,mt)*x_t(ms,mt) - x_tt(ms,mt)*x_s(ms,mt) )                             &
+                + psi_axisym_t(ms,mt) * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) ) )       / xjac**2           &
+                - xjac_Z * (- psi_axisym_s(ms,mt) * x_t(ms,mt) + psi_axisym_t(ms,mt) * x_s(ms,mt) )  / xjac**2
     ! --- These are just temporary, only for the sources (they are recalculated afterwards at each n_plane)
     A30   = eq_g(1,var_A3,ms,mt)
     A30_s = eq_s(1,var_A3,ms,mt)
@@ -644,6 +658,11 @@ do ms=1, n_gauss
         if ( (rho_axisym(ms,mt) .lt. rho_GS) .or. particlesource_fix_profile_allow_negative ) &
           particle_source(ms,mt) = (1.0/particlesource_fix_profile_tsteps) * (rho_GS-rho_axisym(ms,mt)) ! / tstep
       endif
+    elseif (particlesource_fix_profile_const_Dperp) then
+      call density    (xpoint2, xcase2, Z, Z_xpoint, psi_axisym(ms,mt),psi_axis,psi_bnd, rho_GS,dd1,dd2,dd3,dd4,dd5,dd6,dd7,dd8)
+      ! dd1 is dn_dpsi
+      ! dd3 is dn_dpsi2
+      particle_source(ms,mt) = - D_perp(1) * ( (psi_axisym_R(ms,mt)**2 + psi_axisym_Z(ms,mt)**2) * dd3 + (psi_axisym_R(ms,mt) / R + psi_axisym_RR(ms,mt) + psi_axisym_ZZ(ms,mt)) * dd1 )
     endif
     if (heatsource_fix_profile) then
       if (psi_norm .lt. heatsource_fix_profile_psi_max) then
@@ -651,6 +670,9 @@ do ms=1, n_gauss
         if ( (T_axisym(ms,mt)   .lt. T_GS  ) .or. heatsource_fix_profile_allow_negative ) &
           heat_source(ms,mt)     = (1.0/heatsource_fix_profile_tsteps) * (T_GS  -T_axisym(ms,mt)  ) ! / tstep
       endif
+    elseif (heatsource_fix_profile_const_ZKperp) then
+      call temperature(xpoint2, xcase2, Z, Z_xpoint, psi_axisym(ms,mt),psi_axis,psi_bnd, T_GS  ,dd1,dd2,dd3,dd4,dd5,dd6,dd7,dd8)
+      heat_source(ms,mt) = - ZK_perp(1) * ( (psi_axisym_R(ms,mt)**2 + psi_axisym_Z(ms,mt)**2) * dd3 + (psi_axisym_R(ms,mt) / R + psi_axisym_RR(ms,mt) + psi_axisym_ZZ(ms,mt)) * dd1 )
     endif
     
     ! --- Bootstrap current 

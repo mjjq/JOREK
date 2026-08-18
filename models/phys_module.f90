@@ -323,6 +323,7 @@ module phys_module
   logical :: heatsource_fix_profile_allow_negative       !< allow a negative source
   real*8  :: heatsource_fix_profile_tsteps               !< time-scale over which this is enforced (ideally >=2)
   real*8  :: heatsource_fix_profile_psi_max              !< max psi-norm where this is applied
+  logical :: heatsource_fix_profile_const_ZKperp         !< Plasma heating source to fix profile onto input Grad-Shafranov profile, only works with constant ZK_perp profile
   logical :: heatsource_i_fix_profile                    !< adaptive source to fix profile onto input Grad-Shafranov profile
   logical :: heatsource_i_fix_profile_allow_negative     !< allow a negative source
   real*8  :: heatsource_i_fix_profile_tsteps             !< time-scale over which this is enforced (ideally >=2)

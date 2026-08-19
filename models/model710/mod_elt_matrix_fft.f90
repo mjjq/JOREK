@@ -662,7 +662,9 @@ do ms=1, n_gauss
       call density    (xpoint2, xcase2, Z, Z_xpoint, psi_axisym(ms,mt),psi_axis,psi_bnd, rho_GS,dd1,dd2,dd3,dd4,dd5,dd6,dd7,dd8)
       ! dd1 is dn_dpsi
       ! dd3 is dn_dpsi2
-      particle_source(ms,mt) = - D_perp(1) * ( (psi_axisym_R(ms,mt)**2 + psi_axisym_Z(ms,mt)**2) * dd3 + (psi_axisym_R(ms,mt) / R + psi_axisym_RR(ms,mt) + psi_axisym_ZZ(ms,mt)) * dd1 )
+      ! Add onto the particle source defined by particlesource, as the density may rigidly decrease
+      ! depending on boundary conditions
+      particle_source(ms,mt) = particle_source(ms,mt) - D_perp(1) * ( (psi_axisym_R(ms,mt)**2 + psi_axisym_Z(ms,mt)**2) * dd3 + (psi_axisym_R(ms,mt) / R + psi_axisym_RR(ms,mt) + psi_axisym_ZZ(ms,mt)) * dd1 )
     endif
     if (heatsource_fix_profile) then
       if (psi_norm .lt. heatsource_fix_profile_psi_max) then

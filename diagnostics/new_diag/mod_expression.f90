@@ -2083,7 +2083,7 @@ module mod_expression
             endif
           elseif (particlesource_fix_profile_const_Dperp) then
             call density    (eq%xpoint, eq%xcase, Z, eq%Z_xpoint, psi_norm,0.d0,1.d0, rho_GS,dd1,dd2,dd3,dd4,dd5,dd6,dd7,dd8)
-            particle_source = - D_perp(1) * ( grad_psi_2 * dd3 + lap_psi * dd1 )
+            particle_source = particle_source - D_perp(1) * ( grad_psi_2 * dd3 + lap_psi * dd1 )
           elseif (particlesource_fix_profile_target_profile_const_Dperp) then
             call density_target(eq%xpoint, eq%xcase, Z, eq%Z_xpoint, psi_norm,0.d0,1.d0, rho_target_GS,dd1_target,dd2_target, &
                                                             dd3_target,dd4_target,dd5_target,dd6_target,dd7_target,dd8_target)

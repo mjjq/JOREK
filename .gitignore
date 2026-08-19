@@ -1,3 +1,4 @@
+*venv*
 *.bck
 *.o
 *.mod
@@ -93,3 +94,4 @@ bin*
 reg_tests/testcases/w7a_ballooning_183/dc_W7A_unst_10kPa
 reg_tests/testcases/w7a_ballooning_2T_183/dc_W7A_unst_10kPa
 reg_tests/unit_tests/adas_files/info.txt
+.venv

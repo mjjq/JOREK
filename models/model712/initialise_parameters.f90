@@ -115,7 +115,12 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 use_pastix, use_murge, use_murge_element,           &
                 refinement, grid_to_wall,                           &
                 fix_axis_nodes,                                     &
-                adaptive_time, cfl, equil, bench_without_plot,      &
+                cfl, equil, bench_without_plot,      &
+                adaptive_time, adaptive_time_dec_iter,              &
+                adaptive_time_dec_fac, adaptive_time_inc_iter,      &
+                adaptive_time_inc_fac, adaptive_time_min,           &
+                adaptive_time_max,                                  &
+                equil, bench_without_plot,                          &
                 eta_T_dependent, visco_T_dependent,ZKpar_T_dependent,&
                 heatsource_psin, heatsource_sig,                    &
                 particlesource_psin, particlesource_sig,            &

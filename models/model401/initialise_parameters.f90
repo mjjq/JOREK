@@ -88,7 +88,11 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 n_tor_fft_thresh, use_strumpack,                    &
                 refinement, force_central_node,                     &
                 fix_axis_nodes,                                     &
-                adaptive_time, equil, bench_without_plot,           &
+                adaptive_time, adaptive_time_dec_iter,              &
+                adaptive_time_dec_fac, adaptive_time_inc_iter,      &
+                adaptive_time_inc_fac, adaptive_time_min,           &
+                adaptive_time_max,                                  &
+                equil, bench_without_plot,                          &
                 eta_T_dependent, visco_T_dependent,                 &
                 zkpar_T_dependent,                                  & 
                 heatsource_psin, heatsource_sig,                    &

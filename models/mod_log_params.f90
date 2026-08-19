@@ -1210,6 +1210,10 @@ write(*,'(1x,a)',advance='no') ' CASTOR3D_METHOD_AT_VI_REFERENCE_FRAME : '
   write(*,LOGI_FMT) 'grid_to_wall          ', grid_to_wall
   write(*,LOGI_FMT) 'adaptive_time         ', adaptive_time
   write(*,REAL_FMT) 'cfl                   ', cfl
+  write(*,INTG_FMT) 'adaptive_time_dec_iter', adaptive_time_dec_iter
+  write(*,REAL_FMT) 'adaptive_time_min     ', adaptive_time_min
+  write(*,REAL_FMT) 'adaptive_time_max     ', adaptive_time_max
+  write(*,REAL_FMT) 'adaptive_time_dec_fac ', adaptive_time_dec_fac
   write(*,LOGI_FMT) 'equil                 ', equil
   write(*,LOGI_FMT) 'bench_without_plot    ', bench_without_plot
   write(*,LOGI_FMT) 'more_outfile_digits   ', more_outfile_digits

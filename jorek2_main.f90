@@ -701,15 +701,12 @@ mpi_required = 0
     
 
     index_now = index_now + 1
-    tstep = tstep_n(jstep)
 #ifdef fullmhd    
-    if(adaptive_time .and. (cfl .ge. 1.d-10)) then
+    if(adaptive_time .and. (cfl .gt. 1.d-10)) then
       call timestep(my_id, mhd_sim%node_list, mhd_sim%element_list, mhd_sim%local_elms, mhd_sim%n_local_elms, cfl, tstep_cfl)
       call MPI_AllReduce(tstep_cfl,tstep,1,MPI_DOUBLE_PRECISION,MPI_MIN,MPI_COMM_WORLD,ierr)
     endif
 #endif
-
-    index_now = index_now + 1
     
     ! start from t=0 
     if (index_now <= 1) tstep_prev = tstep

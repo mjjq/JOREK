@@ -14,6 +14,40 @@ module mod_plasma_functions
   contains
   
  
+!> Implement (log(1+exp(x))) function to handle large arguments
+pure subroutine log1exp(x, y, dy_dx, d2y_dx2)
+        implicit none
+
+        real*8, intent(in)              :: x              ! The value to evaluate
+        real*8, intent(out)             :: y              ! The value to return
+        real*8, intent(out)             :: dy_dx          ! First derivative of y
+        real*8, intent(out)             :: d2y_dx2        ! Second derivative of y
+
+        real*8                          :: exp_val
+        
+        ! exp(x>709) causes overflow, so handle this separately
+        ! log(1+exp(x))~log(exp(x))=x for x>>1
+        ! Apply the approximation for x>50 for better numerical
+        ! stability
+        if (x .gt. 50.d0) then
+          y=x
+          dy_dx = 1.d0
+          d2y_dx2 = 0.d0
+        ! Also avoid overflow for x<<0
+        ! log(1+exp(x))~log(1)=0 for x<<0
+        else if (x .lt. -50.d0) then
+          y=0.d0
+          dy_dx=0.d0
+          d2y_dx2=0.d0
+        else
+          exp_val = exp(x)
+          y=log(1.d0 + exp_val)
+          dy_dx = exp_val/(1.d0+exp_val)
+          d2y_dx2 = exp_val/(1.d0+exp_val)**2
+        endif
+end subroutine log1exp
+
+
 !> Return a smoothed form of max(T_corr, T_min)
 pure subroutine smooth_max(T_corr, T_min, T_clamp, d_T_clamp_dT, d2_T_clamp_dT2)
         implicit none
@@ -24,19 +58,17 @@ pure subroutine smooth_max(T_corr, T_min, T_clamp, d_T_clamp_dT, d2_T_clamp_dT2)
         real*8, intent(out)             :: d_T_clamp_dT   ! Derivative in clamped temperature w.r.t T_corr
         real*8, intent(out)             :: d2_T_clamp_dT2 ! 2nd derivative in clamped temperature w.r.t T_corr
 
-        real*8                          :: smooth_dist, exp_arg
+        real*8                          :: smooth_dist, exp_arg, log_val
 
         ! Width of smoothing, hardcoded to 0.1T_min to avoid sharp transition
         ! and ensure T_clamp ~ T_min for T_corr << T_min
         smooth_dist = 0.1d0*T_min
-        exp_arg = exp((T_corr-T_min)/smooth_dist)
+        exp_arg = (T_corr-T_min)/smooth_dist
 
-        T_clamp = T_min + smooth_dist*log(1.d0 + exp_arg)
-        d_T_clamp_dT = exp_arg/(1.d0 + exp_arg)
-        d2_T_clamp_dT2 = exp_arg / &
-                (smooth_dist*(1.d0 + exp_arg)**2)
+        call log1exp(exp_arg, log_val, d_T_clamp_dT, d2_T_clamp_dT2)
 
-
+        T_clamp = T_min + smooth_dist*log_val
+        d2_T_clamp_dT2 = d2_T_clamp_dT2/smooth_dist
 end subroutine smooth_max
 
  

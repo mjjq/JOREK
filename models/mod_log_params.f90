@@ -1295,6 +1295,7 @@ write(*,'(1x,a)',advance='no') ' CASTOR3D_METHOD_AT_VI_REFERENCE_FRAME : '
   endif
   write(*,LOGI_FMT) 'output_bnd_elements   ', output_bnd_elements
   write(*,LOGI_FMT) 'bootstrap             ', bootstrap
+  write(*,REAL_FMT) 'bootstrap_psin_cutoff ', bootstrap_psin_cutoff
   write(*,LOGI_FMT) 'NEO                   ', NEO
   if (NEO) then
     write(*,LOGI_FMT) 'num_neo_file          ', num_neo_file

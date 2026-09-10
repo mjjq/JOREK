@@ -209,7 +209,9 @@ subroutine bootstrap_current(R, Z,                           &
     distance = 0.05 * distance_xpoint_axis
     Jb = Jb * (0.5d0 - 0.5d0 * tanh( -(distance_xpoint - distance)/0.01d0 ) )
   endif
-  
+
+  if (psi_norm .gt. bootstrap_psin_cutoff )  Jb = 0.
+
 return
 end subroutine bootstrap_current
 
@@ -395,7 +397,7 @@ subroutine bootstrap_get_averaged_j_spline(node_list, element_list, psi_axis, ps
   ! --- Internal parameters
   type (type_surface_list) :: flux_list, sep_list
   integer                  :: i, k, ig, i_surf, i_piece, n_psi, i_elm
-  real*8                   :: psi_bnd, psi_bnd2
+  real*8                   :: psi_bnd, psi_bnd2, psi_n_bnd_factor
   real*8                   :: sigmas(17)
   integer                  :: n_grids(12)
   real*8                   :: rr, s, t, ds, dt, xjac, dl, sum_dl
@@ -469,17 +471,44 @@ subroutine bootstrap_get_averaged_j_spline(node_list, element_list, psi_axis, ps
     endif
   endif
 
-  ! --- Define number of psi values and allocate flux_list structure
-  flux_list%n_psi = n_psi
-  call tr_allocate(flux_list%psi_values,1,flux_list%n_psi,"flux_list%psi_values",CAT_GRID)
-  
-  ! --- Allocate sep_list structure (that's for plotting only)
-  sep_list%n_psi =3
-  if(xcase .eq. DOUBLE_NULL) sep_list%n_psi =6
-  call tr_allocate(sep_list%psi_values,1,sep_list%n_psi,"sep_list%psi_values",CAT_GRID)
-  
-  ! --- Call the routine
-  call define_flux_values(node_list, element_list, flux_list, sep_list, xcase, psi_xpoint_tmp, n_grids, sigmas)
+  ! If we are dealing with an X-point flux-aligned grid, use define_flux values, otherwise use find_flux_values.
+  if (xpoint .and. (n_flux .gt. 1)) then
+    ! --- Define number of psi values and allocate flux_list structure
+    flux_list%n_psi = n_psi
+    call tr_allocate(flux_list%psi_values,1,flux_list%n_psi,"flux_list%psi_values",CAT_GRID)
+
+    ! --- Allocate sep_list structure (that's for plotting only)
+    sep_list%n_psi =3
+    if(xcase .eq. DOUBLE_NULL) sep_list%n_psi =6
+    call tr_allocate(sep_list%psi_values,1,sep_list%n_psi,"sep_list%psi_values",CAT_GRID)
+
+    ! --- Call the routine
+    call define_flux_values(node_list, element_list, flux_list, sep_list, xcase, psi_xpoint_tmp, n_grids, sigmas)
+  else
+    ! --- Define number of psi values and allocate flux_list structure
+    n_psi = n_spline_vtk
+    flux_list%n_psi = n_psi
+    call tr_allocate(flux_list%psi_values,1,flux_list%n_psi,"flux_list%psi_values",CAT_GRID)
+
+    ! --- Simulation could be setup with a flux-aligned or polar limiting grid. If so,
+    ! --- should only acquire surfaces up to the limiter boundary, i.e. psi_n = 1.0
+    ! --- However, should avoid the boundary itself as some values appear to be undefined
+    ! --- so take psi_n = 0.9995, i.e. just within the grid boundary.
+    ! --- If an x-point is found in this conditional block, we must be simulating a
+    ! --- polar grid beyond the LCFS. Therefore, acquire surfaces up to psi_n = 1.2.
+    psi_n_bnd_factor = 0.9995
+    if (xpoint) psi_n_bnd_factor = 1.2
+
+    ! --- Call the routine
+    do i=1,flux_list%n_psi
+      flux_list%psi_values(i) = psi_axis + psi_n_bnd_factor*(psi_bnd - psi_axis) * float(i)/float(flux_list%n_psi)
+    enddo
+    call find_flux_surfaces(my_id,xpoint,xcase,node_list,element_list,flux_list)
+
+    call tr_allocate(sep_list%psi_values,1,1,"sep_list%psi_values",CAT_GRID)
+    sep_list%psi_values(1) = psi_bnd
+    call find_flux_surfaces(my_id,xpoint,xcase,node_list,element_list,sep_list)
+  endif
   
   
   ! ---------------------------------------------
@@ -598,7 +627,7 @@ subroutine bootstrap_get_q_and_ft_splines(node_list, element_list, psi_axis, psi
   real*8                   :: hh2(n_spline), ft_int(n_spline)
   integer                  :: n_int
   real*8                   :: lambda_ft, dlambda_ft, OneMinusLh
-  real*8                   :: psi_n
+  real*8                   :: psi_n, psi_n_bnd_factor
   real*8                   :: psi_xpoint_tmp(2)
 
 
@@ -665,17 +694,44 @@ subroutine bootstrap_get_q_and_ft_splines(node_list, element_list, psi_axis, psi
     endif
   endif
 
-  ! --- Define number of psi values and allocate flux_list structure
-  flux_list%n_psi = n_psi
-  call tr_allocate(flux_list%psi_values,1,flux_list%n_psi,"flux_list%psi_values",CAT_GRID)
-  
-  ! --- Allocate sep_list structure (that's for plotting only)
-  sep_list%n_psi =3
-  if(xcase .eq. DOUBLE_NULL) sep_list%n_psi =6
-  call tr_allocate(sep_list%psi_values,1,sep_list%n_psi,"sep_list%psi_values",CAT_GRID)
-  
-  ! --- Call the routine
-  call define_flux_values(node_list, element_list, flux_list, sep_list, xcase, psi_xpoint_tmp, n_grids, sigmas)
+  ! If we are dealing with an X-point flux-aligned grid, use define_flux values, otherwise use find_flux_values.
+  if (xpoint .and. (n_flux .gt. 1)) then
+    ! --- Define number of psi values and allocate flux_list structure
+    flux_list%n_psi = n_psi
+    call tr_allocate(flux_list%psi_values,1,flux_list%n_psi,"flux_list%psi_values",CAT_GRID)
+
+    ! --- Allocate sep_list structure (that's for plotting only)
+    sep_list%n_psi =3
+    if(xcase .eq. DOUBLE_NULL) sep_list%n_psi =6
+    call tr_allocate(sep_list%psi_values,1,sep_list%n_psi,"sep_list%psi_values",CAT_GRID)
+
+    ! --- Call the routine
+    call define_flux_values(node_list, element_list, flux_list, sep_list, xcase, psi_xpoint_tmp, n_grids, sigmas)
+  else
+    ! --- Define number of psi values and allocate flux_list structure
+    n_psi = n_spline
+    flux_list%n_psi = n_psi
+    call tr_allocate(flux_list%psi_values,1,flux_list%n_psi,"flux_list%psi_values",CAT_GRID)
+
+    ! --- Simulation could be setup with a flux-aligned or polar limiting grid. If so,
+    ! --- should only acquire surfaces up to the limiter boundary, i.e. psi_n = 1.0
+    ! --- However, should avoid the boundary itself as some values appear to be undefined
+    ! --- so take psi_n = 0.9995, i.e. just within the grid boundary.
+    ! --- If an x-point is found in this conditional block, we must be simulating a
+    ! --- polar grid beyond the LCFS. Therefore, acquire surfaces up to psi_n = 1.2.
+    psi_n_bnd_factor = 0.9995
+    if (xpoint) psi_n_bnd_factor = 1.2
+
+    ! --- Call the routine
+    do i=1,flux_list%n_psi
+      flux_list%psi_values(i) = psi_axis + psi_n_bnd_factor*(psi_bnd - psi_axis) * float(i)/float(flux_list%n_psi)
+    enddo
+    call find_flux_surfaces(my_id,xpoint,xcase,node_list,element_list,flux_list)
+
+    call tr_allocate(sep_list%psi_values,1,1,"sep_list%psi_values",CAT_GRID)
+    sep_list%psi_values(1) = psi_bnd
+    call find_flux_surfaces(my_id,xpoint,xcase,node_list,element_list,sep_list)
+  endif
   
   ! -----------------
   ! --- Get q-profile

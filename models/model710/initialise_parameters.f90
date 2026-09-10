@@ -113,6 +113,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 iter_precon, gmres_4, gmres_m, gmres_tol,           &
                 max_steps_noUpdate,                                 &
                 keep_n0_const, linear_run, export_for_nemec,        &
+		initial_amplitude,				    &
                 output_bnd_elements,                                &
                 wall_file,                                          &
                 first_target_point, last_target_point,              &

@@ -876,6 +876,13 @@ module phys_module
   real*8              :: aki_neo_const    !< if ( (NEO) .and. (neo_file=='none')), this constant value is used for aki_neo
   real*8              :: amu_neo_const    !< if ( (NEO) .and. (neo_file=='none')), this constant value is used for amu_neo
 
+  !> @name initial amplitudes
+  real*8 :: initial_amplitude !< Initial amplitude of n>0 perturbations.
+  real*8 :: init_amp_psin     !< Location of initial perturbation gaussian (in terms of Psi N)
+  real*8 :: init_amp_width    !< Width of initial perturbation gaussian
+  integer :: init_m_pol       !< Poloidal mode number of initial perturbation (used to seed specific modes)
+  integer :: init_n_tor       !< Toroidal mode number of initial perturbation
+
   !> @name RMP profiles
   logical :: output_bnd_elements !< If .true., writes bnd nodes and bnd elements in files 'boundary_nodes.dat' and 'boundary_elements.dat'
   logical :: RMP_on              !< Activates RMPs on boundary if .true. (the old version without STARWALL)

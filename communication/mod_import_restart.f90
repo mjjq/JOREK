@@ -820,7 +820,7 @@ endif
     ! --- Using just noise
     else
 
-      amplitude = 1.d-10
+      amplitude = initial_amplitude
       do i=1,node_list%n_nodes
         node_list%node(i)%values(n_tor_tmp+1:n_tor,:,:)= 0.d0
         do j=n_tor_tmp+1, n_tor
@@ -2018,7 +2018,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
       stop
     ! --- Using just noise
     else
-      amplitude = 1.d-10
+      amplitude = initial_amplitude
       do i=1,node_list%n_nodes
         do m=2,n_tor
           if ( new_mode(m) .eq. 1 ) then

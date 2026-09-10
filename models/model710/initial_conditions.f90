@@ -137,7 +137,7 @@ call Poisson(my_id,0,node_list,element_list,bnd_node_list,bnd_elm_list, &
 
 
 !---------------------------- initialise perturbations
-amplitude = 1.d-12
+amplitude = initial_amplitude
 mm = 2
 
 do in=2,n_tor

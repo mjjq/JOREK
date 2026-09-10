@@ -736,7 +736,13 @@ subroutine preset_parameters
   alpha_Newton       = 2.d0
   strumpack_matching = .false.
 
-  
+!==== Initial amplitude ====
+  initial_amplitude = 1.d-12
+  init_amp_psin = 0.5
+  init_amp_width = 1000.0 ! Disable gaussian concentration about init_amp_psin by default
+  init_m_pol = 0          ! Poloidally uniform initial perturbation
+  init_n_tor = 0          ! Do not apply the perturbation to any toroidal harmonics
+
 !==== RMP parameters =====
   RMP_on             = .false.              ! .true. to activate RMPs (changes boundary conditions)
   RMP_psi_cos_file   = 'none'

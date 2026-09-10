@@ -17,6 +17,9 @@ type (type_bnd_element_list) :: bnd_elm_list
 
 integer    :: my_id, i, in, mm, i_elm, ifail, xcase2
 real*8     :: amplitude, psi, psi_n, theta
+real*8     :: initial_pert_envelope, initial_pert_env_derivative
+real*8     :: exp_envelope, exp_envelope_deriv
+real*8     :: quad_envelope, quad_envelope_deriv, angular_envelope
 real*8     :: zn,  dn_dpsi,  dn_dpsi2,  dn_dz,  dn_dz2,  dn_dpsi_dz,  dn_dpsi3,  dn_dpsi2_dz,  dn_dpsi_dz2
 real*8     :: zrn, drn_dpsi, drn_dpsi2, drn_dz, drn_dz2, drn_dpsi_dz, drn_dpsi3, drn_dpsi2_dz, drn_dpsi_dz2
 real*8     :: zT,  dT_dpsi,  dT_dpsi2,  dT_dz,  dT_dz2,  dT_dpsi_dz,  dT_dpsi3,  dT_dpsi2_dz,  dT_dpsi_dz2
@@ -257,8 +260,9 @@ endif
 
     
 !---------------------------- initialise perturbations
-amplitude = 1.d-12
+amplitude = initial_amplitude
 mm = 2
+
 
 do in=2,n_tor
 
@@ -269,23 +273,58 @@ do in=2,n_tor
       node_list%node(i)%values(in,:,:) = 0.d0
 
       psi = node_list%node(i)%values(1,1,var_psi)
-      Z   = node_list%node(i)%x(1,1,2)
       psi_n = (psi - ES%psi_axis)/(ES%psi_bnd - ES%psi_axis)
 
-      node_list%node(i)%values(in,1,var_w) = amplitude * psi_n * (1.d0 -psi_n)
-      node_list%node(i)%values(in,2,var_w) = amplitude * (1.d0 - 2.d0 * psi_n)/(ES%psi_bnd - ES%psi_axis) * node_list%node(i)%values(1,2,var_psi)
-      node_list%node(i)%values(in,3,var_w) = amplitude * (1.d0 - 2.d0 * psi_n)/(ES%psi_bnd - ES%psi_axis) * node_list%node(i)%values(1,3,var_psi)
+      R   = node_list%node(i)%x(1,1,1)
+      Z   = node_list%node(i)%x(1,1,2)
+
+      theta = atan2(Z-ES%Z_axis, R-ES%R_axis)
+
+      ! Standard initial perturbation
+      amplitude = 1.d-12
+      angular_envelope = 1.0
+
+      ! If the current toroidal harmonic is init_n_tor, then apply
+      ! custom initial perturbation. Integer division here so this
+      ! if statement will be true for both sin and cos perturbations.
+      if (in/2 .eq. init_n_tor) then
+              angular_envelope = cos(dble(init_m_pol) * theta)
+              amplitude = initial_amplitude
+              if(my_id .eq. 0) then
+                PRINT '(A, F8.3)', 'Initial perturbation amplitude: ', amplitude
+                write(*,*) "For toroidal mode ", init_n_tor
+              endif
+      endif
+
+      ! Initial perturbation consists of a quadratic and gaussian envelope
+      ! Need the quadratic envelope to ensure perturbation is zero at r=0,a
+      exp_envelope = exp(-((psi_n - init_amp_psin)/init_amp_width)**2)
+      exp_envelope_deriv = -2.0*(psi_n-init_amp_psin)/init_amp_width**2 * exp_envelope
+
+      quad_envelope = psi_n * (1.d0 - psi_n)
+      quad_envelope_deriv = 1.d0 - 2.d0 * psi_n
+
+      initial_pert_envelope = amplitude * exp_envelope * quad_envelope * angular_envelope
+      ! Apply chain rule to envelope derivative
+      initial_pert_env_derivative = amplitude * ( &
+        exp_envelope * quad_envelope_deriv +              &
+        exp_envelope_deriv * quad_envelope                &
+      ) * angular_envelope
+
+      node_list%node(i)%values(in,1,var_psi) = initial_pert_envelope
+      node_list%node(i)%values(in,2,var_psi) = initial_pert_env_derivative/(ES%psi_bnd - ES%psi_axis) * node_list%node(i)%values(1,2,var_psi)
+      node_list%node(i)%values(in,3,var_psi) = initial_pert_env_derivative/(ES%psi_bnd - ES%psi_axis) * node_list%node(i)%values(1,3,var_psi)
       if(fix_irregular_nodes .and. (node_list%node(i)%irregular_node .ne. 0)) then
-        node_list%node(i)%values(in,4,var_w) = 0.d0
+        node_list%node(i)%values(in,4,var_psi) = 0.d0
       else
-        node_list%node(i)%values(in,4,var_w) = amplitude * (1.d0 - 2.d0 * psi_n)/(ES%psi_bnd - ES%psi_axis) * node_list%node(i)%values(1,4,var_psi)
+        node_list%node(i)%values(in,4,var_psi) = initial_pert_env_derivative/(ES%psi_bnd - ES%psi_axis) * node_list%node(i)%values(1,4,var_psi)
       endif
       
       if (xpoint2 .and. ((psi_n .gt. 1.d0) .or. ((Z .lt. ES%Z_xpoint(1)) .and. (xcase2 .ne. UPPER_XPOINT)) ) ) then
-        node_list%node(i)%values(in,1:4,var_w) = 0.d0
+        node_list%node(i)%values(in,1:4,var_psi) = 0.d0
       endif
       if (xpoint2 .and. ((psi_n .gt. 1.d0) .or. ((Z .gt. ES%Z_xpoint(2)) .and. (xcase2 .ne. LOWER_XPOINT)) ) ) then
-        node_list%node(i)%values(in,1:4,var_w) = 0.d0
+        node_list%node(i)%values(in,1:4,var_psi) = 0.d0
       endif
 
       node_list%node(i)%deltas = 0.d0

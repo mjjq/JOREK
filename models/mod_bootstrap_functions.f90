@@ -503,11 +503,11 @@ subroutine bootstrap_get_averaged_j_spline(node_list, element_list, psi_axis, ps
     do i=1,flux_list%n_psi
       flux_list%psi_values(i) = psi_axis + psi_n_bnd_factor*(psi_bnd - psi_axis) * float(i)/float(flux_list%n_psi)
     enddo
-    call find_flux_surfaces(my_id,xpoint,xcase,node_list,element_list,flux_list)
+    call find_flux_surfaces(0,xpoint,xcase,node_list,element_list,flux_list)
 
     call tr_allocate(sep_list%psi_values,1,1,"sep_list%psi_values",CAT_GRID)
     sep_list%psi_values(1) = psi_bnd
-    call find_flux_surfaces(my_id,xpoint,xcase,node_list,element_list,sep_list)
+    call find_flux_surfaces(0,xpoint,xcase,node_list,element_list,sep_list)
   endif
   
   
@@ -726,11 +726,11 @@ subroutine bootstrap_get_q_and_ft_splines(node_list, element_list, psi_axis, psi
     do i=1,flux_list%n_psi
       flux_list%psi_values(i) = psi_axis + psi_n_bnd_factor*(psi_bnd - psi_axis) * float(i)/float(flux_list%n_psi)
     enddo
-    call find_flux_surfaces(my_id,xpoint,xcase,node_list,element_list,flux_list)
+    call find_flux_surfaces(0,xpoint,xcase,node_list,element_list,flux_list)
 
     call tr_allocate(sep_list%psi_values,1,1,"sep_list%psi_values",CAT_GRID)
     sep_list%psi_values(1) = psi_bnd
-    call find_flux_surfaces(my_id,xpoint,xcase,node_list,element_list,sep_list)
+    call find_flux_surfaces(0,xpoint,xcase,node_list,element_list,sep_list)
   endif
   
   ! -----------------

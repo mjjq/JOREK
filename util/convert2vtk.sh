@@ -134,9 +134,11 @@ function do_convert () {
   proj_base="$4"
   
   cd ${tmpdir[$ithread]}
-  
-  stepnum=${file##*/} # Remove directory from filename
-  stepnum=${stepnum:5:5}
+
+  stepnum=$(basename $file)
+  stepnum="${stepnum#jorek}"
+  stepnum="${stepnum%.${RST_TYPE}}"
+  echo $stepnum
   targetFile="jorek.$stepnum.vtk" # Target filename with same number as source
   targetFile="$targetDir/$targetFile" # Target filename with full path
 
@@ -474,7 +476,7 @@ fi
 
 # --- Select files for conversion
 if [ -z "$select_arguments" ]; then
-  files=`ls $sourceDir/jorek?????.${RST_TYPE} 2> /dev/null`
+  files=`ls $sourceDir/jorek[0-9]*.${RST_TYPE} 2> /dev/null`
 else
   files=`${SCRIPTDIR}/select_restart_files.sh $select_arguments`
   if [ "${files:0:5}" == "ERROR" ] ; then
@@ -579,7 +581,7 @@ else
   file_selected_restarts="selected_restart_files.txt"
   
   rm -f $file_available_restarts $file_selected_restarts
-  ls -1 $sourceDir/jorek?????.${RST_TYPE} > $file_available_restarts
+  ls -1 $sourceDir/jorek[0-9]*.${RST_TYPE} > $file_available_restarts
   
   step_ranges=`echo $selected_steps | tr ',' ' '`
   for step_range in $step_ranges; do

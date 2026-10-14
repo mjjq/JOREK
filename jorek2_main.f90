@@ -894,7 +894,7 @@ mpi_required = 0
     ! --- Write a restart file every nout timesteps
     if ( (my_id == 0) .and. (mod(index_now,nout) == 0) ) then
       if ( freeboundary .and. freeb_change_indices ) call exchange_indices(mhd_sim%node_list, my_id, n_cpu, .true.)
-      write(fileout,'(A5,i5.5)') 'jorek',index_now
+      write(fileout,'(A5,i6.6)') 'jorek',index_now
       call export_restart(mhd_sim%node_list, mhd_sim%element_list, fileout)
       if ( freeboundary .and. freeb_change_indices ) call exchange_indices(mhd_sim%node_list, my_id, n_cpu, .false.)
     endif

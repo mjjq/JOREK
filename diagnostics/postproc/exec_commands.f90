@@ -311,8 +311,16 @@ module exec_commands
     write(file_name,'(a,i5.5)') 'jorek', istep
     if ( rst_hdf5 .ne. 0 ) then
       inquire (file=trim(file_name)//'.h5', exist=file_exists)
+      if (.not. file_exists) then
+        write(file_name,'(a,i6.6)') 'jorek', istep
+        inquire (file=trim(file_name)//'.h5', exist=file_exists)
+      end if
     else
       inquire (file=trim(file_name)//'.rst', exist=file_exists)
+      if (.not. file_exists) then
+        write(file_name,'(a,i6.6)') 'jorek', istep
+        inquire (file=trim(file_name)//'.rst', exist=file_exists)
+      end if
     end if
     if ( .not. file_exists ) then
       ierr = 42
@@ -1068,9 +1076,9 @@ module exec_commands
     end if
 
     if ( min_step /= max_step ) then
-      write(step_range_string,'(a,i5.5,a,i5.5)') prefix, min_step, '..', max_step
+      write(step_range_string,'(a,i6.6,a,i6.6)') prefix, min_step, '..', max_step
     else
-      write(step_range_string,'(a,i5.5)') prefix, min_step
+      write(step_range_string,'(a,i6.6)') prefix, min_step
     end if
 
   end function step_range_string
